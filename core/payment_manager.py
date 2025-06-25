@@ -23,10 +23,6 @@ class PaymentManager:
         self.api_base = os.environ.get("BAIZE_API_BASE", "http://localhost:5000/api")
         self.product_id = "baize_ai_pro"  # 产品标识符
         
-        # Creem API配置
-        self.creem_api_base = os.environ.get("CREEM_API_BASE", "https://test-api.creem.io/v1")
-        self.creem_api_key = os.environ.get("CREEM_API_KEY", "")
-        
         # 本地临时支付会话存储（仅存储会话ID，不存储敏感信息）
         self.session_file = Path.home() / ".baize_payment_session.json"
         
@@ -208,113 +204,9 @@ class PaymentManager:
     
 
     
-    def activate_creem_license(self, license_key: str, instance_name: str) -> Tuple[bool, str]:
-        """
-        使用Creem API激活许可证
-        
-        Args:
-            license_key: Creem许可证密钥
-            instance_name: 实例名称（通常使用硬件指纹）
-            
-        Returns:
-            (激活成功, 消息)
-        """
-        try:
-            if not self.creem_api_key:
-                return False, "Creem API密钥未配置"
-            
-            payload = {
-                "key": license_key,
-                "instance_name": instance_name
-            }
-            
-            headers = {
-                "accept": "application/json",
-                "x-api-key": self.creem_api_key,
-                "Content-Type": "application/json"
-            }
-            
-            response = requests.post(
-                f"{self.creem_api_base}/licenses/activate",
-                json=payload,
-                headers=headers,
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("success", False):
-                    return True, "许可证激活成功"
-                else:
-                    reason = data.get("message", "激活失败")
-                    return False, f"激活失败: {reason}"
-            else:
-                try:
-                    error_data = response.json()
-                    error_msg = error_data.get("message", f"HTTP {response.status_code}")
-                except:
-                    error_msg = f"HTTP {response.status_code}"
-                
-                return False, f"Creem API错误: {error_msg}"
-                
-        except requests.exceptions.RequestException as e:
-            return False, f"网络连接失败: {str(e)}"
-        except Exception as e:
-            return False, f"激活许可证时发生错误: {str(e)}"
+
     
-    def validate_creem_license(self, license_key: str, instance_id: str) -> Tuple[bool, str]:
-        """
-        使用Creem API验证许可证
-        
-        Args:
-            license_key: Creem许可证密钥
-            instance_id: 实例ID（激活时返回的ID）
-            
-        Returns:
-            (验证成功, 消息)
-        """
-        try:
-            if not self.creem_api_key:
-                return False, "Creem API密钥未配置"
-            
-            payload = {
-                "key": license_key,
-                "instance_id": instance_id
-            }
-            
-            headers = {
-                "accept": "application/json",
-                "x-api-key": self.creem_api_key,
-                "Content-Type": "application/json"
-            }
-            
-            response = requests.post(
-                f"{self.creem_api_base}/licenses/validate",
-                json=payload,
-                headers=headers,
-                timeout=30
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("valid", False):
-                    return True, "许可证验证成功"
-                else:
-                    reason = data.get("reason", "许可证无效")
-                    return False, reason
-            else:
-                try:
-                    error_data = response.json()
-                    error_msg = error_data.get("message", f"HTTP {response.status_code}")
-                except:
-                    error_msg = f"HTTP {response.status_code}"
-                
-                return False, f"Creem API错误: {error_msg}"
-                
-        except requests.exceptions.RequestException as e:
-            return False, f"网络连接失败: {str(e)}"
-        except Exception as e:
-            return False, f"验证许可证时发生错误: {str(e)}"
+
     
     def _save_session_mapping(self, local_id: str, server_id: str):
         """保存会话映射"""

@@ -336,42 +336,11 @@ B8cD5kF6gJ7pL9rS0tU3vX4yZ5aB1dE2fG3hI4jK5lM6nO7pQ8rS9tU0vW1xY2zA
         }
     
     def activate_license(self, activation_code: str) -> Tuple[bool, str]:
-        """激活许可证 - 优先使用/api/license/validate接口"""
+        """激活许可证 - 使用/api/license/validate接口"""
         try:
-            # 首先尝试通过/api/license/validate接口验证和激活
+            # 通过/api/license/validate接口验证和激活
             success, message = self.validate_activation_code(activation_code)
-            if success:
-                return True, message
-            
-            # 如果/api/license/validate失败，尝试使用Creem API作为备用
-            from .payment_manager import PaymentManager
-            payment_manager = PaymentManager()
-            
-            # 获取硬件指纹作为实例名称
-            hardware_fingerprint = self._get_hardware_fingerprint()
-            
-            # 使用Creem API激活许可证
-            success, creem_message = payment_manager.activate_creem_license(
-                activation_code, hardware_fingerprint
-            )
-            
-            if success:
-                # 激活成功，保存许可证信息
-                license_data = {
-                    "code": activation_code,
-                    "hardware_fingerprint": hardware_fingerprint,
-                    "activated_at": int(time.time()),
-                    "status": "active",
-                    "type": "creem_license"
-                }
-                
-                if self._save_license_data(license_data):
-                    return True, "许可证激活成功"
-                else:
-                    return False, "许可证激活成功，但保存到本地失败"
-            else:
-                # 两种方式都失败，返回主接口的错误信息
-                return False, f"激活失败: {message}"
+            return success, message
                 
         except Exception as e:
             return False, f"激活许可证时发生错误: {str(e)}"
