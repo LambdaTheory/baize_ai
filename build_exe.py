@@ -65,6 +65,9 @@ def build_exe():
         '--hidden-import=PyQt5.sip',    # 确保PyQt5正确导入
         '--hidden-import=PIL._tkinter_finder',  # Pillow依赖
         '--hidden-import=qfluentwidgets',       # Fluent Widgets
+        '--hidden-import=cryptography',         # 加密库
+        '--hidden-import=cryptography.hazmat.primitives',
+        '--hidden-import=cryptography.hazmat.backends'
         '--noconfirm',                  # 不询问覆盖
         # 排除不必要的模块
         '--exclude-module=matplotlib',

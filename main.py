@@ -12,6 +12,8 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt, QTimer
 from ui.fluent_main_window import FluentMainWindow
 from ui.fluent_splash_screen import BaizeSplashScreen
+from ui.fluent_activation_dialog import FluentActivationDialog
+from core.license_manager import LicenseManager
 from single_instance import get_instance_manager
 
 
@@ -90,6 +92,10 @@ def main():
     
     set_app_icon()
     
+    # 检查许可证状态
+    license_manager = LicenseManager()
+    is_license_valid, license_message, license_data = license_manager.check_license_validity()
+    
     # 创建并显示启动画面
     splash = BaizeSplashScreen()
     splash.show_splash()
@@ -97,9 +103,28 @@ def main():
     # 创建主窗口 (Fluent Design版本)
     window = FluentMainWindow()
     
+    # 如果许可证无效且不在试用期，显示激活对话框
+    def check_activation_after_splash():
+        if not is_license_valid and not license_data.get("trial", False):
+            activation_dialog = FluentActivationDialog(window)
+            result = activation_dialog.exec_()
+            if result != activation_dialog.Accepted:
+                # 用户取消激活，但仍允许在试用期内使用
+                license_manager = LicenseManager()
+                is_valid, message, data = license_manager.check_license_validity()
+                if not is_valid and not data.get("trial", False):
+                    # 既没有激活也没有试用期，退出程序
+                    app.quit()
+                    return
+        
+        # 设置许可证状态到主窗口
+        window.set_license_status(is_license_valid, license_message, license_data)
+    
     # 当启动画面完成时显示主窗口
     def on_splash_finished():
         window.show()
+        # 检查激活状态
+        check_activation_after_splash()
         # 如果通过命令行传入了图片文件路径，则自动加载
         if args.file_path and os.path.exists(args.file_path):
             print(f"从命令行加载图片: {args.file_path}")

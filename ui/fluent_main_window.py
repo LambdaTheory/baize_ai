@@ -16,7 +16,7 @@ from qfluentwidgets import (NavigationInterface, NavigationItemPosition, FluentW
                            SplashScreen, InfoBar, InfoBarPosition, MessageBox,
                            NavigationWidget, qrouter, CardWidget, SmoothScrollArea,
                            FlowLayout, PivotItem, Pivot, setTheme, Theme, isDarkTheme,
-                           ComboBox, EditableComboBox, BodyLabel)
+                           ComboBox, EditableComboBox, BodyLabel, TitleLabel, PrimaryPushButton)
 
 from core.image_reader import ImageInfoReader
 from core.data_manager import DataManager
@@ -29,6 +29,8 @@ from .fluent_history_widget import FluentHistoryWidget
 from .fluent_prompt_editor_widget import FluentPromptEditorWidget
 from .fluent_prompt_reverser_widget import FluentPromptReverserWidget
 from .fluent_settings_widget import FluentSettingsWidget
+from .fluent_activation_dialog import FluentActivationDialog
+from core.license_manager import LicenseManager
 
 
 
@@ -724,6 +726,10 @@ class FluentMainWindow(FluentWindow):
         self.html_exporter = HTMLExporter()
         self.current_file_path = None
         
+        # 许可证管理器
+        self.license_manager = LicenseManager()
+        self.license_status = {"is_valid": False, "message": "", "data": {}}
+        
         # 初始化AI图像打标签器
         try:
             from core.ai_image_tagger import AIImageTagger
@@ -845,12 +851,27 @@ class FluentMainWindow(FluentWindow):
             position=NavigationItemPosition.BOTTOM
         )
         
+        # 激活页面（始终显示，方便用户激活）
+        self.addSubInterface(
+            interface=self.create_activation_interface(),
+            icon=FluentIcons.get_icon('key') if hasattr(FluentIcons, 'get_icon') else '🔑',
+            text='软件激活',
+            position=NavigationItemPosition.BOTTOM
+        )
+        
     def create_extraction_interface(self):
         """创建信息提取界面"""
         self.extraction_interface = QWidget()
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.MD, 
+                                     FluentSpacing.MD, FluentSpacing.MD)
+        main_layout.setSpacing(FluentSpacing.SM)
+        
+        # 许可证状态栏
+        self.create_license_status_bar(main_layout)
+        
+        # 主要内容布局
         layout = QHBoxLayout()
-        layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.MD, 
-                                FluentSpacing.MD, FluentSpacing.MD)
         layout.setSpacing(FluentSpacing.LG)
         
         # 左侧区域 - 图片信息展示
@@ -878,7 +899,10 @@ class FluentMainWindow(FluentWindow):
         layout.addWidget(left_widget, 3)  # 左侧占3份
         layout.addWidget(self.history_widget, 2)  # 右侧占2份
         
-        self.extraction_interface.setLayout(layout)
+        # 将主要内容布局添加到主布局
+        main_layout.addLayout(layout)
+        
+        self.extraction_interface.setLayout(main_layout)
         
         # 设置对象名称
         self.extraction_interface.setObjectName("extraction")
@@ -914,6 +938,72 @@ class FluentMainWindow(FluentWindow):
         
         # 设置对象名称
         self.settings_interface.setObjectName("settings")
+        
+    def create_activation_interface(self):
+        """创建激活界面"""
+        # 创建一个简单的激活状态显示界面
+        activation_widget = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.LG, 
+                                 FluentSpacing.LG, FluentSpacing.LG)
+        
+        # 激活状态卡片
+        status_card = CardWidget()
+        status_layout = QVBoxLayout()
+        status_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.LG, 
+                                       FluentSpacing.LG, FluentSpacing.LG)
+        
+        # 标题
+        title_label = TitleLabel("软件激活")
+        status_layout.addWidget(title_label)
+        
+        # 当前状态
+        self.license_status_label = BodyLabel("检查中...")
+        status_layout.addWidget(self.license_status_label)
+        
+        # 激活按钮
+        activate_btn = PrimaryPushButton("激活软件")
+        activate_btn.clicked.connect(self.show_activation_dialog)
+        status_layout.addWidget(activate_btn)
+        
+        status_card.setLayout(status_layout)
+        layout.addWidget(status_card)
+        layout.addStretch()
+        
+        activation_widget.setLayout(layout)
+        activation_widget.setObjectName("activation")
+        
+        return activation_widget
+    
+    def create_license_status_bar(self, parent_layout):
+        """创建许可证状态栏"""
+        self.license_status_card = CardWidget()
+        self.license_status_card.setFixedHeight(60)
+        
+        status_layout = QHBoxLayout()
+        status_layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.SM, 
+                                       FluentSpacing.MD, FluentSpacing.SM)
+        
+        # 状态图标和文本
+        self.license_status_icon = BodyLabel("🔓")
+        self.license_status_icon.setStyleSheet("font-size: 16px;")
+        
+        self.license_status_text = BodyLabel("检查许可证状态中...")
+        self.license_status_text.setStyleSheet("font-weight: 500;")
+        
+        # 快速激活按钮
+        self.quick_activate_btn = PrimaryPushButton("立即激活")
+        self.quick_activate_btn.setFixedSize(80, 32)
+        self.quick_activate_btn.clicked.connect(self.show_activation_dialog)
+        
+        # 布局
+        status_layout.addWidget(self.license_status_icon)
+        status_layout.addWidget(self.license_status_text)
+        status_layout.addStretch()
+        status_layout.addWidget(self.quick_activate_btn)
+        
+        self.license_status_card.setLayout(status_layout)
+        parent_layout.addWidget(self.license_status_card)
         
     def setup_connections(self):
         """设置信号连接"""
@@ -1734,6 +1824,104 @@ class FluentMainWindow(FluentWindow):
         
         # 停止定时器，等待下次用户输入变化
         self.auto_save_timer.stop()
+    
+    def set_license_status(self, is_valid, message, data):
+        """设置许可证状态"""
+        self.license_status = {
+            "is_valid": is_valid,
+            "message": message,
+            "data": data
+        }
+        
+        # 更新激活界面的状态标签
+        if hasattr(self, 'license_status_label'):
+            if is_valid:
+                if data.get("trial", False):
+                    remaining_days = data.get("remaining_days", 0)
+                    self.license_status_label.setText(f"✅ 试用期 - 剩余 {remaining_days} 天")
+                else:
+                    self.license_status_label.setText("✅ 已激活 - 感谢您的支持！")
+            else:
+                self.license_status_label.setText(f"❌ {message}")
+        
+        # 更新顶部状态栏
+        if hasattr(self, 'license_status_text') and hasattr(self, 'license_status_icon'):
+            if is_valid:
+                if data.get("trial", False):
+                    remaining_days = data.get("remaining_days", 0)
+                    self.license_status_icon.setText("⏰")
+                    self.license_status_text.setText(f"试用期剩余 {remaining_days} 天")
+                    self.license_status_card.setStyleSheet("background-color: rgba(255, 193, 7, 0.1);")
+                    self.quick_activate_btn.setVisible(True)
+                    self.quick_activate_btn.setText("立即激活")
+                else:
+                    self.license_status_icon.setText("✅")
+                    self.license_status_text.setText("软件已激活 - 感谢您的支持")
+                    self.license_status_card.setStyleSheet("background-color: rgba(0, 200, 83, 0.1);")
+                    self.quick_activate_btn.setVisible(False)
+            else:
+                self.license_status_icon.setText("❌")
+                self.license_status_text.setText(message)
+                self.license_status_card.setStyleSheet("background-color: rgba(255, 99, 71, 0.1);")
+                self.quick_activate_btn.setVisible(True)
+                self.quick_activate_btn.setText("立即激活")
+        
+        # 更新导航栏
+        self.update_navigation_for_activation()
+    
+    def show_activation_dialog(self):
+        """显示激活对话框"""
+        dialog = FluentActivationDialog(self)
+        dialog.activation_completed.connect(self.on_activation_completed)
+        dialog.exec_()
+    
+    def on_activation_completed(self, success, message):
+        """激活完成回调"""
+        if success:
+            # 重新检查许可证状态
+            is_valid, msg, data = self.license_manager.check_license_validity()
+            self.set_license_status(is_valid, msg, data)
+            
+            InfoBar.success(
+                title="激活成功",
+                content=message,
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self
+            )
+        else:
+            InfoBar.error(
+                title="激活失败",
+                content=message,
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self
+            )
+    
+    def update_navigation_for_activation(self):
+        """更新导航栏以反映激活状态"""
+        # 这里可以添加代码来移除或更新激活相关的导航项
+        # 具体实现取决于PyQt-Fluent-Widgets的API
+        pass
+    
+    def check_feature_access(self, feature_name):
+        """检查功能访问权限"""
+        if not self.license_status.get("is_valid", False):
+            InfoBar.warning(
+                title="功能受限",
+                content=f"{feature_name}需要激活软件后才能使用",
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self
+            )
+            return False
+        return True
 
 
 def main():
