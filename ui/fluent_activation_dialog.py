@@ -348,22 +348,18 @@ class FluentActivationDialog(QDialog):
     
     def show_offline_activation(self):
         """显示离线激活帮助"""
-        help_text = f"""
-        离线激活步骤：
+        help_text = f"""离线激活步骤：
+
+1. 记录您的硬件指纹：{self.fingerprint_value.text()}
+
+2. 访问离线激活页面：https://your-website.com/offline-activation
+
+3. 输入您的激活码和硬件指纹
+
+4. 下载激活文件并导入到软件中
+
+如需帮助，请联系客服。"""
         
-        1. 记录您的硬件指纹：{self.fingerprint_value.text()}
-        
-        2. 访问离线激活页面：https://your-website.com/offline-activation
-        
-        3. 输入您的激活码和硬件指纹
-        
-        4. 下载激活文件并导入到软件中
-        
-        如需帮助，请联系客服。
-        """
-        
-        MessageBox.info(
-            "离线激活",
-            help_text,
-            parent=self
-        ) 
+        # 使用正确的MessageBox调用方式
+        msgbox = MessageBox("离线激活", help_text, self)
+        msgbox.exec_() 
