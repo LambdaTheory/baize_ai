@@ -138,12 +138,12 @@ class FluentActivationDialog(QDialog):
         
         # 激活码输入框
         self.activation_input = LineEdit()
-        self.activation_input.setPlaceholderText("请输入激活码（格式：BAIZE-XXXXX-XXXXX-XXXXX-XXXXX）")
+        self.activation_input.setPlaceholderText("请输入Creem许可证密钥")
         self.activation_input.textChanged.connect(self.on_activation_code_changed)
         activation_layout.addWidget(self.activation_input)
         
         # 激活码格式说明
-        format_label = BodyLabel("激活码格式：BAIZE-XXXXX-XXXXX-XXXXX-XXXXX")
+        format_label = BodyLabel("支持格式：XXXXX-XXXXX-XXXXX-XXXXX")
         format_label.setStyleSheet(f"color: {FluentColors.get_color('text_tertiary')}; font-size: 12px;")
         activation_layout.addWidget(format_label)
         
@@ -214,10 +214,6 @@ class FluentActivationDialog(QDialog):
         """创建按钮区域"""
         button_layout = QHBoxLayout()
         
-        # 离线激活按钮
-        self.offline_button = PushButton("离线激活")
-        self.offline_button.clicked.connect(self.show_offline_activation)
-        
         # 取消按钮
         self.cancel_button = PushButton("稍后激活")
         self.cancel_button.clicked.connect(self.reject)
@@ -227,7 +223,6 @@ class FluentActivationDialog(QDialog):
         self.activate_button.clicked.connect(self.activate_license)
         self.activate_button.setEnabled(False)
         
-        button_layout.addWidget(self.offline_button)
         button_layout.addStretch()
         button_layout.addWidget(self.cancel_button)
         button_layout.addWidget(self.activate_button)
@@ -297,13 +292,19 @@ class FluentActivationDialog(QDialog):
     
     def on_activation_code_changed(self, text):
         """激活码输入变化"""
-        # 简单格式验证
-        is_valid_format = (
-            text.startswith("BAIZE-") and 
-            len(text) == 29 and
-            text.count("-") == 4
+        # Creem格式验证：XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
+        is_creem_format = (
+            len(text) == 29 and  # 5个5字符段 + 4个连字符
+            text.count("-") == 4 and
+            all(c.isalnum() or c == '-' for c in text) and  # 只允许字母数字和连字符
+            all(len(part) == 5 for part in text.split("-"))  # 每段都是5个字符
         )
-        self.activate_button.setEnabled(is_valid_format)
+        
+        # 基本长度检查（至少10个字符，避免过短的输入就启用按钮）
+        is_min_length = len(text.strip()) >= 10
+        
+        # 启用按钮条件：符合Creem格式或达到最小长度要求
+        self.activate_button.setEnabled(is_creem_format or is_min_length)
     
     def activate_license(self):
         """激活许可证"""
@@ -449,7 +450,7 @@ class FluentActivationDialog(QDialog):
             # 用户确认已完成支付，显示许可证密钥输入提示
             InfoBar.info(
                 title="请输入许可证密钥",
-                content="请在上方激活码输入框中输入您从Creem获得的许可证密钥，然后点击'立即激活'按钮。\n\n许可证密钥格式通常为：BAIZE-XXXXX-XXXXX-XXXXX-XXXXX",
+                content="请在上方激活码输入框中输入您从Creem获得的许可证密钥，然后点击'立即激活'按钮。\n\nCreem许可证密钥格式通常为：XXXXX-XXXXX-XXXXX-XXXXX-XXXXX",
                 orient=Qt.Horizontal,
                 isClosable=True,
                 position=InfoBarPosition.TOP,
@@ -460,22 +461,6 @@ class FluentActivationDialog(QDialog):
             # 高亮激活码输入框
             self.activation_input.setFocus()
     
-    def show_offline_activation(self):
-        """显示离线激活帮助"""
-        help_text = f"""离线激活步骤：
 
-1. 记录您的硬件指纹：{self.fingerprint_value.text()}
-
-2. 访问离线激活页面：https://your-website.com/offline-activation
-
-3. 输入您的激活码和硬件指纹
-
-4. 下载激活文件并导入到软件中
-
-如需帮助，请联系客服。"""
-        
-        # 使用正确的MessageBox调用方式
-        msgbox = MessageBox("离线激活", help_text, self)
-        msgbox.exec_()
     
  

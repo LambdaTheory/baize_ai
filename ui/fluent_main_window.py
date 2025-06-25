@@ -789,7 +789,7 @@ class FluentMainWindow(FluentWindow):
 
     def init_ui(self):
         """初始化用户界面"""
-        self.setWindowTitle("白泽AI v3.0 - 智能图片分析工具")
+        self.setWindowTitle("白泽")
         
         # 设置窗口图标
         self.set_window_icon()

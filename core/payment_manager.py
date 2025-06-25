@@ -166,9 +166,8 @@ class PaymentManager:
                 error_msg = response.json().get("message", "服务器验证失败")
                 return False, error_msg
                 
-        except requests.exceptions.RequestException:
-            # 网络失败时使用离线验证作为备用
-            return self._offline_verification_fallback(activation_code, hardware_fingerprint)
+        except requests.exceptions.RequestException as e:
+            return False, f"网络连接失败，请检查网络: {str(e)}"
         except Exception as e:
             return False, f"验证激活码时发生错误: {str(e)}"
     
@@ -207,28 +206,7 @@ class PaymentManager:
         except Exception as e:
             return False, f"查询支付状态时发生错误: {str(e)}", None
     
-    def _offline_verification_fallback(self, activation_code: str, hardware_fingerprint: str) -> Tuple[bool, str]:
-        """
-        离线验证备用方案（当无法连接服务器时）
-        注意：这个方法只能做基本的格式验证，不能验证激活码的真实性
-        """
-        # 基本格式检查
-        if not activation_code.startswith("BAIZE-"):
-            return False, "激活码格式错误"
-        
-        parts = activation_code.split("-")
-        if len(parts) != 5:
-            return False, "激活码格式错误"
-        
-        # 检查是否为已知的测试激活码
-        test_codes = [
-            "BAIZE-TEST1-TEST2-TEST3-TEST4"  # 开发测试用
-        ]
-        
-        if activation_code in test_codes:
-            return True, "离线验证通过（测试模式）"
-        
-        return False, "无法连接服务器验证激活码，请检查网络连接"
+
     
     def activate_creem_license(self, license_key: str, instance_name: str) -> Tuple[bool, str]:
         """

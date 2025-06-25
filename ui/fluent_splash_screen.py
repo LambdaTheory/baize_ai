@@ -102,7 +102,7 @@ class BaizeSplashScreen(QWidget):
         """)
         
         # 版本信息
-        self.version_label = QLabel("v3.0.0")
+        self.version_label = QLabel("v1.0.0")
         version_font = QFont("Microsoft YaHei", 10)
         self.version_label.setFont(version_font)
         self.version_label.setAlignment(Qt.AlignCenter)

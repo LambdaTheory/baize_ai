@@ -176,13 +176,19 @@ B8cD5kF6gJ7pL9rS0tU3vX4yZ5aB1dE2fG3hI4jK5lM6nO7pQ8rS9tU0vW1xY2zA
     def validate_activation_code(self, activation_code: str) -> Tuple[bool, str]:
         """验证激活码 - 通过服务器验证"""
         try:
-            # 基本格式检查
-            if not activation_code.startswith("BAIZE-"):
-                return False, "激活码格式错误"
-            
+            # 基本格式检查 - 只支持Creem格式
             code_parts = activation_code.split("-")
             if len(code_parts) != 5:
-                return False, "激活码格式错误"
+                return False, "许可证密钥格式错误"
+            
+            # 检查是否为Creem格式：XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
+            is_creem_format = (
+                all(len(part) == 5 for part in code_parts) and
+                all(c.isalnum() or c == '-' for c in activation_code)
+            )
+            
+            if not is_creem_format:
+                return False, "许可证密钥格式错误"
             
             # 导入支付管理器进行服务器验证
             from .payment_manager import PaymentManager
