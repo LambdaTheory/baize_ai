@@ -143,7 +143,7 @@ class PaymentManager:
             }
             
             response = requests.post(
-                f"{self.api_base}/license/validate",
+                f"{self.api_base}/license/activate",
                 json=payload,
                 timeout=30,
                 headers={"Content-Type": "application/json"}
@@ -152,11 +152,23 @@ class PaymentManager:
             if response.status_code == 200:
                 data = response.json()
                 if data.get("valid", False):
-                    return True, "许可证验证成功"
+                    # 激活成功
+                    message = data.get("message", "许可证激活成功")
+                    return True, message
                 else:
-                    reason = data.get("reason", data.get("message", "许可证无效"))
+                    # 激活失败，获取具体原因
+                    reason = data.get("reason", data.get("message", "许可证激活失败"))
                     return False, reason
+            elif response.status_code == 500:
+                # 服务器内部错误
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get("message", error_data.get("error", "服务器内部错误"))
+                except:
+                    error_msg = "服务器内部错误"
+                return False, f"服务器错误: {error_msg}"
             else:
+                # 其他HTTP错误
                 try:
                     error_data = response.json()
                     error_msg = error_data.get("message", error_data.get("error", "服务器验证失败"))
@@ -164,8 +176,12 @@ class PaymentManager:
                     error_msg = f"服务器验证失败 (HTTP {response.status_code})"
                 return False, error_msg
                 
+        except requests.exceptions.ConnectionError as e:
+            return False, f"无法连接到激活服务器 ({self.api_base})，请检查网络连接或联系客服"
+        except requests.exceptions.Timeout as e:
+            return False, "连接超时，请稍后重试"
         except requests.exceptions.RequestException as e:
-            return False, f"网络连接失败，请检查网络: {str(e)}"
+            return False, f"网络请求失败: {str(e)}"
         except Exception as e:
             return False, f"验证激活码时发生错误: {str(e)}"
     
