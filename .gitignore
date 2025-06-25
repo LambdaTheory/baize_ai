@@ -24,6 +24,11 @@ demo_*.html
 # 数据库文件 (保留结构，但不包含数据)
 database/*.db
 
+# 支付服务器数据
+payment_server/*.db
+payment_server/.env
+payment_server/*.log
+
 # 日志文件
 *.log
 

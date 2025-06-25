@@ -1,10 +1,28 @@
+# 白泽AI客户端依赖
+# 注意：服务端依赖已移到 payment_server/requirements.txt
+
+# GUI框架
 PyQt5>=5.15.0
 PyQt-Fluent-Widgets>=1.4.0
+
+# 图像处理
 Pillow>=9.0.0
-pyinstaller>=5.0
 exifread>=3.0.0
+
+# HTTP请求 (用于API调用)
 requests>=2.25.0
+
+# WebSocket (ComfyUI集成)
 websocket-client>=1.0.0
+
+# AI集成
 openai>=1.0.0
+
+# Excel导出
 openpyxl>=3.0.0
-cryptography>=3.4.8 
+
+# 加密和许可证
+cryptography>=3.4.8
+
+# 打包工具
+pyinstaller>=5.0 

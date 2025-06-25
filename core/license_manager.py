@@ -174,30 +174,40 @@ B8cD5kF6gJ7pL9rS0tU3vX4yZ5aB1dE2fG3hI4jK5lM6nO7pQ8rS9tU0vW1xY2zA
             return False
     
     def validate_activation_code(self, activation_code: str) -> Tuple[bool, str]:
-        """验证激活码"""
+        """验证激活码 - 通过服务器验证"""
         try:
-            # 激活码格式: BAIZE-XXXXX-XXXXX-XXXXX-XXXXX
+            # 基本格式检查
             if not activation_code.startswith("BAIZE-"):
                 return False, "激活码格式错误"
             
-            # 提取激活码数据
             code_parts = activation_code.split("-")
             if len(code_parts) != 5:
                 return False, "激活码格式错误"
             
-            # 这里应该调用您的激活服务器验证
-            # 为演示目的，我们实现一个简单的验证逻辑
-            activation_data = {
-                "code": activation_code,
-                "hardware_fingerprint": self._get_hardware_fingerprint(),
-                "timestamp": int(time.time()),
-                "version": self.version
-            }
+            # 导入支付管理器进行服务器验证
+            from .payment_manager import PaymentManager
+            payment_manager = PaymentManager()
             
-            # 模拟签名验证 (实际应该由服务器签名)
-            data_string = json.dumps(activation_data, sort_keys=True)
+            # 通过服务器验证激活码
+            hardware_fingerprint = self._get_hardware_fingerprint()
+            is_valid, message = payment_manager.verify_activation_code_with_server(
+                activation_code, hardware_fingerprint
+            )
             
-            # 保存激活信息
+            if is_valid:
+                # 服务器验证通过，保存激活信息
+                activation_data = {
+                    "code": activation_code,
+                    "hardware_fingerprint": hardware_fingerprint,
+                    "activated_at": int(time.time()),
+                    "version": self.version,
+                    "server_verified": True
+                }
+                
+                # 使用服务器验证的激活码数据
+                data_string = json.dumps(activation_data, sort_keys=True)
+                
+                # 保存激活信息
             if self._save_license_data(activation_data):
                 return True, "激活成功"
             else:
