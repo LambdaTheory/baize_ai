@@ -1,0 +1,9 @@
+PyQt5>=5.15.0
+PyQt-Fluent-Widgets>=1.4.0
+Pillow>=9.0.0
+pyinstaller>=5.0
+exifread>=3.0.0
+requests>=2.25.0
+websocket-client>=1.0.0
+openai>=1.0.0
+openpyxl>=3.0.0 

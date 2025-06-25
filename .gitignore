@@ -1,0 +1,41 @@
+# 构建产物
+build/
+dist/
+*.spec
+*.exe
+
+# Python缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 临时文件
+*.tmp
+*.temp
+~$*
+
+# 测试文件
+test_*.html
+test_*.xlsx
+*_分享.html
+demo_*.html
+
+# 数据库文件 (保留结构，但不包含数据)
+database/*.db
+
+# 日志文件
+*.log
+
+# IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 打包临时文件
+*.egg-info/ 

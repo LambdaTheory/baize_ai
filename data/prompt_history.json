@@ -1,0 +1,22 @@
+{
+  "scenes": [
+    {
+      "title": "通用提示词",
+      "english_prompts": [
+        "masterpiece",
+        "best quality",
+        "ultra detailed",
+        "beautiful girl",
+        "elegant dress"
+      ],
+      "chinese_prompts": [
+        "杰作",
+        "极品",
+        "超详细",
+        "美丽的女孩",
+        "优雅的连衣裙"
+      ]
+    }
+  ],
+  "last_updated": "2025-06-25 11:30:00"
+}

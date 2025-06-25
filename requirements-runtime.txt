@@ -1,0 +1,11 @@
+# 运行时必需依赖（用于exe打包）
+PyQt5>=5.15.0
+PyQt-Fluent-Widgets>=1.4.0
+Pillow>=9.0.0
+exifread>=3.0.0
+requests>=2.25.0
+websocket-client>=1.0.0
+openpyxl>=3.0.0
+
+# OpenAI依赖是可选的，只有使用AI功能时才需要
+# openai>=1.0.0 
