@@ -138,10 +138,8 @@ class PaymentManager:
         """
         try:
             payload = {
-                "activation_code": activation_code,
-                "hardware_fingerprint": hardware_fingerprint,
-                "client_version": "3.0.0",
-                "timestamp": int(time.time())
+                "key": activation_code,
+                "instance_id": hardware_fingerprint
             }
             
             response = requests.post(
@@ -154,12 +152,16 @@ class PaymentManager:
             if response.status_code == 200:
                 data = response.json()
                 if data.get("valid", False):
-                    return True, "激活码验证成功"
+                    return True, "许可证验证成功"
                 else:
-                    reason = data.get("reason", "激活码无效")
+                    reason = data.get("reason", data.get("message", "许可证无效"))
                     return False, reason
             else:
-                error_msg = response.json().get("message", "服务器验证失败")
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get("message", error_data.get("error", "服务器验证失败"))
+                except:
+                    error_msg = f"服务器验证失败 (HTTP {response.status_code})"
                 return False, error_msg
                 
         except requests.exceptions.RequestException as e:
