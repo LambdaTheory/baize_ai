@@ -149,7 +149,7 @@ class PaymentManager:
             }
             
             response = requests.post(
-                f"{self.api_base}/license/verify",
+                f"{self.api_base}/license/validate",
                 json=payload,
                 timeout=30,
                 headers={"Content-Type": "application/json"}

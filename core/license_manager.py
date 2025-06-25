@@ -174,7 +174,7 @@ B8cD5kF6gJ7pL9rS0tU3vX4yZ5aB1dE2fG3hI4jK5lM6nO7pQ8rS9tU0vW1xY2zA
             return False
     
     def validate_activation_code(self, activation_code: str) -> Tuple[bool, str]:
-        """验证激活码 - 通过服务器验证"""
+        """验证激活码 - 通过/api/license/validate接口验证"""
         try:
             # 基本格式检查 - 只支持Creem格式
             code_parts = activation_code.split("-")
@@ -194,7 +194,7 @@ B8cD5kF6gJ7pL9rS0tU3vX4yZ5aB1dE2fG3hI4jK5lM6nO7pQ8rS9tU0vW1xY2zA
             from .payment_manager import PaymentManager
             payment_manager = PaymentManager()
             
-            # 通过服务器验证激活码
+            # 通过/api/license/validate接口验证激活码
             hardware_fingerprint = self._get_hardware_fingerprint()
             is_valid, message = payment_manager.verify_activation_code_with_server(
                 activation_code, hardware_fingerprint
@@ -207,17 +207,17 @@ B8cD5kF6gJ7pL9rS0tU3vX4yZ5aB1dE2fG3hI4jK5lM6nO7pQ8rS9tU0vW1xY2zA
                     "hardware_fingerprint": hardware_fingerprint,
                     "activated_at": int(time.time()),
                     "version": self.version,
-                    "server_verified": True
+                    "server_verified": True,
+                    "type": "license_validate"
                 }
                 
-                # 使用服务器验证的激活码数据
-                data_string = json.dumps(activation_data, sort_keys=True)
-                
                 # 保存激活信息
-            if self._save_license_data(activation_data):
-                return True, "激活成功"
+                if self._save_license_data(activation_data):
+                    return True, "激活成功"
+                else:
+                    return False, "保存激活信息失败"
             else:
-                return False, "保存激活信息失败"
+                return False, message
                 
         except Exception as e:
             return False, f"激活码验证失败: {str(e)}"
@@ -336,9 +336,14 @@ B8cD5kF6gJ7pL9rS0tU3vX4yZ5aB1dE2fG3hI4jK5lM6nO7pQ8rS9tU0vW1xY2zA
         }
     
     def activate_license(self, activation_code: str) -> Tuple[bool, str]:
-        """激活许可证 - 使用Creem API"""
+        """激活许可证 - 优先使用/api/license/validate接口"""
         try:
-            # 导入支付管理器
+            # 首先尝试通过/api/license/validate接口验证和激活
+            success, message = self.validate_activation_code(activation_code)
+            if success:
+                return True, message
+            
+            # 如果/api/license/validate失败，尝试使用Creem API作为备用
             from .payment_manager import PaymentManager
             payment_manager = PaymentManager()
             
@@ -346,7 +351,7 @@ B8cD5kF6gJ7pL9rS0tU3vX4yZ5aB1dE2fG3hI4jK5lM6nO7pQ8rS9tU0vW1xY2zA
             hardware_fingerprint = self._get_hardware_fingerprint()
             
             # 使用Creem API激活许可证
-            success, message = payment_manager.activate_creem_license(
+            success, creem_message = payment_manager.activate_creem_license(
                 activation_code, hardware_fingerprint
             )
             
@@ -365,7 +370,8 @@ B8cD5kF6gJ7pL9rS0tU3vX4yZ5aB1dE2fG3hI4jK5lM6nO7pQ8rS9tU0vW1xY2zA
                 else:
                     return False, "许可证激活成功，但保存到本地失败"
             else:
-                return False, message
+                # 两种方式都失败，返回主接口的错误信息
+                return False, f"激活失败: {message}"
                 
         except Exception as e:
             return False, f"激活许可证时发生错误: {str(e)}"
