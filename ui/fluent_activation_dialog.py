@@ -34,7 +34,7 @@ class FluentActivationDialog(QDialog):
     def init_ui(self):
         """初始化UI"""
         self.setWindowTitle("白泽AI - 软件激活")
-        self.setFixedSize(500, 650)
+        self.setFixedSize(520, 670)  # 稍微增加宽度和高度确保内容完整显示
         self.setModal(True)
         
         # 主布局
@@ -149,11 +149,15 @@ class FluentActivationDialog(QDialog):
         
         # 购买链接
         purchase_layout = QHBoxLayout()
+        purchase_layout.setSpacing(FluentSpacing.SM)
+        
         purchase_label = BodyLabel("还没有激活码？")
         purchase_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
         
         self.purchase_button = PushButton("立即购买")
         self.purchase_button.clicked.connect(self.open_purchase_page)
+        self.purchase_button.setMinimumWidth(80)  # 设置最小宽度确保按钮完整显示
+        self.purchase_button.setMaximumWidth(120) # 设置最大宽度避免过宽
         
         purchase_layout.addWidget(purchase_label)
         purchase_layout.addWidget(self.purchase_button)
