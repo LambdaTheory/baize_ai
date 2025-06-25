@@ -1845,26 +1845,29 @@ class FluentMainWindow(FluentWindow):
                 self.license_status_label.setText(f"❌ {message}")
         
         # 更新顶部状态栏
-        if hasattr(self, 'license_status_text') and hasattr(self, 'license_status_icon'):
-            if is_valid:
-                if data.get("trial", False):
-                    remaining_days = data.get("remaining_days", 0)
-                    self.license_status_icon.setText("⏰")
-                    self.license_status_text.setText(f"试用期剩余 {remaining_days} 天")
-                    self.license_status_card.setStyleSheet("background-color: rgba(255, 193, 7, 0.1);")
-                    self.quick_activate_btn.setVisible(True)
-                    self.quick_activate_btn.setText("立即激活")
-                else:
-                    self.license_status_icon.setText("✅")
-                    self.license_status_text.setText("软件已激活 - 感谢您的支持")
-                    self.license_status_card.setStyleSheet("background-color: rgba(0, 200, 83, 0.1);")
-                    self.quick_activate_btn.setVisible(False)
+        if hasattr(self, 'license_status_card'):
+            if is_valid and not data.get("trial", False):
+                # 软件已激活且非试用期时，隐藏状态栏以节省空间
+                self.license_status_card.setVisible(False)
             else:
-                self.license_status_icon.setText("❌")
-                self.license_status_text.setText(message)
-                self.license_status_card.setStyleSheet("background-color: rgba(255, 99, 71, 0.1);")
-                self.quick_activate_btn.setVisible(True)
-                self.quick_activate_btn.setText("立即激活")
+                # 试用期或未激活时，显示状态栏
+                self.license_status_card.setVisible(True)
+                
+                if hasattr(self, 'license_status_text') and hasattr(self, 'license_status_icon'):
+                    if is_valid:
+                        if data.get("trial", False):
+                            remaining_days = data.get("remaining_days", 0)
+                            self.license_status_icon.setText("⏰")
+                            self.license_status_text.setText(f"试用期剩余 {remaining_days} 天")
+                            self.license_status_card.setStyleSheet("background-color: rgba(255, 193, 7, 0.1);")
+                            self.quick_activate_btn.setVisible(True)
+                            self.quick_activate_btn.setText("立即激活")
+                    else:
+                        self.license_status_icon.setText("❌")
+                        self.license_status_text.setText(message)
+                        self.license_status_card.setStyleSheet("background-color: rgba(255, 99, 71, 0.1);")
+                        self.quick_activate_btn.setVisible(True)
+                        self.quick_activate_btn.setText("立即激活")
         
         # 更新导航栏
         self.update_navigation_for_activation()
