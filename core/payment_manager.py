@@ -138,7 +138,7 @@ class PaymentManager:
         """
         try:
             payload = {
-                "key": activation_code,
+                "license_key": activation_code,
                 "instance_id": hardware_fingerprint
             }
             
