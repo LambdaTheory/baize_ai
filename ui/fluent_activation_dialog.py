@@ -376,8 +376,8 @@ class FluentActivationDialog(QDialog):
                     parent=self
                 )
                 
-                # 启动支付状态检查
-                self.start_payment_check()
+                # 显示支付完成确认弹窗
+                self.show_payment_completion_dialog()
                 
             else:
                 # 增加重试计数
@@ -431,6 +431,35 @@ class FluentActivationDialog(QDialog):
             self.purchase_button.setEnabled(True)
             self.purchase_button.setText("立即购买")
     
+    def show_payment_completion_dialog(self):
+        """显示支付完成确认弹窗"""
+        from qfluentwidgets import MessageBox
+        
+        msgbox = MessageBox(
+            title="支付完成确认",
+            content="请确认您是否已经完成支付？\n\n如果已完成支付，您将在Creem的订单确认页面或邮件中看到许可证密钥，请复制并粘贴到激活码输入框中。",
+            parent=self
+        )
+        
+        # 添加自定义按钮
+        msgbox.yesButton.setText("已完成支付")
+        msgbox.cancelButton.setText("取消")
+        
+        if msgbox.exec_() == msgbox.Accepted:
+            # 用户确认已完成支付，显示许可证密钥输入提示
+            InfoBar.info(
+                title="请输入许可证密钥",
+                content="请在上方激活码输入框中输入您从Creem获得的许可证密钥，然后点击'立即激活'按钮。\n\n许可证密钥格式通常为：BAIZE-XXXXX-XXXXX-XXXXX-XXXXX",
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=10000,  # 显示10秒
+                parent=self
+            )
+            
+            # 高亮激活码输入框
+            self.activation_input.setFocus()
+    
     def show_offline_activation(self):
         """显示离线激活帮助"""
         help_text = f"""离线激活步骤：
@@ -449,77 +478,4 @@ class FluentActivationDialog(QDialog):
         msgbox = MessageBox("离线激活", help_text, self)
         msgbox.exec_()
     
-    def start_payment_check(self):
-        """启动支付状态检查"""
-        # 创建定时器定期检查支付状态
-        self.payment_check_timer = QTimer()
-        self.payment_check_timer.timeout.connect(self.check_payment_status)
-        self.payment_check_timer.start(5000)  # 每5秒检查一次
-        
-        # 添加检查支付状态按钮
-        if not hasattr(self, 'check_payment_button'):
-            self.check_payment_button = PushButton("检查支付状态")
-            self.check_payment_button.clicked.connect(self.check_payment_status)
-            
-            # 找到按钮布局并添加新按钮
-            button_layout = self.layout().itemAt(self.layout().count() - 1).layout()
-            button_layout.insertWidget(1, self.check_payment_button)
-    
-    def check_payment_status(self):
-        """检查支付状态"""
-        try:
-            from core.payment_manager import PaymentManager
-            
-            # 获取硬件指纹
-            hardware_fingerprint = self.license_manager._get_hardware_fingerprint()
-            
-            # 创建支付管理器
-            payment_manager = PaymentManager()
-            
-            # 检查支付状态并自动激活
-            success, message, activation_code = payment_manager.check_payment_and_activate(hardware_fingerprint)
-            
-            if success and activation_code:
-                # 支付完成，自动填入激活码
-                self.activation_input.setText(activation_code)
-                
-                # 停止定时检查
-                if hasattr(self, 'payment_check_timer'):
-                    self.payment_check_timer.stop()
-                
-                InfoBar.success(
-                    title="支付完成",
-                    content="支付已完成，激活码已自动填入，请点击激活按钮",
-                    orient=Qt.Horizontal,
-                    isClosable=True,
-                    position=InfoBarPosition.TOP,
-                    duration=5000,
-                    parent=self
-                )
-                
-                # 自动激活
-                self.activate_license()
-                
-            else:
-                # 支付尚未完成
-                if "没有待处理的支付会话" not in message:
-                    InfoBar.info(
-                        title="支付状态",
-                        content=message,
-                        orient=Qt.Horizontal,
-                        isClosable=True,
-                        position=InfoBarPosition.TOP,
-                        duration=3000,
-                        parent=self
-                    )
-                    
-        except Exception as e:
-            InfoBar.error(
-                title="检查支付状态失败",
-                content=f"检查支付状态时发生错误: {str(e)}",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            ) 
+ 
