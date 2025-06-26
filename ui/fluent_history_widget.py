@@ -64,7 +64,8 @@ class FluentHistoryWidget(CardWidget):
         
         # 设置卡片布局
         card_layout = QVBoxLayout()
-        card_layout.addWidget(main_widget)
+        card_layout.setContentsMargins(0, 0, 0, 0)  # 移除边距
+        card_layout.addWidget(main_widget, 1)  # 添加拉伸因子
         self.setLayout(card_layout)
         
     def create_action_buttons(self, parent_layout):

@@ -1252,7 +1252,7 @@ class FluentMainWindow(FluentWindow):
         # 历史记录组件（直接添加，不需要额外标题）
         self.history_widget = FluentHistoryWidget(self.data_manager)
         
-        history_layout.addWidget(self.history_widget)
+        history_layout.addWidget(self.history_widget, 1)  # 添加拉伸因子，让历史记录组件占用全部空间
         self.history_card.setLayout(history_layout)
         
         # 按30%和70%的比例添加到列布局
