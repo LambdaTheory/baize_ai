@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                             QSplitter, QApplication, QGridLayout, QLabel,
                             QSizePolicy, QMessageBox)
 from PyQt5.QtCore import Qt, pyqtSignal, QSize, QThread, QObject
-from PyQt5.QtGui import QPixmap, QIcon
+from PyQt5.QtGui import QPixmap, QIcon, QDragEnterEvent, QDropEvent, QPainter, QBrush, QColor, QPen, QFont
 
 from qfluentwidgets import (NavigationInterface, NavigationItemPosition, FluentWindow,
                            SplashScreen, InfoBar, InfoBarPosition, MessageBox,
@@ -32,6 +32,38 @@ from .fluent_settings_widget import FluentSettingsWidget
 from .fluent_activation_dialog import FluentActivationDialog
 from core.license_manager import LicenseManager
 
+
+class DragOverlay(QWidget):
+    """拖拽蒙层组件"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setVisible(False)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.setStyleSheet("background-color: rgba(79, 70, 229, 0.1);")
+        
+    def paintEvent(self, event):
+        """绘制蒙层"""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # 背景蒙层
+        painter.fillRect(self.rect(), QColor(79, 70, 229, 25))
+        
+        # 边框
+        pen = QPen(QColor(79, 70, 229), 3, Qt.DashLine)
+        painter.setPen(pen)
+        painter.drawRect(self.rect().adjusted(10, 10, -10, -10))
+        
+        # 文字
+        painter.setPen(QPen(QColor(79, 70, 229)))
+        font = QFont()
+        font.setPointSize(24)
+        font.setWeight(QFont.Bold)
+        painter.setFont(font)
+        
+        text = "把图片放到此处"
+        painter.drawText(self.rect(), Qt.AlignCenter, text)
 
 
 class HighlightEditableComboBox(EditableComboBox):
@@ -862,6 +894,8 @@ class FluentMainWindow(FluentWindow):
     def create_extraction_interface(self):
         """创建信息提取界面"""
         self.extraction_interface = QWidget()
+        self.extraction_interface.setAcceptDrops(True)  # 使整个界面支持拖拽
+        
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.MD, 
                                      FluentSpacing.MD, FluentSpacing.MD)
@@ -880,9 +914,18 @@ class FluentMainWindow(FluentWindow):
         left_layout.setSpacing(FluentSpacing.MD)
         left_widget.setLayout(left_layout)
         
-        # 拖拽区域
-        self.drop_area = FluentDropArea()
-        left_layout.addWidget(self.drop_area)
+        # 移除原来的拖拽区域组件，改为提示信息
+        info_label = BodyLabel("🖼️ 将图片或文件夹拖拽到此界面的任意位置即可开始处理")
+        info_label.setAlignment(Qt.AlignCenter)
+        info_label.setStyleSheet(f"""
+            color: {FluentColors.get_color('text_secondary')};
+            font-size: 14px;
+            padding: 20px;
+            background-color: {FluentColors.get_color('bg_secondary')};
+            border-radius: 12px;
+            border: 2px dashed {FluentColors.get_color('border_primary')};
+        """)
+        left_layout.addWidget(info_label)
         
         # 图片信息组件
         self.image_info_widget = FluentImageInfoWidget()
@@ -907,9 +950,79 @@ class FluentMainWindow(FluentWindow):
         # 设置对象名称
         self.extraction_interface.setObjectName("extraction")
         
+        # 创建拖拽蒙层
+        self.drag_overlay = DragOverlay(self.extraction_interface)
+        
+        # 重写拖拽事件
+        self.extraction_interface.dragEnterEvent = self.dragEnterEvent
+        self.extraction_interface.dragLeaveEvent = self.dragLeaveEvent
+        self.extraction_interface.dropEvent = self.dropEvent
+        
         # 加载历史记录
         self.history_widget.load_history()
         
+    def resizeEvent(self, event):
+        """窗口大小变化事件"""
+        super().resizeEvent(event)
+        # 确保蒙层大小与界面同步
+        if hasattr(self, 'drag_overlay') and hasattr(self, 'extraction_interface'):
+            self.drag_overlay.resize(self.extraction_interface.size())
+        
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        """拖拽进入事件"""
+        if event.mimeData().hasUrls():
+            # 检查是否有支持的文件格式或文件夹
+            has_valid_items = False
+            for url in event.mimeData().urls():
+                if url.isLocalFile():
+                    file_path = url.toLocalFile()
+                    import os
+                    # 检查是否是文件夹或支持的图片格式
+                    if os.path.isdir(file_path) or file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                        has_valid_items = True
+                        break
+            
+            if has_valid_items:
+                event.accept()
+                # 显示蒙层
+                self.drag_overlay.resize(self.extraction_interface.size())
+                self.drag_overlay.show()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
+            
+    def dragLeaveEvent(self, event):
+        """拖拽离开事件"""
+        # 隐藏蒙层
+        self.drag_overlay.hide()
+        
+    def dropEvent(self, event: QDropEvent):
+        """拖拽放下事件"""
+        import os
+        files = []
+        folders = []
+        
+        for url in event.mimeData().urls():
+            if url.isLocalFile():
+                file_path = url.toLocalFile()
+                if os.path.isdir(file_path):
+                    folders.append(file_path)
+                elif file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    files.append(file_path)
+        
+        # 隐藏蒙层
+        self.drag_overlay.hide()
+        
+        # 优先处理文件夹（批量处理）
+        if folders:
+            # 只处理第一个文件夹
+            self.handle_folder_dropped(folders[0])
+        elif files:
+            self.handle_files_dropped(files)
+        
+        event.accept()
+    
     def create_gallery_interface(self):
         """创建图片画廊界面"""
         self.gallery_interface = FluentGalleryWidget(self.data_manager)
@@ -1007,9 +1120,9 @@ class FluentMainWindow(FluentWindow):
         
     def setup_connections(self):
         """设置信号连接"""
-        # 拖拽区域信号
-        self.drop_area.filesDropped.connect(self.handle_files_dropped)
-        self.drop_area.folderDropped.connect(self.handle_folder_dropped)  # 新增文件夹拖拽信号
+        # 移除原来的拖拽区域信号连接
+        # self.drop_area.filesDropped.connect(self.handle_files_dropped)
+        # self.drop_area.folderDropped.connect(self.handle_folder_dropped)
         
         # 图片信息组件信号
         self.image_info_widget.save_btn.clicked.connect(self.save_record)
