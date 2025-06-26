@@ -1005,33 +1005,25 @@ class FluentMainWindow(FluentWindow):
         self.history_widget.load_history()
     
     def create_first_column(self, parent_layout):
-        """创建第一列：图片预览(80%) + 基础信息(20%)"""
+        """创建第一列：图片预览(100%高度)"""
         from qfluentwidgets import CardWidget, SubtitleLabel, BodyLabel, LineEdit
         
         first_column = QWidget()
         column_layout = QVBoxLayout()
-        column_layout.setSpacing(FluentSpacing.MD)
+        column_layout.setSpacing(0)  # 移除间距，让图片预览占满整个列
         first_column.setLayout(column_layout)
         
-        # 图片预览卡片 (80%)
+        # 图片预览卡片 (100%高度)
         self.image_preview_card = CardWidget()
         self.image_preview_card.setBorderRadius(16)
         preview_layout = QVBoxLayout()
         preview_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.LG, 
                                         FluentSpacing.LG, FluentSpacing.LG)
         
-        # 标题
-        preview_title = SubtitleLabel("📸 图片预览")
-        preview_title.setStyleSheet(f"""
-            color: {FluentColors.get_color('text_primary')};
-            font-weight: 600;
-            margin-bottom: 12px;
-        """)
-        
-        # 图片标签
+        # 图片标签，占据整个可用空间
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setMinimumHeight(350)
+        self.image_label.setMinimumHeight(400)  # 增加最小高度
         self.image_label.setScaledContents(False)
         self.image_label.setStyleSheet(f"""
             QLabel {{
@@ -1044,86 +1036,23 @@ class FluentMainWindow(FluentWindow):
         """)
         self.image_label.setText("🖼️ 将图片拖拽到此处\n💻 支持从SD WebUI、ComfyUI等浏览器拖拽")
         
-        preview_layout.addWidget(preview_title)
-        preview_layout.addWidget(self.image_label, 1)
+        preview_layout.addWidget(self.image_label, 1)  # 让图片标签占据所有可用空间
         self.image_preview_card.setLayout(preview_layout)
         
-        # 基础信息卡片 (20%)
-        self.basic_info_card = CardWidget()
-        self.basic_info_card.setBorderRadius(16)
-        basic_layout = QVBoxLayout()
-        basic_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.MD, 
-                                      FluentSpacing.LG, FluentSpacing.LG)
-        
-        # 标题
-        basic_title = SubtitleLabel("📋 基本信息")
-        basic_title.setStyleSheet(f"""
-            color: {FluentColors.get_color('text_primary')};
-            font-weight: 600;
-            margin-bottom: 8px;
-        """)
-        
-        # 创建滚动区域
-        from qfluentwidgets import SmoothScrollArea
-        basic_scroll = SmoothScrollArea()
-        basic_scroll.setMaximumHeight(150)
-        basic_scroll.setWidgetResizable(True)
-        basic_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
-        
-        basic_content = QWidget()
-        basic_content_layout = QVBoxLayout()
-        basic_content_layout.setSpacing(FluentSpacing.SM)
-        
-        # 文件名（可编辑）
-        filename_layout = QHBoxLayout()
-        filename_label = BodyLabel("文件名:")
-        filename_label.setMinimumWidth(60)
-        filename_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        # 隐藏的基础信息变量（用于保存文件信息，但不显示在界面上）
         self.file_name_edit = LineEdit()
-        self.file_name_edit.setPlaceholderText("文件名...")
-        self.file_name_edit.setFixedHeight(32)
-        filename_layout.addWidget(filename_label)
-        filename_layout.addWidget(self.file_name_edit)
-        
-        # 文件路径（保留变量但不显示在界面上）
+        self.file_name_edit.setVisible(False)
         self.file_path_label = BodyLabel("-")
-        
-        # 文件大小和尺寸
-        size_layout = QHBoxLayout()
-        size_layout.setSpacing(FluentSpacing.LG)
-        
-        size_label = BodyLabel("大小:")
-        size_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.file_path_label.setVisible(False)
         self.file_size_label = BodyLabel("-")
-        self.file_size_label.setStyleSheet(f"color: {FluentColors.get_color('text_primary')};")
-        
-        dimension_label = BodyLabel("尺寸:")
-        dimension_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.file_size_label.setVisible(False)
         self.image_size_label = BodyLabel("-")
-        self.image_size_label.setStyleSheet(f"color: {FluentColors.get_color('text_primary')};")
+        self.image_size_label.setVisible(False)
         
-        size_layout.addWidget(size_label)
-        size_layout.addWidget(self.file_size_label)
-        size_layout.addWidget(dimension_label)
-        size_layout.addWidget(self.image_size_label)
-        size_layout.addStretch()
+        # 图片预览卡片占100%高度
+        column_layout.addWidget(self.image_preview_card, 1)
         
-        basic_content_layout.addLayout(filename_layout)
-        basic_content_layout.addLayout(size_layout)
-        basic_content_layout.addStretch()
-        
-        basic_content.setLayout(basic_content_layout)
-        basic_scroll.setWidget(basic_content)
-        
-        basic_layout.addWidget(basic_title)
-        basic_layout.addWidget(basic_scroll)
-        self.basic_info_card.setLayout(basic_layout)
-        
-        # 按70%和30%的比例添加到列布局
-        column_layout.addWidget(self.image_preview_card, 7)  # 70%
-        column_layout.addWidget(self.basic_info_card, 3)     # 30%
-        
-        parent_layout.addWidget(first_column, 3)  # 第一列占3份
+        parent_layout.addWidget(first_column, 1)  # 第一列占1份
     
     def create_second_column(self, parent_layout):
         """创建第二列：AI信息(100%)"""
@@ -1232,7 +1161,7 @@ class FluentMainWindow(FluentWindow):
         # AI信息卡片占满整个列
         column_layout.addWidget(self.ai_info_card, 1)
         
-        parent_layout.addWidget(second_column, 3)  # 第二列占3份
+        parent_layout.addWidget(second_column, 2)  # 第二列占2份
     
     def create_third_column(self, parent_layout):
         """创建第三列：标签备注(40%) + 历史记录(60%)"""
@@ -1322,10 +1251,10 @@ class FluentMainWindow(FluentWindow):
         self.history_card.setLayout(history_layout)
         
         # 按30%和70%的比例添加到列布局
-        column_layout.addWidget(self.tags_notes_card, 3)    # 30%
-        column_layout.addWidget(self.history_card, 7)       # 70%
+        column_layout.addWidget(self.tags_notes_card, 1)    # 30%
+        column_layout.addWidget(self.history_card, 2)       # 70%
         
-        parent_layout.addWidget(third_column, 3)  # 第三列占3份
+        parent_layout.addWidget(third_column, 1)  # 第三列占1份
     
     def handle_edit_prompt_clicked(self):
         """处理编辑提示词按钮点击"""
