@@ -234,9 +234,9 @@ class FluentHistoryWidget(CardWidget):
     def create_history_table(self, parent_layout):
         """创建历史记录表格"""
         self.history_table = TableWidget()
-        self.history_table.setColumnCount(3)  # 只保留3列：缩略图、标签、来源
+        self.history_table.setColumnCount(3)  # 只保留3列：缩略图、生成信息、来源
         self.history_table.setHorizontalHeaderLabels([
-            "缩略图", "标签", "来源"
+            "缩略图", "生成信息", "来源"
         ])
         
         # 设置表格属性
@@ -313,15 +313,16 @@ class FluentHistoryWidget(CardWidget):
         
         # 设置列的调整模式
         header.setSectionResizeMode(0, QHeaderView.Fixed)  # 缩略图列固定宽度
-        header.setSectionResizeMode(1, QHeaderView.Stretch)  # 标签列自动拉伸，占用大部分空间
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # 来源列根据内容自适应
+        header.setSectionResizeMode(1, QHeaderView.Stretch)  # 生成信息列自动拉伸，占用大部分空间
+        header.setSectionResizeMode(2, QHeaderView.Fixed)  # 来源列固定宽度
         
         # 设置初始列宽
         self.history_table.setColumnWidth(0, 100)  # 缩略图固定宽度
-        # 标签列和来源列的宽度由拉伸模式自动管理
+        self.history_table.setColumnWidth(2, 120)  # 来源列固定宽度
+        # 生成信息列的宽度由拉伸模式自动管理
         
         # 启用最后一列的自动拉伸，让表格充满整个宽度
-        header.setStretchLastSection(True)
+        header.setStretchLastSection(False)
         
     def setup_connections(self):
         """设置信号连接"""
@@ -437,8 +438,6 @@ class FluentHistoryWidget(CardWidget):
                 else:
                     invalid_count += 1
                 
-                tags = record.get('tags', '')
-                
                 # 获取生成来源
                 generation_source = record.get('generation_source', 'Unknown')
                 # 转换为中文显示
@@ -451,6 +450,9 @@ class FluentHistoryWidget(CardWidget):
                 # 创建缩略图小部件
                 thumbnail_widget = self.create_thumbnail_widget(file_path)
                 
+                # 创建富文本生成信息项（替换原来的tags）
+                generation_info_item = self.create_generation_info_item(record)
+                
                 # 生成来源项
                 source_item = QTableWidgetItem(source_display)
                 if generation_source == 'ComfyUI':
@@ -460,22 +462,20 @@ class FluentHistoryWidget(CardWidget):
                 else:
                     source_item.setForeground(QColor(156, 163, 175))  # 灰色
                 
-                tags_item = QTableWidgetItem(tags)
-                
                 # 为无效文件设置特殊样式
                 if not file_exists:
-                    tags_item.setBackground(QColor(254, 242, 242))  # 很淡的红色背景
-                    tags_item.setForeground(QColor(185, 28, 28))  # 深红色文字
+                    generation_info_item.setBackground(QColor(254, 242, 242))  # 很淡的红色背景
+                    generation_info_item.setForeground(QColor(185, 28, 28))  # 深红色文字
                     source_item.setBackground(QColor(254, 242, 242))  # 很淡的红色背景
                     source_item.setForeground(QColor(185, 28, 28))  # 深红色文字
                 
-                # 设置表格项（按新顺序：缩略图、标签、来源）
+                # 设置表格项（按新顺序：缩略图、生成信息、来源）
                 self.history_table.setCellWidget(i, 0, thumbnail_widget)  # 缩略图（使用setCellWidget）
-                self.history_table.setItem(i, 1, tags_item)      # 标签
-                self.history_table.setItem(i, 2, source_item)    # 来源
+                self.history_table.setItem(i, 1, generation_info_item)    # 生成信息（替换原来的标签）
+                self.history_table.setItem(i, 2, source_item)             # 来源
                 
-                # 为了保持兼容性，将记录ID存储在标签项中
-                tags_item.setData(Qt.UserRole, record.get('id'))
+                # 为了保持兼容性，将记录ID存储在生成信息项中
+                generation_info_item.setData(Qt.UserRole, record.get('id'))
                 
             # 更新统计信息
             self.update_statistics(len(records), valid_count, invalid_count, 0)
@@ -569,7 +569,7 @@ class FluentHistoryWidget(CardWidget):
                 record_ids = []
                 for index in selected_rows:
                     row = index.row()
-                    item = self.history_table.item(row, 1)  # 标签列现在是第1列，存储记录ID
+                    item = self.history_table.item(row, 1)  # 生成信息列现在是第1列，存储记录ID
                     if item:
                         record_id = item.data(Qt.UserRole)
                         if record_id:
@@ -698,5 +698,193 @@ class FluentHistoryWidget(CardWidget):
         
         dialog = FluentBatchExportDialog(selected_records, self)
         dialog.exec_()
+
+    def create_generation_info_item(self, record):
+        """创建生成信息项，显示格式化的生成参数"""
+        info_parts = []
+        
+        # 1. 模型信息 - 优先显示
+        model = record.get('model', '').strip()
+        if model:
+            # 截取模型名称，避免过长
+            model_display = model.split('/')[-1] if '/' in model else model  # 取文件名部分
+            # 移除常见的文件扩展名
+            if model_display.endswith('.safetensors'):
+                model_display = model_display[:-12]
+            elif model_display.endswith('.ckpt'):
+                model_display = model_display[:-5]
+            
+            if len(model_display) > 30:
+                model_display = model_display[:27] + '...'
+            info_parts.append(f"🤖 {model_display}")
+        
+        # 2. LoRA信息 - 重点显示，使用更好的格式
+        lora_info_str = record.get('lora_info', '')
+        if lora_info_str:
+            lora_display = self.format_lora_info(lora_info_str)
+            if lora_display:
+                info_parts.append(f"🎯 LoRA: {lora_display}")
+        
+        # 3. 核心生成参数
+        param_parts = []
+        sampler = record.get('sampler', '').strip()
+        steps = record.get('steps')
+        cfg_scale = record.get('cfg_scale')
+        
+        if sampler:
+            # 简化采样器名称显示
+            sampler_short = sampler.replace('_', ' ').replace('DPM++', 'DPM++').title()
+            if len(sampler_short) > 12:
+                sampler_short = sampler_short[:9] + '...'
+            param_parts.append(f"{sampler_short}")
+        if steps:
+            param_parts.append(f"{steps}步")
+        if cfg_scale:
+            param_parts.append(f"CFG{cfg_scale}")
+        
+        if param_parts:
+            info_parts.append(f"⚙️ {' • '.join(param_parts)}")
+        
+        # 4. 种子信息（如果有）
+        seed = record.get('seed')
+        if seed:
+            seed_display = str(seed)[-6:] if len(str(seed)) > 6 else str(seed)
+            info_parts.append(f"🎲 {seed_display}")
+        
+        # 5. 标签信息（如果有的话）
+        tags = record.get('tags', '').strip()
+        if tags:
+            # 限制标签显示长度并美化
+            if len(tags) > 35:
+                tags_display = tags[:32] + '...'
+            else:
+                tags_display = tags
+            info_parts.append(f"🏷️ {tags_display}")
+        
+        # 合并所有信息
+        full_text = '\n'.join(info_parts) if info_parts else '暂无生成信息'
+        
+        # 创建完整的工具提示信息
+        tooltip_parts = []
+        if model:
+            tooltip_parts.append(f"模型: {record.get('model', '')}")
+        if lora_info_str:
+            tooltip_parts.append(f"LoRA: {self.format_lora_info_detailed(lora_info_str)}")
+        if sampler:
+            tooltip_parts.append(f"采样器: {sampler}")
+        if steps:
+            tooltip_parts.append(f"步数: {steps}")
+        if cfg_scale:
+            tooltip_parts.append(f"CFG Scale: {cfg_scale}")
+        if seed:
+            tooltip_parts.append(f"种子: {seed}")
+        if tags:
+            tooltip_parts.append(f"标签: {tags}")
+        
+        full_tooltip = '\n'.join(tooltip_parts) if tooltip_parts else '暂无生成信息'
+        
+        # 创建表格项
+        item = QTableWidgetItem(full_text)
+        item.setToolTip(full_tooltip)  # 设置详细信息为提示
+        
+        # 设置字体和样式
+        font = item.font()
+        font.setPointSize(9)  # 稍小的字体
+        item.setFont(font)
+        
+        return item
+    
+    def format_lora_info(self, lora_info_str):
+        """格式化LoRA信息为简洁显示"""
+        if not lora_info_str:
+            return ""
+        
+        try:
+            import json
+            lora_info = json.loads(lora_info_str)
+            
+            if isinstance(lora_info, dict) and 'loras' in lora_info and lora_info['loras']:
+                lora_names = []
+                for lora in lora_info['loras']:
+                    if isinstance(lora, dict):
+                        name = lora.get('name', '未知')
+                        weight = lora.get('weight', 1.0)
+                        # 只显示LoRA名称和权重，格式简洁
+                        lora_names.append(f"{name}({weight})")
+                
+                if lora_names:
+                    # 限制显示的LoRA数量，避免过长
+                    if len(lora_names) > 2:
+                        display_loras = lora_names[:2] + [f"等{len(lora_names)}个"]
+                    else:
+                        display_loras = lora_names
+                    return ", ".join(display_loras)
+            
+            elif isinstance(lora_info, dict) and 'raw_lora_text' in lora_info:
+                raw_text = lora_info['raw_lora_text']
+                # 限制原始文本长度
+                if len(raw_text) > 30:
+                    return raw_text[:27] + '...'
+                return raw_text
+            
+            # 其他格式的处理
+            elif isinstance(lora_info, dict):
+                lora_items = []
+                count = 0
+                for name, weight in lora_info.items():
+                    if name != 'loras':  # 避免显示结构键
+                        lora_items.append(f"{name}({weight})")
+                        count += 1
+                        if count >= 2:  # 最多显示2个
+                            break
+                
+                if lora_items:
+                    if len(lora_info) > 2:
+                        lora_items.append(f"等{len(lora_info)}个")
+                    return ", ".join(lora_items)
+            
+            return "有LoRA"
+            
+        except Exception as e:
+            print(f"格式化LoRA信息失败: {e}")
+            return "LoRA解析错误"
+    
+    def format_lora_info_detailed(self, lora_info_str):
+        """格式化LoRA信息为详细显示（用于工具提示）"""
+        if not lora_info_str:
+            return "无LoRA信息"
+        
+        try:
+            import json
+            lora_info = json.loads(lora_info_str)
+            
+            if isinstance(lora_info, dict) and 'loras' in lora_info and lora_info['loras']:
+                lora_details = []
+                for i, lora in enumerate(lora_info['loras'], 1):
+                    if isinstance(lora, dict):
+                        name = lora.get('name', '未知')
+                        weight = lora.get('weight', 1.0)
+                        hash_val = lora.get('hash', '')
+                        detail = f"{i}. {name} (权重: {weight})"
+                        if hash_val:
+                            detail += f" [Hash: {hash_val[:8]}...]"
+                        lora_details.append(detail)
+                return '\n'.join(lora_details)
+            
+            elif isinstance(lora_info, dict) and 'raw_lora_text' in lora_info:
+                return lora_info['raw_lora_text']
+            
+            elif isinstance(lora_info, dict):
+                lora_details = []
+                for i, (name, weight) in enumerate(lora_info.items(), 1):
+                    if name != 'loras':  # 避免显示结构键
+                        lora_details.append(f"{i}. {name} (权重: {weight})")
+                return '\n'.join(lora_details)
+            
+            return str(lora_info)
+            
+        except Exception as e:
+            print(f"格式化详细LoRA信息失败: {e}")
+            return "LoRA信息解析错误"
     
  
