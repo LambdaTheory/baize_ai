@@ -54,8 +54,7 @@ class FluentHistoryWidget(CardWidget):
         # 操作按钮区域
         self.create_action_buttons(main_layout)
         
-        # 统计信息
-        self.create_statistics_card(main_layout)
+
         
         # 历史记录表格
         self.create_history_table(main_layout)
@@ -106,27 +105,7 @@ class FluentHistoryWidget(CardWidget):
             }}
         """)
         
-        # 清理无效按钮
-        self.clean_invalid_btn = PushButton("清理无效")
-        self.clean_invalid_btn.setFixedHeight(36)
-        self.clean_invalid_btn.setMinimumWidth(100)
-        
-        # 设置清理按钮样式
-        self.clean_invalid_btn.setStyleSheet(f"""
-            PushButton {{
-                background-color: {FluentColors.get_color('warning')};
-                border: 1px solid {FluentColors.get_color('warning')};
-                color: white;
-            }}
-            PushButton:hover {{
-                background-color: #f59e0b;
-                border: 1px solid #f59e0b;
-            }}
-            PushButton:pressed {{
-                background-color: #d97706;
-                border: 1px solid #d97706;
-            }}
-        """)
+
         
         # 清空全部按钮
         self.delete_all_btn = PushButton("清空全部")
@@ -183,53 +162,12 @@ class FluentHistoryWidget(CardWidget):
         button_layout.addWidget(self.refresh_btn)
         button_layout.addWidget(self.batch_export_btn)
         button_layout.addWidget(self.delete_record_btn)
-        button_layout.addWidget(self.clean_invalid_btn)
         button_layout.addWidget(self.delete_all_btn)
         button_layout.addStretch()
         
         parent_layout.addLayout(button_layout)
         
-    def create_statistics_card(self, parent_layout):
-        """创建统计信息卡片"""
-        self.stats_card = CardWidget()
-        self.stats_card.setBorderRadius(12)
-        self.stats_card.setFixedHeight(60)
-        self.stats_card.setStyleSheet(f"""
-            background-color: {FluentColors.get_color('bg_secondary')};
-            border: 1px solid {FluentColors.get_color('border_secondary')};
-        """)
-        
-        stats_layout = QHBoxLayout()
-        stats_layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.SM, 
-                                      FluentSpacing.MD, FluentSpacing.SM)
-        
-        # 总记录数
-        self.total_label = BodyLabel("总记录: 0")
-        self.total_label.setStyleSheet(f"color: {FluentColors.get_color('text_primary')};")
-        
-        # 有效记录数
-        self.valid_label = BodyLabel("有效: 0")
-        self.valid_label.setStyleSheet(f"color: {FluentColors.get_color('success')};")
-        
-        # 无效记录数
-        self.invalid_label = BodyLabel("无效: 0")
-        self.invalid_label.setStyleSheet(f"color: {FluentColors.get_color('error')};")
-        
-        # 选中记录数
-        self.selected_label = BodyLabel("已选中: 0")
-        self.selected_label.setStyleSheet(f"color: {FluentColors.get_color('primary')};")
-        
-        stats_layout.addWidget(self.total_label)
-        stats_layout.addWidget(QLabel("  |  "))
-        stats_layout.addWidget(self.valid_label)
-        stats_layout.addWidget(QLabel("  |  "))
-        stats_layout.addWidget(self.invalid_label)
-        stats_layout.addWidget(QLabel("  |  "))
-        stats_layout.addWidget(self.selected_label)
-        stats_layout.addStretch()
-        
-        self.stats_card.setLayout(stats_layout)
-        parent_layout.addWidget(self.stats_card)
+
         
     def create_history_table(self, parent_layout):
         """创建历史记录表格"""
@@ -334,7 +272,7 @@ class FluentHistoryWidget(CardWidget):
         # 按钮相关
         self.delete_record_btn.clicked.connect(self.delete_selected_records)
         self.delete_all_btn.clicked.connect(self.delete_all_records)
-        self.clean_invalid_btn.clicked.connect(self.clean_invalid_records)
+
         self.refresh_btn.clicked.connect(self.load_history)
         self.batch_export_btn.clicked.connect(self.batch_export_selected)
         
@@ -477,18 +415,12 @@ class FluentHistoryWidget(CardWidget):
                 # 为了保持兼容性，将记录ID存储在生成信息项中
                 generation_info_item.setData(Qt.UserRole, record.get('id'))
                 
-            # 更新统计信息
-            self.update_statistics(len(records), valid_count, invalid_count, 0)
+
             
         except Exception as e:
             print(f"加载历史记录失败: {str(e)}")
             
-    def update_statistics(self, total, valid, invalid, selected):
-        """更新统计信息"""
-        self.total_label.setText(f"总记录: {total}")
-        self.valid_label.setText(f"有效: {valid}")
-        self.invalid_label.setText(f"无效: {invalid}")
-        self.selected_label.setText(f"已选中: {selected}")
+
         
     def on_item_clicked(self, item):
         """表格项点击事件"""
@@ -509,11 +441,7 @@ class FluentHistoryWidget(CardWidget):
         self.delete_record_btn.setEnabled(selected_count > 0)
         self.batch_export_btn.setEnabled(selected_count > 0)  # 启用/禁用批量导出按钮
         
-        # 更新选中统计
-        total = len(self.history_records)
-        valid = sum(1 for record in self.history_records if os.path.exists(record.get('file_path', '')))
-        invalid = total - valid
-        self.update_statistics(total, valid, invalid, selected_count)
+
         
     def show_context_menu(self, position):
         """显示右键菜单"""
@@ -613,42 +541,7 @@ class FluentHistoryWidget(CardWidget):
             except Exception as e:
                 QMessageBox.critical(self, "清空失败", f"删除记录时出错: {str(e)}")
                 
-    def clean_invalid_records(self):
-        """清理无效记录"""
-        try:
-            # 找到所有无效记录
-            invalid_records = []
-            for record in self.history_records:
-                file_path = record.get('file_path', '')
-                if not os.path.exists(file_path):
-                    invalid_records.append(record)
-            
-            if not invalid_records:
-                QMessageBox.information(self, "提示", "没有发现无效记录")
-                return
-                
-            # 确认删除
-            reply = QMessageBox.question(
-                self, "清理无效记录", 
-                f"发现 {len(invalid_records)} 条无效记录（文件不存在），确定要删除吗？",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
-            )
-            
-            if reply == QMessageBox.Yes:
-                success_count = 0
-                for record in invalid_records:
-                    record_id = record.get('id')
-                    if record_id and self.data_manager.delete_record(record_id):
-                        success_count += 1
-                
-                # 重新加载表格
-                self.load_history()
-                
-                QMessageBox.information(self, "清理完成", f"成功清理 {success_count} 条无效记录")
-                
-        except Exception as e:
-            QMessageBox.critical(self, "清理失败", f"清理无效记录时出错: {str(e)}")
+
             
     def update_file_path(self, row):
         """更新文件路径"""
