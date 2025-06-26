@@ -23,42 +23,19 @@ class FluentInterfaceCreator(QObject):
         # 创建布局管理器
         self.parent.extraction_layout = FluentExtractionLayout(self.parent)
         
-        # 创建界面
+        # 创建界面 - FluentExtractionLayout会自动将组件设置到parent上
         self.parent.extraction_interface = self.parent.extraction_layout.create_extraction_interface()
         
-        # 获取各个组件的引用
-        components = self.parent.extraction_layout.get_components()
-        
-        # 设置组件引用到主窗口
-        self.parent.image_label = components['image_label']
-        self.parent.file_name_edit = components['file_name_edit']
-        self.parent.file_path_label = components['file_path_label']
-        self.parent.file_size_label = components['file_size_label']
-        self.parent.image_size_label = components['image_size_label']
-        self.parent.positive_prompt_text = components['positive_prompt_text']
-        self.parent.negative_prompt_text = components['negative_prompt_text']
-        self.parent.generation_method_text = components['generation_method_text']
-        self.parent.params_layout = components['params_layout']
-        self.parent.user_tags_edit = components['user_tags_edit']
-        self.parent.user_notes_edit = components['user_notes_edit']
-        self.parent.history_widget = components['history_widget']
-        self.parent.image_info_widget = components['image_info_widget']
-        self.parent.license_status_bar = components['license_status_bar']
-        
-        # 获取按钮引用
-        self.parent.positive_translate_btn = components['positive_translate_btn']
-        self.parent.negative_translate_btn = components['negative_translate_btn']
-        self.parent.save_prompts_btn = components['save_prompts_btn']
-        self.parent.reset_prompts_btn = components['reset_prompts_btn']
-        
-        # 加载历史记录
-        self.parent.history_widget.load_history()
+        # 加载历史记录（如果历史组件存在）
+        if hasattr(self.parent, 'history_widget') and self.parent.history_widget:
+            self.parent.history_widget.load_history()
     
     def create_gallery_interface(self):
         """创建图片画廊界面"""
         from .fluent_gallery_components import FluentGalleryWidget
         
         self.parent.gallery_interface = FluentGalleryWidget(self.parent)
+        self.parent.gallery_interface.setObjectName("gallery")
         
         # 连接信号
         self.parent.gallery_interface.record_selected.connect(
@@ -70,18 +47,21 @@ class FluentInterfaceCreator(QObject):
         from .fluent_prompt_editor_widget import FluentPromptEditorWidget
         
         self.parent.prompt_editor_interface = FluentPromptEditorWidget(self.parent)
+        self.parent.prompt_editor_interface.setObjectName("prompt_editor")
     
     def create_prompt_reverser_interface(self):
         """创建提示词反推界面"""
         from .fluent_prompt_reverser_widget import FluentPromptReverserWidget
         
         self.parent.prompt_reverser_interface = FluentPromptReverserWidget(self.parent)
+        self.parent.prompt_reverser_interface.setObjectName("prompt_reverser")
     
     def create_settings_interface(self):
         """创建设置界面"""
         from .fluent_settings_widget import FluentSettingsWidget
         
         self.parent.settings_interface = FluentSettingsWidget(self.parent)
+        self.parent.settings_interface.setObjectName("settings")
     
     def create_activation_interface(self):
         """创建激活界面"""
@@ -174,6 +154,9 @@ class FluentInterfaceCreator(QObject):
         
         layout.addWidget(activation_card)
         layout.addStretch()
+        
+        # 设置对象名称
+        self.parent.activation_interface.setObjectName("activation")
     
     def setup_navigation(self):
         """设置导航界面"""

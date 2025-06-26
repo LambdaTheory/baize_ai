@@ -186,12 +186,12 @@ class BaizeSplashScreen(QWidget):
                     scaled_pixmap = pixmap.scaled(180, 180, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                     self.logo_label.setPixmap(scaled_pixmap)
                     logo_loaded = True
-                    print(f"✅ 成功加载Logo: {logo_path}")
+                    print(f"[成功] 成功加载Logo: {logo_path}")
                     break
                 else:
-                    print(f"❌ 图片加载失败（pixmap为空）: {logo_path}")
+                    print(f"[错误] 图片加载失败（pixmap为空）: {logo_path}")
             else:
-                print(f"❌ 文件不存在: {logo_path}")
+                print(f"[错误] 文件不存在: {logo_path}")
         
         if not logo_loaded:
             # 如果没有找到logo，显示默认的白泽图标
@@ -204,7 +204,7 @@ class BaizeSplashScreen(QWidget):
                     background: transparent;
                 }
             """)
-            print("⚠️ 未找到Logo文件，使用默认图标")
+            print("[警告] 未找到Logo文件，使用默认图标")
     
     def setup_animations(self):
         """设置动画效果"""

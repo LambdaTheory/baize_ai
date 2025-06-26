@@ -302,8 +302,14 @@ class FluentImageDisplay(QObject):
         from qfluentwidgets import BodyLabel
         from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFrame
         
-        model_name = image_info.get('model_name', '')
-        model_hash = image_info.get('model_hash', '')
+        # 检查多种可能的模型字段
+        model_name = (image_info.get('model_name', '') or 
+                     image_info.get('model', '') or
+                     image_info.get('checkpoint', '') or
+                     image_info.get('unet_model', '') or
+                     image_info.get('ckpt_name', ''))
+        model_hash = (image_info.get('model_hash', '') or
+                     image_info.get('checkpoint_hash', ''))
         
         if not model_name and not model_hash:
             return

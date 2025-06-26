@@ -79,15 +79,15 @@ def main():
                     icon = QIcon(icon_path)
                     if not icon.isNull():
                         app.setWindowIcon(icon)
-                        print(f"✅ 设置应用图标: {icon_path}")
+                        print(f"[成功] 设置应用图标: {icon_path}")
                         return True
                 except Exception as e:
-                    print(f"⚠️ 加载应用图标失败 {icon_path}: {e}")
+                    print(f"[警告] 加载应用图标失败 {icon_path}: {e}")
                     continue
             else:
-                print(f"❌ 图标文件不存在: {icon_path}")
+                print(f"[错误] 图标文件不存在: {icon_path}")
         
-        print("⚠️ 未找到应用图标文件")
+        print("[警告] 未找到应用图标文件")
         return False
     
     set_app_icon()
