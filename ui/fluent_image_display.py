@@ -272,22 +272,8 @@ class FluentImageDisplay(QObject):
             font-weight: 600;
         """)
         
-        # 状态标签
-        status_label = BodyLabel("已识别")
-        status_label.setStyleSheet("""
-            color: #065F46;
-            font-size: 10px;
-            font-weight: 500;
-            background-color: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            padding: 2px 6px;
-            border-radius: 10px;
-        """)
-        status_label.setFixedHeight(18)
-        
         method_layout.addWidget(method_icon)
         method_layout.addWidget(method_label, 1)
-        method_layout.addWidget(status_label)
         
         method_card.setLayout(method_layout)
         self.parent.params_layout.addWidget(method_card)
