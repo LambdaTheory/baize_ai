@@ -960,7 +960,7 @@ class FluentMainWindow(FluentWindow):
         )
         
     def create_extraction_interface(self):
-        """创建信息提取界面"""
+        """创建信息提取界面 - 三列布局"""
         self.extraction_interface = QWidget()
         self.extraction_interface.setAcceptDrops(True)  # 使整个界面支持拖拽
         
@@ -972,44 +972,18 @@ class FluentMainWindow(FluentWindow):
         # 许可证状态栏
         self.create_license_status_bar(main_layout)
         
-        # 主要内容布局
+        # 主要内容布局 - 三列
         layout = QHBoxLayout()
         layout.setSpacing(FluentSpacing.LG)
         
-        # 左侧区域 - 图片信息展示
-        left_widget = QWidget()
-        left_layout = QVBoxLayout()
-        left_layout.setSpacing(FluentSpacing.MD)
-        left_widget.setLayout(left_layout)
+        # 第一列 - 图片预览和基础信息
+        self.create_first_column(layout)
         
-        # 移除原来的拖拽区域组件，改为提示信息
-        info_label = BodyLabel("🖼️ 将图片或文件夹拖拽到此界面的任意位置即可开始处理\n💻 支持从SD WebUI、ComfyUI等浏览器直接拖拽图片")
-        info_label.setAlignment(Qt.AlignCenter)
-        info_label.setWordWrap(True)
-        info_label.setStyleSheet(f"""
-            color: {FluentColors.get_color('text_secondary')};
-            font-size: 14px;
-            padding: 20px;
-            background-color: {FluentColors.get_color('bg_secondary')};
-            border-radius: 12px;
-            border: 2px dashed {FluentColors.get_color('border_primary')};
-        """)
-        left_layout.addWidget(info_label)
+        # 第二列 - AI信息
+        self.create_second_column(layout)
         
-        # 图片信息组件
-        self.image_info_widget = FluentImageInfoWidget()
-        self.image_info_widget.setVisible(True)  # 确保可见
-        self.image_info_widget.show()  # 强制显示
-        print(f"图片信息组件创建: {self.image_info_widget}")
-        print(f"图片信息组件初始可见性: {self.image_info_widget.isVisible()}")
-        left_layout.addWidget(self.image_info_widget)
-        
-        # 右侧区域 - 历史记录
-        self.history_widget = FluentHistoryWidget(self.data_manager)
-        
-        # 添加到布局
-        layout.addWidget(left_widget, 3)  # 左侧占3份
-        layout.addWidget(self.history_widget, 2)  # 右侧占2份
+        # 第三列 - 标签备注和历史记录
+        self.create_third_column(layout)
         
         # 将主要内容布局添加到主布局
         main_layout.addLayout(layout)
@@ -1029,7 +1003,575 @@ class FluentMainWindow(FluentWindow):
         
         # 加载历史记录
         self.history_widget.load_history()
+    
+    def create_first_column(self, parent_layout):
+        """创建第一列：图片预览(80%) + 基础信息(20%)"""
+        from qfluentwidgets import CardWidget, SubtitleLabel, BodyLabel, LineEdit
         
+        first_column = QWidget()
+        column_layout = QVBoxLayout()
+        column_layout.setSpacing(FluentSpacing.MD)
+        first_column.setLayout(column_layout)
+        
+        # 图片预览卡片 (80%)
+        self.image_preview_card = CardWidget()
+        self.image_preview_card.setBorderRadius(16)
+        preview_layout = QVBoxLayout()
+        preview_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.LG, 
+                                        FluentSpacing.LG, FluentSpacing.LG)
+        
+        # 标题
+        preview_title = SubtitleLabel("📸 图片预览")
+        preview_title.setStyleSheet(f"""
+            color: {FluentColors.get_color('text_primary')};
+            font-weight: 600;
+            margin-bottom: 12px;
+        """)
+        
+        # 图片标签
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setMinimumHeight(350)
+        self.image_label.setScaledContents(False)
+        self.image_label.setStyleSheet(f"""
+            QLabel {{
+                border: 2px dashed {FluentColors.get_color('border_primary')};
+                border-radius: 12px;
+                background-color: {FluentColors.get_color('bg_secondary')};
+                color: {FluentColors.get_color('text_tertiary')};
+                font-size: 16px;
+            }}
+        """)
+        self.image_label.setText("🖼️ 将图片拖拽到此处\n💻 支持从SD WebUI、ComfyUI等浏览器拖拽")
+        
+        preview_layout.addWidget(preview_title)
+        preview_layout.addWidget(self.image_label, 1)
+        self.image_preview_card.setLayout(preview_layout)
+        
+        # 基础信息卡片 (20%)
+        self.basic_info_card = CardWidget()
+        self.basic_info_card.setBorderRadius(16)
+        basic_layout = QVBoxLayout()
+        basic_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.MD, 
+                                      FluentSpacing.LG, FluentSpacing.LG)
+        
+        # 标题
+        basic_title = SubtitleLabel("📋 基本信息")
+        basic_title.setStyleSheet(f"""
+            color: {FluentColors.get_color('text_primary')};
+            font-weight: 600;
+            margin-bottom: 8px;
+        """)
+        
+        # 创建滚动区域
+        from qfluentwidgets import SmoothScrollArea
+        basic_scroll = SmoothScrollArea()
+        basic_scroll.setMaximumHeight(150)
+        basic_scroll.setWidgetResizable(True)
+        basic_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        
+        basic_content = QWidget()
+        basic_content_layout = QVBoxLayout()
+        basic_content_layout.setSpacing(FluentSpacing.SM)
+        
+        # 文件名（可编辑）
+        filename_layout = QHBoxLayout()
+        filename_label = BodyLabel("文件名:")
+        filename_label.setMinimumWidth(60)
+        filename_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.file_name_edit = LineEdit()
+        self.file_name_edit.setPlaceholderText("文件名...")
+        self.file_name_edit.setFixedHeight(32)
+        filename_layout.addWidget(filename_label)
+        filename_layout.addWidget(self.file_name_edit)
+        
+        # 文件路径（保留变量但不显示在界面上）
+        self.file_path_label = BodyLabel("-")
+        
+        # 文件大小和尺寸
+        size_layout = QHBoxLayout()
+        size_layout.setSpacing(FluentSpacing.LG)
+        
+        size_label = BodyLabel("大小:")
+        size_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.file_size_label = BodyLabel("-")
+        self.file_size_label.setStyleSheet(f"color: {FluentColors.get_color('text_primary')};")
+        
+        dimension_label = BodyLabel("尺寸:")
+        dimension_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.image_size_label = BodyLabel("-")
+        self.image_size_label.setStyleSheet(f"color: {FluentColors.get_color('text_primary')};")
+        
+        size_layout.addWidget(size_label)
+        size_layout.addWidget(self.file_size_label)
+        size_layout.addWidget(dimension_label)
+        size_layout.addWidget(self.image_size_label)
+        size_layout.addStretch()
+        
+        basic_content_layout.addLayout(filename_layout)
+        basic_content_layout.addLayout(size_layout)
+        basic_content_layout.addStretch()
+        
+        basic_content.setLayout(basic_content_layout)
+        basic_scroll.setWidget(basic_content)
+        
+        basic_layout.addWidget(basic_title)
+        basic_layout.addWidget(basic_scroll)
+        self.basic_info_card.setLayout(basic_layout)
+        
+        # 按70%和30%的比例添加到列布局
+        column_layout.addWidget(self.image_preview_card, 7)  # 70%
+        column_layout.addWidget(self.basic_info_card, 3)     # 30%
+        
+        parent_layout.addWidget(first_column, 3)  # 第一列占3份
+    
+    def create_second_column(self, parent_layout):
+        """创建第二列：AI信息(100%)"""
+        from qfluentwidgets import CardWidget, SubtitleLabel, BodyLabel, TextEdit, SmoothScrollArea, FlowLayout, TransparentPushButton, PushButton
+        
+        second_column = QWidget()
+        column_layout = QVBoxLayout()
+        column_layout.setSpacing(FluentSpacing.MD)
+        second_column.setLayout(column_layout)
+        
+        # AI信息卡片 (100%)
+        self.ai_info_card = CardWidget()
+        self.ai_info_card.setBorderRadius(16)
+        ai_layout = QVBoxLayout()
+        ai_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.LG, 
+                                   FluentSpacing.LG, FluentSpacing.LG)
+        
+        # 标题
+        ai_title = SubtitleLabel("🤖 AI生成信息")
+        ai_title.setStyleSheet(f"""
+            color: {FluentColors.get_color('text_primary')};
+            font-weight: 600;
+            margin-bottom: 8px;
+        """)
+        
+        # AI信息滚动区域
+        ai_scroll = SmoothScrollArea()
+        ai_scroll.setWidgetResizable(True)
+        ai_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        
+        self.ai_content = QWidget()
+        self.ai_content_layout = QVBoxLayout()
+        self.ai_content_layout.setSpacing(FluentSpacing.SM)
+        
+        # 正向提示词
+        self.positive_prompt_label = BodyLabel("正向提示词:")
+        self.positive_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.positive_prompt_text = TextEdit()
+        self.positive_prompt_text.setMaximumHeight(80)
+        self.positive_prompt_text.setPlaceholderText("正向提示词...")
+        
+        # 反向提示词
+        self.negative_prompt_label = BodyLabel("反向提示词:")
+        self.negative_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.negative_prompt_text = TextEdit()
+        self.negative_prompt_text.setMaximumHeight(60)
+        self.negative_prompt_text.setPlaceholderText("反向提示词...")
+        
+        # 生成方式
+        self.generation_method_label = BodyLabel("生成方式:")
+        self.generation_method_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.generation_method_text = BodyLabel("-")
+        self.generation_method_text.setStyleSheet(f"""
+            color: {FluentColors.get_color('text_primary')};
+            background-color: {FluentColors.get_color('bg_secondary')};
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        """)
+        
+        # 编辑提示词按钮
+        edit_prompt_layout = QHBoxLayout()
+        self.edit_prompt_btn = TransparentPushButton("编辑提示词")
+        self.edit_prompt_btn.setFixedHeight(28)
+        self.edit_prompt_btn.setStyleSheet(f"""
+            TransparentPushButton {{
+                color: {FluentColors.get_color('accent')};
+                border: 1px solid {FluentColors.get_color('accent')};
+                border-radius: 4px;
+                padding: 4px 12px;
+                font-size: 12px;
+            }}
+            TransparentPushButton:hover {{
+                background-color: {FluentColors.get_color('accent')};
+                color: white;
+            }}
+        """)
+        edit_prompt_layout.addWidget(self.edit_prompt_btn)
+        edit_prompt_layout.addStretch()
+        
+        # 生成参数
+        self.params_label = BodyLabel("生成参数:")
+        self.params_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.params_widget = QWidget()
+        self.params_layout = QVBoxLayout()
+        self.params_widget.setLayout(self.params_layout)
+        
+        self.ai_content_layout.addWidget(self.positive_prompt_label)
+        self.ai_content_layout.addWidget(self.positive_prompt_text)
+        self.ai_content_layout.addWidget(self.negative_prompt_label)
+        self.ai_content_layout.addWidget(self.negative_prompt_text)
+        self.ai_content_layout.addWidget(self.generation_method_label)
+        self.ai_content_layout.addWidget(self.generation_method_text)
+        self.ai_content_layout.addLayout(edit_prompt_layout)
+        self.ai_content_layout.addWidget(self.params_label)
+        self.ai_content_layout.addWidget(self.params_widget)
+        self.ai_content_layout.addStretch()
+        
+        self.ai_content.setLayout(self.ai_content_layout)
+        ai_scroll.setWidget(self.ai_content)
+        
+        ai_layout.addWidget(ai_title)
+        ai_layout.addWidget(ai_scroll)
+        self.ai_info_card.setLayout(ai_layout)
+        
+        # AI信息卡片占满整个列
+        column_layout.addWidget(self.ai_info_card, 1)
+        
+        parent_layout.addWidget(second_column, 3)  # 第二列占3份
+    
+    def create_third_column(self, parent_layout):
+        """创建第三列：标签备注(40%) + 历史记录(60%)"""
+        from qfluentwidgets import CardWidget, SubtitleLabel, BodyLabel, TextEdit, SmoothScrollArea, PushButton
+        
+        third_column = QWidget()
+        column_layout = QVBoxLayout()
+        column_layout.setSpacing(FluentSpacing.MD)
+        third_column.setLayout(column_layout)
+        
+        # 标签备注卡片 (40%)
+        self.tags_notes_card = CardWidget()
+        self.tags_notes_card.setBorderRadius(16)
+        tags_layout = QVBoxLayout()
+        tags_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.LG, 
+                                     FluentSpacing.LG, FluentSpacing.LG)
+        
+        # 标题
+        tags_title = SubtitleLabel("🏷️ 标签与备注")
+        tags_title.setStyleSheet(f"""
+            color: {FluentColors.get_color('text_primary')};
+            font-weight: 600;
+            margin-bottom: 8px;
+        """)
+        
+        # 标签备注滚动区域
+        tags_scroll = SmoothScrollArea()
+        tags_scroll.setWidgetResizable(True)
+        tags_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        
+        tags_content = QWidget()
+        tags_content_layout = QVBoxLayout()
+        tags_content_layout.setSpacing(FluentSpacing.SM)
+        
+        # 用户标签
+        user_tags_label = BodyLabel("用户标签:")
+        user_tags_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.user_tags_edit = TextEdit()
+        self.user_tags_edit.setMaximumHeight(60)
+        self.user_tags_edit.setPlaceholderText("输入标签，用逗号分隔...")
+        
+        # 用户备注
+        user_notes_label = BodyLabel("用户备注:")
+        user_notes_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.user_notes_edit = TextEdit()
+        self.user_notes_edit.setPlaceholderText("输入备注信息...")
+        
+        # 操作按钮区域
+        button_layout = QHBoxLayout()
+        self.save_btn = PushButton("保存记录")
+        self.save_btn.setFixedHeight(32)
+        self.copy_btn = PushButton("复制信息")
+        self.copy_btn.setFixedHeight(32)
+        self.export_btn = PushButton("HTML分享")
+        self.export_btn.setFixedHeight(32)
+        
+        button_layout.addWidget(self.save_btn)
+        button_layout.addWidget(self.copy_btn)
+        button_layout.addWidget(self.export_btn)
+        button_layout.addStretch()
+        
+        tags_content_layout.addWidget(user_tags_label)
+        tags_content_layout.addWidget(self.user_tags_edit)
+        tags_content_layout.addWidget(user_notes_label)
+        tags_content_layout.addWidget(self.user_notes_edit)
+        tags_content_layout.addLayout(button_layout)
+        tags_content_layout.addStretch()
+        
+        tags_content.setLayout(tags_content_layout)
+        tags_scroll.setWidget(tags_content)
+        
+        tags_layout.addWidget(tags_title)
+        tags_layout.addWidget(tags_scroll)
+        self.tags_notes_card.setLayout(tags_layout)
+        
+        # 历史记录卡片 (70%)
+        self.history_card = CardWidget()
+        self.history_card.setBorderRadius(16)
+        history_layout = QVBoxLayout()
+        history_layout.setContentsMargins(FluentSpacing.SM, FluentSpacing.SM, 
+                                        FluentSpacing.SM, FluentSpacing.SM)
+        
+        # 历史记录组件（直接添加，不需要额外标题）
+        self.history_widget = FluentHistoryWidget(self.data_manager)
+        
+        history_layout.addWidget(self.history_widget)
+        self.history_card.setLayout(history_layout)
+        
+        # 按30%和70%的比例添加到列布局
+        column_layout.addWidget(self.tags_notes_card, 3)    # 30%
+        column_layout.addWidget(self.history_card, 7)       # 70%
+        
+        parent_layout.addWidget(third_column, 3)  # 第三列占3份
+    
+    def handle_edit_prompt_clicked(self):
+        """处理编辑提示词按钮点击"""
+        try:
+            # 获取当前的提示词
+            positive_prompt = self.positive_prompt_text.toPlainText()
+            negative_prompt = self.negative_prompt_text.toPlainText()
+            
+            # 构造提示词文本
+            prompt_text = positive_prompt
+            if negative_prompt:
+                prompt_text += f"\nNegative prompt: {negative_prompt}"
+            
+            # 获取当前图片的场景名称
+            scene_name = "未命名场景"
+            if hasattr(self, 'current_file_path') and self.current_file_path:
+                import os
+                scene_name = os.path.splitext(os.path.basename(self.current_file_path))[0]
+            
+            # 触发编辑提示词请求信号
+            self.handle_edit_prompt_request(prompt_text, scene_name)
+            
+        except Exception as e:
+            print(f"处理编辑提示词请求时出错: {e}")
+    
+    def display_image_info(self, file_path, image_info=None):
+        """显示图片信息到新布局"""
+        import os
+        from PyQt5.QtGui import QPixmap
+        from qfluentwidgets import BodyLabel
+        
+        try:
+            # 显示图片预览
+            if os.path.exists(file_path):
+                pixmap = QPixmap(file_path)
+                if not pixmap.isNull():
+                    # 缩放图片以适应显示区域
+                    scaled_pixmap = pixmap.scaled(
+                        self.image_label.size(), 
+                        Qt.KeepAspectRatio, 
+                        Qt.SmoothTransformation
+                    )
+                    self.image_label.setPixmap(scaled_pixmap)
+                else:
+                    self.image_label.setText("无法加载图片")
+            else:
+                self.image_label.setText("图片文件不存在")
+            
+            # 显示基础信息
+            filename = os.path.basename(file_path)
+            self.file_name_edit.setText(filename)
+            self.file_path_label.setText(file_path)
+            
+            # 文件大小
+            try:
+                file_size = os.path.getsize(file_path)
+                size_text = self.format_file_size(file_size)
+                self.file_size_label.setText(size_text)
+            except:
+                self.file_size_label.setText("-")
+            
+            # 图片尺寸
+            if not pixmap.isNull():
+                dimensions = f"{pixmap.width()} x {pixmap.height()}"
+                self.image_size_label.setText(dimensions)
+            else:
+                self.image_size_label.setText("-")
+            
+            # 显示AI信息
+            if image_info and isinstance(image_info, dict):
+                # 正向提示词
+                prompt = image_info.get('prompt', '')
+                self.positive_prompt_text.setPlainText(prompt)
+                
+                # 反向提示词
+                negative_prompt = image_info.get('negative_prompt', '')
+                self.negative_prompt_text.setPlainText(negative_prompt)
+                
+                # 生成方式判断
+                generation_method = self.detect_generation_method(image_info)
+                self.generation_method_text.setText(generation_method)
+                
+                # 生成参数
+                self.clear_params_layout()
+                self.create_params_layout(image_info)
+            else:
+                # 清空AI信息
+                self.positive_prompt_text.setPlainText("")
+                self.negative_prompt_text.setPlainText("")
+                self.generation_method_text.setText("-")
+                self.clear_params_layout()
+                
+        except Exception as e:
+            print(f"显示图片信息时出错: {e}")
+            self.image_label.setText(f"显示错误: {str(e)}")
+    
+    def format_file_size(self, size):
+        """格式化文件大小"""
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} TB"
+    
+    def detect_generation_method(self, image_info):
+        """检测图片的生成方式"""
+        if not isinstance(image_info, dict):
+            return "-"
+        
+        # 检查ComfyUI特有标识
+        if 'workflow' in image_info or 'comfyui' in str(image_info).lower():
+            return "ComfyUI"
+        
+        # 检查SD WebUI特有参数
+        webui_indicators = ['sampler_name', 'cfg_scale', 'steps', 'seed']
+        if any(key in image_info for key in webui_indicators):
+            return "SD WebUI"
+        
+        # 检查其他标识符
+        software = image_info.get('software', '').lower()
+        if 'comfy' in software:
+            return "ComfyUI"
+        elif 'automatic1111' in software or 'webui' in software:
+            return "SD WebUI"
+        
+        # 如果有prompt但无明确标识，默认为SD WebUI
+        if image_info.get('prompt'):
+            return "SD WebUI"
+        
+        return "-"
+    
+    def clear_params_layout(self):
+        """清空参数布局"""
+        while self.params_layout.count():
+            child = self.params_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+    
+    def create_params_layout(self, image_info):
+        """创建参数布局"""
+        from qfluentwidgets import BodyLabel
+        
+        # 确保image_info是字典类型
+        if not isinstance(image_info, dict):
+            return
+        
+        # 定义参数映射
+        param_mapping = {
+            'steps': '采样步数',
+            'sampler_name': '采样器',
+            'cfg_scale': 'CFG Scale',
+            'seed': '随机种子',
+            'size': '尺寸',
+            'model_name': '模型',
+            'model_hash': '模型哈希',
+            'denoising_strength': '去噪强度',
+            'clip_skip': 'Clip Skip',
+            'ensd': 'ENSD'
+        }
+        
+        # 显示主要参数
+        for key, label in param_mapping.items():
+            value = image_info.get(key, '')
+            if value:
+                param_widget = QWidget()
+                param_layout = QVBoxLayout()
+                param_layout.setSpacing(2)
+                param_layout.setContentsMargins(0, 4, 0, 4)
+                
+                # 参数标签
+                param_label = BodyLabel(f"{label}:")
+                param_label.setStyleSheet(f"""
+                    color: {FluentColors.get_color('text_secondary')};
+                    font-size: 12px;
+                    margin-bottom: 2px;
+                """)
+                
+                # 参数值
+                param_value = BodyLabel(str(value))
+                param_value.setWordWrap(True)
+                param_value.setStyleSheet(f"""
+                    color: {FluentColors.get_color('text_primary')};
+                    background-color: {FluentColors.get_color('bg_secondary')};
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                """)
+                
+                param_layout.addWidget(param_label)
+                param_layout.addWidget(param_value)
+                param_widget.setLayout(param_layout)
+                
+                self.params_layout.addWidget(param_widget)
+        
+        # 显示LoRA信息
+        lora_info = image_info.get('lora_info', {})
+        if lora_info:
+            # 兼容不同的LoRA数据格式
+            lora_list = []
+            
+            if isinstance(lora_info, dict):
+                # 格式1: {"loras": [{"name": "xxx", "weight": 0.8}]}
+                if 'loras' in lora_info and isinstance(lora_info['loras'], list):
+                    lora_list = lora_info['loras']
+                # 格式2: {"lora_name": weight}
+                elif 'loras' not in lora_info:
+                    for name, weight in lora_info.items():
+                        lora_list.append({"name": name, "weight": weight})
+            elif isinstance(lora_info, list):
+                # 格式3: [{"name": "xxx", "weight": 0.8}]
+                lora_list = lora_info
+            
+            if lora_list:
+                lora_widget = QWidget()
+                lora_layout = QVBoxLayout()
+                lora_layout.setSpacing(2)
+                lora_layout.setContentsMargins(0, 4, 0, 4)
+                
+                # LoRA标题
+                lora_label = BodyLabel("LoRA:")
+                lora_label.setStyleSheet(f"""
+                    color: {FluentColors.get_color('text_secondary')};
+                    font-size: 12px;
+                    margin-bottom: 2px;
+                """)
+                lora_layout.addWidget(lora_label)
+                
+                # LoRA列表
+                for lora in lora_list:
+                    if isinstance(lora, dict):
+                        lora_text = f"• {lora.get('name', 'Unknown')} (权重: {lora.get('weight', 'N/A')})"
+                        lora_item = BodyLabel(lora_text)
+                        lora_item.setWordWrap(True)
+                        lora_item.setStyleSheet(f"""
+                            color: {FluentColors.get_color('text_primary')};
+                            background-color: {FluentColors.get_color('bg_secondary')};
+                            padding: 4px 8px;
+                            border-radius: 4px;
+                            font-size: 12px;
+                            margin-bottom: 2px;
+                        """)
+                        lora_layout.addWidget(lora_item)
+                
+                lora_widget.setLayout(lora_layout)
+                self.params_layout.addWidget(lora_widget)
+    
     def resizeEvent(self, event):
         """窗口大小变化事件"""
         super().resizeEvent(event)
@@ -1289,24 +1831,19 @@ class FluentMainWindow(FluentWindow):
         
     def setup_connections(self):
         """设置信号连接"""
-        # 移除原来的拖拽区域信号连接
-        # self.drop_area.filesDropped.connect(self.handle_files_dropped)
-        # self.drop_area.folderDropped.connect(self.handle_folder_dropped)
-        
-        # 图片信息组件信号
-        self.image_info_widget.save_btn.clicked.connect(self.save_record)
-        self.image_info_widget.copy_info_btn.clicked.connect(self.copy_info)
-        self.image_info_widget.share_html_btn.clicked.connect(self.share_as_html)
-        self.image_info_widget.auto_tag_btn.clicked.connect(self.auto_tag_image)
-        self.image_info_widget.edit_prompt_requested.connect(self.handle_edit_prompt_request)
+        # 新布局的按钮连接
+        self.save_btn.clicked.connect(self.save_record)
+        self.copy_btn.clicked.connect(self.copy_info)
+        self.export_btn.clicked.connect(self.share_as_html)
+        self.edit_prompt_btn.clicked.connect(self.handle_edit_prompt_clicked)
         
         # 历史记录信号
         self.history_widget.record_selected.connect(self.load_from_history_record)
         
         # 监听用户输入变化，启动自动保存定时器
-        self.image_info_widget.file_name_edit.textChanged.connect(self.on_user_input_changed)
-        self.image_info_widget.tags_edit.textChanged.connect(self.on_user_input_changed)
-        self.image_info_widget.notes_text.textChanged.connect(self.on_user_input_changed)
+        self.file_name_edit.textChanged.connect(self.on_user_input_changed)
+        self.user_tags_edit.textChanged.connect(self.on_user_input_changed)
+        self.user_notes_edit.textChanged.connect(self.on_user_input_changed)
         
     def handle_files_dropped(self, files):
         """处理拖拽的文件"""
@@ -1356,7 +1893,7 @@ class FluentMainWindow(FluentWindow):
             image_info = self.image_reader.extract_info(file_path)
             
             # 显示图片信息
-            self.image_info_widget.display_image_info(file_path, image_info)
+            self.display_image_info(file_path, image_info)
             
             # 自动保存记录
             self.auto_save_record(file_path, image_info)
@@ -1420,9 +1957,9 @@ class FluentMainWindow(FluentWindow):
             
         try:
             # 获取用户输入的信息
-            custom_name = self.image_info_widget.file_name_edit.text().strip()
-            tags = self.image_info_widget.tags_edit.text().strip()
-            notes = self.image_info_widget.notes_text.toPlainText().strip()
+            custom_name = self.file_name_edit.text().strip()
+            tags = self.user_tags_edit.toPlainText().strip()
+            notes = self.user_notes_edit.toPlainText().strip()
             
             # 重新读取图片信息
             image_info = self.image_reader.extract_info(self.current_file_path)
@@ -1480,12 +2017,12 @@ class FluentMainWindow(FluentWindow):
             info_lines = []
             
             # 第一行：Prompt（正向提示词）
-            prompt = self.image_info_widget.prompt_text.toPlainText().strip()
+            prompt = self.positive_prompt_text.toPlainText().strip()
             if prompt:
                 info_lines.append(prompt)
             
             # 第二行：Negative prompt
-            negative_prompt = self.image_info_widget.neg_prompt_text.toPlainText().strip()
+            negative_prompt = self.negative_prompt_text.toPlainText().strip()
             if negative_prompt:
                 info_lines.append(f"Negative prompt: {negative_prompt}")
             
@@ -1899,15 +2436,12 @@ class FluentMainWindow(FluentWindow):
             image_info = self.image_reader.extract_info(file_path)
             
             # 显示图片信息
-            self.image_info_widget.display_image_info(file_path, image_info)
+            self.display_image_info(file_path, image_info)
             
             # 加载用户自定义信息
-            if hasattr(self.image_info_widget, 'file_name_edit'):
-                self.image_info_widget.file_name_edit.setText(record.get('custom_name', ''))
-            if hasattr(self.image_info_widget, 'tags_edit'):
-                self.image_info_widget.tags_edit.setText(record.get('tags', ''))
-            if hasattr(self.image_info_widget, 'notes_text'):
-                self.image_info_widget.notes_text.setPlainText(record.get('notes', ''))
+            self.file_name_edit.setText(record.get('custom_name', ''))
+            self.user_tags_edit.setPlainText(record.get('tags', ''))
+            self.user_notes_edit.setPlainText(record.get('notes', ''))
             
             # 启用自动保存功能
             self.auto_save_enabled = True
@@ -2007,12 +2541,9 @@ class FluentMainWindow(FluentWindow):
         
         # 检查界面状态
         print(f"信息提取页面可见: {self.extraction_interface.isVisible()}")
-        print(f"图片信息组件可见: {self.image_info_widget.isVisible()}")
         
         # 强制显示组件
         self.extraction_interface.setVisible(True)
-        self.image_info_widget.setVisible(True)
-        self.image_info_widget.show()
         
         # 加载选中的记录
         self.load_from_history_record(record_data)
@@ -2095,9 +2626,9 @@ class FluentMainWindow(FluentWindow):
             print("[自动保存] 开始自动保存当前记录...")
             
             # 获取用户输入的信息
-            custom_name = self.image_info_widget.file_name_edit.text().strip()
-            tags = self.image_info_widget.tags_edit.text().strip()
-            notes = self.image_info_widget.notes_text.toPlainText().strip()
+            custom_name = self.file_name_edit.text().strip()
+            tags = self.user_tags_edit.toPlainText().strip()
+            notes = self.user_notes_edit.toPlainText().strip()
             
             # 重新读取图片信息
             image_info = self.image_reader.extract_info(self.current_file_path)
