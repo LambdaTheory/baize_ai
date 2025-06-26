@@ -1096,14 +1096,14 @@ class FluentMainWindow(FluentWindow):
         self.positive_prompt_label = BodyLabel("正向提示词:")
         self.positive_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
         self.positive_prompt_text = TextEdit()
-        self.positive_prompt_text.setMaximumHeight(80)
+        self.positive_prompt_text.setMaximumHeight(120)  # 从80增加到120
         self.positive_prompt_text.setPlaceholderText("正向提示词...")
         
         # 反向提示词
         self.negative_prompt_label = BodyLabel("反向提示词:")
         self.negative_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
         self.negative_prompt_text = TextEdit()
-        self.negative_prompt_text.setMaximumHeight(60)
+        self.negative_prompt_text.setMaximumHeight(100)  # 从60增加到100
         self.negative_prompt_text.setPlaceholderText("反向提示词...")
         
         # 生成方式

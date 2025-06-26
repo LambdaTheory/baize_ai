@@ -304,7 +304,7 @@ class FluentHistoryWidget(CardWidget):
             }}
         """)
         
-        parent_layout.addWidget(self.history_table)
+        parent_layout.addWidget(self.history_table, 1)  # 添加拉伸因子，让表格占用剩余空间
         
     def setup_table_columns(self):
         """设置表格列"""
