@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                             QSplitter, QApplication, QGridLayout, QLabel,
                             QSizePolicy, QMessageBox)
 from PyQt5.QtCore import Qt, pyqtSignal, QSize, QThread, QObject
-from PyQt5.QtGui import QPixmap, QIcon, QDragEnterEvent, QDropEvent, QPainter, QBrush, QColor, QPen, QFont
+from PyQt5.QtGui import QPixmap, QIcon, QDragEnterEvent, QDropEvent, QPainter, QBrush, QColor, QPen, QFont, QLinearGradient
 
 from qfluentwidgets import (NavigationInterface, NavigationItemPosition, FluentWindow,
                            SplashScreen, InfoBar, InfoBarPosition, MessageBox,
@@ -40,30 +40,87 @@ class DragOverlay(QWidget):
         super().__init__(parent)
         self.setVisible(False)
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        self.setStyleSheet("background-color: rgba(79, 70, 229, 0.1);")
         
     def paintEvent(self, event):
         """绘制蒙层"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
         
-        # 背景蒙层
-        painter.fillRect(self.rect(), QColor(79, 70, 229, 25))
+        # 创建渐变背景
+        gradient = QLinearGradient(0, 0, 0, self.height())
+        gradient.setColorAt(0, QColor(0, 120, 212, 40))     # Microsoft Blue 浅色
+        gradient.setColorAt(0.5, QColor(0, 90, 158, 60))    # 中间更深
+        gradient.setColorAt(1, QColor(0, 78, 146, 40))      # 底部稍浅
         
-        # 边框
-        pen = QPen(QColor(79, 70, 229), 3, Qt.DashLine)
+        painter.fillRect(self.rect(), QBrush(gradient))
+        
+        # 绘制圆角边框
+        border_rect = self.rect().adjusted(20, 20, -20, -20)
+        pen = QPen(QColor(0, 120, 212, 180), 4, Qt.DashLine)
+        pen.setDashPattern([10, 5])  # 自定义虚线样式
         painter.setPen(pen)
-        painter.drawRect(self.rect().adjusted(10, 10, -10, -10))
+        painter.drawRoundedRect(border_rect, 24, 24)
         
-        # 文字
-        painter.setPen(QPen(QColor(79, 70, 229)))
-        font = QFont()
-        font.setPointSize(24)
-        font.setWeight(QFont.Bold)
-        painter.setFont(font)
+        # 绘制内部装饰边框
+        inner_rect = border_rect.adjusted(12, 12, -12, -12)
+        inner_pen = QPen(QColor(255, 255, 255, 100), 2, Qt.SolidLine)
+        painter.setPen(inner_pen)
+        painter.drawRoundedRect(inner_rect, 16, 16)
         
-        text = "把图片放到此处"
-        painter.drawText(self.rect(), Qt.AlignCenter, text)
+        # 绘制图标
+        icon_size = 48
+        icon_rect = self.rect().center()
+        icon_rect.setX(icon_rect.x() - icon_size // 2)
+        icon_rect.setY(icon_rect.y() - 60)
+        
+        # 绘制文件图标
+        painter.setPen(QPen(QColor(255, 255, 255, 200)))
+        painter.setBrush(QBrush(QColor(0, 120, 212, 100)))
+        icon_path = painter.drawEllipse(icon_rect.x(), icon_rect.y(), icon_size, icon_size)
+        
+        # 图标内部的"+"符号
+        painter.setPen(QPen(QColor(255, 255, 255), 4, Qt.SolidLine))
+        center_x = icon_rect.x() + icon_size // 2
+        center_y = icon_rect.y() + icon_size // 2
+        # 水平线
+        painter.drawLine(center_x - 12, center_y, center_x + 12, center_y)
+        # 垂直线
+        painter.drawLine(center_x, center_y - 12, center_x, center_y + 12)
+        
+        # 主标题
+        painter.setPen(QPen(QColor(255, 255, 255)))
+        title_font = QFont()
+        title_font.setPointSize(28)
+        title_font.setWeight(QFont.Bold)
+        title_font.setFamily("Microsoft YaHei")
+        painter.setFont(title_font)
+        
+        title_rect = self.rect().adjusted(0, 40, 0, 0)
+        painter.drawText(title_rect, Qt.AlignCenter, "拖放图片到此处")
+        
+        # 副标题
+        painter.setPen(QPen(QColor(255, 255, 255, 180)))
+        subtitle_font = QFont()
+        subtitle_font.setPointSize(16)
+        subtitle_font.setWeight(QFont.Normal)
+        subtitle_font.setFamily("Microsoft YaHei")
+        painter.setFont(subtitle_font)
+        
+        subtitle_rect = self.rect().adjusted(0, 90, 0, 0)
+        painter.drawText(subtitle_rect, Qt.AlignCenter, "支持 PNG、JPG、JPEG 格式或文件夹")
+        
+        # 底部装饰点
+        dot_pen = QPen(QColor(255, 255, 255, 120))
+        painter.setPen(dot_pen)
+        painter.setBrush(QBrush(QColor(255, 255, 255, 120)))
+        
+        bottom_y = self.rect().bottom() - 80
+        center_x = self.rect().center().x()
+        
+        for i in range(5):
+            x = center_x - 40 + i * 20
+            painter.drawEllipse(x - 3, bottom_y - 3, 6, 6)
 
 
 class HighlightEditableComboBox(EditableComboBox):
