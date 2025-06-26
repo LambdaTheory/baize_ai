@@ -242,7 +242,7 @@ class FluentHistoryWidget(CardWidget):
         self.history_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.history_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.history_table.setAlternatingRowColors(True)
-        self.history_table.setSortingEnabled(True)
+        self.history_table.setSortingEnabled(False)  # 禁用排序避免数据错位
         
         # 启用水平滚动条
         self.history_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
