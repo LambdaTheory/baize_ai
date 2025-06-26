@@ -37,7 +37,7 @@ class FluentBusinessLogic(QObject):
             image_info = self.parent.image_reader.extract_info(file_path)
             
             # 显示图片信息
-            self.parent.display_image_info(file_path, image_info)
+            self.parent.image_display.display_image_info(file_path, image_info)
             
             # 自动保存记录
             self.auto_save_record(file_path, image_info)

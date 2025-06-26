@@ -36,6 +36,10 @@ from .fluent_gallery_components import HighlightEditableComboBox, FluentImageCar
 from .fluent_extraction_layout import FluentExtractionLayout
 from .fluent_event_handlers import FluentEventHandlers
 from .fluent_business_logic import FluentBusinessLogic
+from .fluent_image_display import FluentImageDisplay
+from .fluent_export_share import FluentExportShare
+from .fluent_license_manager import FluentLicenseManager
+from .fluent_interface_creator import FluentInterfaceCreator
 from core.license_manager import LicenseManager
 
 
@@ -77,11 +81,13 @@ class FluentMainWindow(FluentWindow):
             print(f"AI图像打标签器初始化失败: {e}")
             self.ai_tagger = None
         
-        # 初始化事件处理器
+        # 初始化各个组件
         self.event_handlers = FluentEventHandlers(self)
-        
-        # 初始化业务逻辑处理器
         self.business_logic = FluentBusinessLogic(self)
+        self.image_display = FluentImageDisplay(self)
+        self.export_share = FluentExportShare(self)
+        self.license_component = FluentLicenseManager(self)
+        self.interface_creator = FluentInterfaceCreator(self)
         
         # 存储原始提示词数据，用于重置功能
         self.original_prompts = {
@@ -142,68 +148,21 @@ class FluentMainWindow(FluentWindow):
         
         self.resize(1500, 1000)
         
-        # 先创建各个页面
-        self.create_extraction_interface()
-        self.create_gallery_interface()
-        self.create_prompt_editor_interface()
-        self.create_prompt_reverser_interface()
-        self.create_settings_interface()
+        # 使用界面创建器创建各个页面
+        self.interface_creator.create_extraction_interface()
+        self.interface_creator.create_gallery_interface()
+        self.interface_creator.create_prompt_editor_interface()
+        self.interface_creator.create_prompt_reverser_interface()
+        self.interface_creator.create_settings_interface()
+        self.interface_creator.create_activation_interface()
         
-        # 再设置导航界面
-        self.setup_navigation()
+        # 设置导航界面
+        self.interface_creator.setup_navigation()
         
         # 显示默认页面
         self.stackedWidget.setCurrentWidget(self.extraction_interface)
         
-    def setup_navigation(self):
-        """设置导航界面"""
-        # 信息提取页面
-        self.addSubInterface(
-            interface=self.extraction_interface,
-            icon=FluentIcons.get_icon('extract'),
-            text='信息提取',
-            position=NavigationItemPosition.TOP
-        )
-        
-        # 图片画廊页面
-        self.addSubInterface(
-            interface=self.gallery_interface,
-            icon=FluentIcons.get_icon('gallery'),
-            text='图片画廊',
-            position=NavigationItemPosition.TOP
-        )
-        
-        # 提示词修改页面
-        self.addSubInterface(
-            interface=self.prompt_editor_interface,
-            icon=FluentIcons.get_icon('edit'),
-            text='提示词修改',
-            position=NavigationItemPosition.TOP
-        )
-        
-        # 提示词反推页面
-        self.addSubInterface(
-            interface=self.prompt_reverser_interface,
-            icon=FluentIcons.get_icon('magic'),
-            text='提示词反推',
-            position=NavigationItemPosition.TOP
-        )
-        
-        # 设置页面
-        self.addSubInterface(
-            interface=self.settings_interface,
-            icon=FluentIcons.get_icon('settings'),
-            text='设置',
-            position=NavigationItemPosition.BOTTOM
-        )
-        
-        # 激活页面（始终显示，方便用户激活）
-        self.addSubInterface(
-            interface=self.create_activation_interface(),
-            icon=FluentIcons.get_icon('key') if hasattr(FluentIcons, 'get_icon') else '🔑',
-            text='软件激活',
-            position=NavigationItemPosition.BOTTOM
-        )
+
         
     def create_extraction_interface(self):
         """创建信息提取界面 - 使用新的布局管理器"""
@@ -224,142 +183,11 @@ class FluentMainWindow(FluentWindow):
         self.extraction_interface.dragLeaveEvent = self.event_handlers.handle_drag_leave_event
         self.extraction_interface.dropEvent = self.event_handlers.handle_drop_event
         
-
-    
-
-    
-
-    
-
-    
-
-    
     def on_prompt_text_changed(self):
         """提示词文本变化时的处理（不自动保存，仅用于标记状态）"""
         # 这里可以添加一些UI状态更新，比如标记提示词已修改
         # 暂时不做任何处理，只是为了断开自动保存连接
         pass
-    
-    def display_image_info(self, file_path, image_info=None):
-        """显示图片信息到新布局"""
-        import os
-        from PyQt5.QtGui import QPixmap
-        from qfluentwidgets import BodyLabel
-        
-        try:
-            # 显示图片预览
-            if os.path.exists(file_path):
-                pixmap = QPixmap(file_path)
-                if not pixmap.isNull():
-                    # 缩放图片以适应显示区域
-                    scaled_pixmap = pixmap.scaled(
-                        self.image_label.size(), 
-                        Qt.KeepAspectRatio, 
-                        Qt.SmoothTransformation
-                    )
-                    self.image_label.setPixmap(scaled_pixmap)
-                else:
-                    self.image_label.setText("无法加载图片")
-            else:
-                self.image_label.setText("图片文件不存在")
-            
-            # 显示基础信息
-            filename = os.path.basename(file_path)
-            self.file_name_edit.setText(filename)
-            self.file_path_label.setText(file_path)
-            
-            # 文件大小
-            try:
-                file_size = os.path.getsize(file_path)
-                size_text = self.format_file_size(file_size)
-                self.file_size_label.setText(size_text)
-            except:
-                self.file_size_label.setText("-")
-            
-            # 图片尺寸
-            if not pixmap.isNull():
-                dimensions = f"{pixmap.width()} x {pixmap.height()}"
-                self.image_size_label.setText(dimensions)
-            else:
-                self.image_size_label.setText("-")
-            
-            # 显示AI信息
-            if image_info and isinstance(image_info, dict):
-                # 正向提示词
-                prompt = image_info.get('prompt', '')
-                self.positive_prompt_text.setPlainText(prompt)
-                
-                # 反向提示词
-                negative_prompt = image_info.get('negative_prompt', '')
-                self.negative_prompt_text.setPlainText(negative_prompt)
-                
-                # 保存原始提示词数据（用于重置功能）
-                self.original_prompts['positive'] = prompt
-                self.original_prompts['negative'] = negative_prompt
-                
-                # 生成方式判断
-                generation_method = self.detect_generation_method(image_info)
-                self.generation_method_text.setText(generation_method)
-                
-                # 生成参数
-                self.clear_params_layout()
-                self.create_params_layout(image_info)
-            else:
-                # 清空AI信息
-                self.positive_prompt_text.setPlainText("")
-                self.negative_prompt_text.setPlainText("")
-                self.generation_method_text.setText("-")
-                self.clear_params_layout()
-                
-                # 清空原始提示词数据
-                self.original_prompts['positive'] = ''
-                self.original_prompts['negative'] = ''
-                
-        except Exception as e:
-            print(f"显示图片信息时出错: {e}")
-            self.image_label.setText(f"显示错误: {str(e)}")
-    
-    def format_file_size(self, size):
-        """格式化文件大小"""
-        for unit in ['B', 'KB', 'MB', 'GB']:
-            if size < 1024.0:
-                return f"{size:.1f} {unit}"
-            size /= 1024.0
-        return f"{size:.1f} TB"
-    
-    def detect_generation_method(self, image_info):
-        """检测图片的生成方式"""
-        if not isinstance(image_info, dict):
-            return "-"
-        
-        # 检查ComfyUI特有标识
-        if 'workflow' in image_info or 'comfyui' in str(image_info).lower():
-            return "ComfyUI"
-        
-        # 检查SD WebUI特有参数
-        webui_indicators = ['sampler_name', 'cfg_scale', 'steps', 'seed']
-        if any(key in image_info for key in webui_indicators):
-            return "SD WebUI"
-        
-        # 检查其他标识符
-        software = image_info.get('software', '').lower()
-        if 'comfy' in software:
-            return "ComfyUI"
-        elif 'automatic1111' in software or 'webui' in software:
-            return "SD WebUI"
-        
-        # 如果有prompt但无明确标识，默认为SD WebUI
-        if image_info.get('prompt'):
-            return "SD WebUI"
-        
-        return "-"
-    
-    def clear_params_layout(self):
-        """清空参数布局"""
-        while self.params_layout.count():
-            child = self.params_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
     
     def create_params_layout(self, image_info):
         """创建参数布局"""
@@ -586,252 +414,19 @@ class FluentMainWindow(FluentWindow):
 
             
     def copy_info(self):
-        """复制信息到剪贴板（Stable Diffusion WebUI格式）"""
-        try:
-            info_lines = []
-            
-            # 第一行：Prompt（正向提示词）
-            prompt = self.positive_prompt_text.toPlainText().strip()
-            if prompt:
-                info_lines.append(prompt)
-            
-            # 第二行：Negative prompt
-            negative_prompt = self.negative_prompt_text.toPlainText().strip()
-            if negative_prompt:
-                info_lines.append(f"Negative prompt: {negative_prompt}")
-            
-            # 第三行：参数信息（逗号分隔）
-            params = []
-            
-            # Steps
-            if hasattr(self.image_info_widget, 'steps_edit') and self.image_info_widget.steps_edit.text():
-                params.append(f"Steps: {self.image_info_widget.steps_edit.text()}")
-            
-            # Size（从图片尺寸获取）
-            if hasattr(self.image_info_widget, 'image_size_label'):
-                size_text = self.image_info_widget.image_size_label.text()
-                if size_text and size_text != "-":
-                    # 将 "1024 × 768" 格式转换为 "1024x768" 格式
-                    size_text = size_text.replace(" × ", "x").replace(" x ", "x")
-                    params.append(f"Size: {size_text}")
-            
-            # Seed
-            if hasattr(self.image_info_widget, 'seed_edit') and self.image_info_widget.seed_edit.text():
-                params.append(f"Seed: {self.image_info_widget.seed_edit.text()}")
-            
-            # Model
-            if hasattr(self.image_info_widget, 'model_edit') and self.image_info_widget.model_edit.text():
-                params.append(f"Model: {self.image_info_widget.model_edit.text()}")
-            elif hasattr(self.image_info_widget, 'unet_edit') and self.image_info_widget.unet_edit.text():
-                # 对于Flux模型，使用UNET模型名称
-                params.append(f"Model: {self.image_info_widget.unet_edit.text()}")
-            
-            # Sampler
-            if hasattr(self.image_info_widget, 'sampler_edit') and self.image_info_widget.sampler_edit.text():
-                params.append(f"Sampler: {self.image_info_widget.sampler_edit.text()}")
-            
-            # CFG Scale 或 Guidance
-            if hasattr(self.image_info_widget, 'cfg_edit') and self.image_info_widget.cfg_edit.text():
-                params.append(f"CFG scale: {self.image_info_widget.cfg_edit.text()}")
-            elif hasattr(self.image_info_widget, 'guidance_edit') and self.image_info_widget.guidance_edit.text():
-                params.append(f"CFG scale: {self.image_info_widget.guidance_edit.text()}")
-            
-            # Clip skip（如果有的话）
-            # 注意：这个通常在WebUI中默认存在，这里设为undefined表示未指定
-            params.append("Clip skip: undefined")
-            
-            # 如果有参数，添加到信息中
-            if params:
-                info_lines.append(", ".join(params))
-            
-            # 如果没有任何信息，提供默认提示
-            if not info_lines:
-                info_lines.append("暂无可复制的生成信息")
-            
-            clipboard = QApplication.clipboard()
-            clipboard.setText("\n".join(info_lines))
-            
-            InfoBar.success(
-                title="复制成功",
-                content="信息已复制到剪贴板",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=2000,
-                parent=self
-            )
-            
-        except Exception as e:
-            InfoBar.error(
-                title="复制失败",
-                content=f"复制信息时出错: {str(e)}",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            )
+        """复制信息到剪贴板 - 委托给导出分享组件"""
+        self.export_share.copy_info()
     
     def share_as_html(self):
-        """分享为HTML"""
-        if not self.current_file_path:
-            InfoBar.warning(
-                title="提示",
-                content="请先选择一个图片文件",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=2000,
-                parent=self
-            )
-            return
-            
-        try:
-            # 获取当前图片的记录数据
-            record_id = self.data_manager.get_record_id_by_path(self.current_file_path)
-            if not record_id:
-                InfoBar.warning(
-                    title="提示",
-                    content="请先保存当前记录",
-                    orient=Qt.Horizontal,
-                    isClosable=True,
-                    position=InfoBarPosition.TOP,
-                    duration=2000,
-                    parent=self
-                )
-                return
-            
-            record_data = self.data_manager.get_record_by_id(record_id)
-            if not record_data:
-                InfoBar.error(
-                    title="错误",
-                    content="无法获取记录数据",
-                    orient=Qt.Horizontal,
-                    isClosable=True,
-                    position=InfoBarPosition.TOP,
-                    duration=3000,
-                    parent=self
-                )
-                return
-            
-            # 获取用户自定义信息
-            if hasattr(self.image_info_widget, 'file_name_edit'):
-                record_data['custom_name'] = self.image_info_widget.file_name_edit.text()
-            if hasattr(self.image_info_widget, 'tags_edit'):
-                record_data['tags'] = self.image_info_widget.tags_edit.text()
-            if hasattr(self.image_info_widget, 'notes_text'):
-                record_data['notes'] = self.image_info_widget.notes_text.toPlainText()
-            
-            from PyQt5.QtWidgets import QFileDialog
-            
-            # 生成默认文件名
-            file_name = record_data.get('custom_name') or record_data.get('file_name', '未命名图片')
-            if '.' in file_name:
-                file_name = file_name.rsplit('.', 1)[0]
-            default_name = f"{file_name}_分享.html"
-            
-            file_path, _ = QFileDialog.getSaveFileName(
-                self, "保存HTML分享文件", default_name, 
-                "HTML文件 (*.html);;所有文件 (*.*)"
-            )
-            
-            if file_path:
-                # 导出HTML
-                success = self.html_exporter.export_to_html(record_data, file_path, include_image=True)
-                
-                if success:
-                    InfoBar.success(
-                        title="分享成功",
-                        content=f"HTML分享文件已保存到: {file_path}",
-                        orient=Qt.Horizontal,
-                        isClosable=True,
-                        position=InfoBarPosition.TOP,
-                        duration=3000,
-                        parent=self
-                    )
-                    
-                    # 询问是否打开文件
-                    from PyQt5.QtWidgets import QMessageBox
-                    reply = QMessageBox.question(
-                        self, "打开文件", 
-                        "是否现在打开HTML文件预览?",
-                        QMessageBox.Yes | QMessageBox.No,
-                        QMessageBox.Yes
-                    )
-                    
-                    if reply == QMessageBox.Yes:
-                        import webbrowser
-                        webbrowser.open(f"file:///{file_path.replace(chr(92), '/')}")
-                else:
-                    InfoBar.error(
-                        title="分享失败",
-                        content="生成HTML文件时出错",
-                        orient=Qt.Horizontal,
-                        isClosable=True,
-                        position=InfoBarPosition.TOP,
-                        duration=3000,
-                        parent=self
-                    )
-                    
-        except Exception as e:
-            InfoBar.error(
-                title="分享失败",
-                content=f"生成HTML分享文件时出错: {str(e)}",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            )
-            
+        """分享为HTML - 委托给导出分享组件"""
+        self.export_share.share_as_html()
+    
     def export_data(self):
-        """导出数据"""
-        try:
-            records = self.data_manager.get_all_records()
-            
-            if not records:
-                InfoBar.info(
-                    title="提示",
-                    content="没有数据可导出",
-                    orient=Qt.Horizontal,
-                    isClosable=True,
-                    position=InfoBarPosition.TOP,
-                    duration=2000,
-                    parent=self
-                )
-                return
-                
-            from PyQt5.QtWidgets import QFileDialog
-            file_path, _ = QFileDialog.getSaveFileName(
-                self, "导出数据", "ai_image_data.json", 
-                "JSON文件 (*.json);;所有文件 (*.*)"
-            )
-            
-            if file_path:
-                import json
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(records, f, ensure_ascii=False, indent=2)
-                    
-                InfoBar.success(
-                    title="导出成功",
-                    content=f"数据已导出到: {file_path}",
-                    orient=Qt.Horizontal,
-                    isClosable=True,
-                    position=InfoBarPosition.TOP,
-                    duration=2000,
-                    parent=self
-                )
-                
-        except Exception as e:
-            InfoBar.error(
-                title="导出失败",
-                content=f"导出数据时出错: {str(e)}",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            )
+        """导出数据 - 委托给导出分享组件"""
+        self.export_share.export_data()
+    
+
+
     
 
             
