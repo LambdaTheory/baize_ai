@@ -843,6 +843,12 @@ class FluentMainWindow(FluentWindow):
         self.ai_worker_thread = None
         self.ai_worker = None
         
+        # 存储原始提示词数据，用于重置功能
+        self.original_prompts = {
+            'positive': '',
+            'negative': ''
+        }
+        
         # 初始化自动保存定时器
         from PyQt5.QtCore import QTimer
         self.auto_save_timer = QTimer()
@@ -1092,19 +1098,111 @@ class FluentMainWindow(FluentWindow):
         self.ai_content_layout = QVBoxLayout()
         self.ai_content_layout.setSpacing(FluentSpacing.SM)
         
-        # 正向提示词
+        # 正向提示词区域
+        positive_prompt_layout = QHBoxLayout()
         self.positive_prompt_label = BodyLabel("正向提示词:")
         self.positive_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        
+        # 正向提示词跳转翻译按钮
+        self.positive_translate_btn = TransparentPushButton("跳转翻译")
+        self.positive_translate_btn.setFixedHeight(24)
+        self.positive_translate_btn.setFixedWidth(80)
+        self.positive_translate_btn.setStyleSheet(f"""
+            TransparentPushButton {{
+                color: {FluentColors.get_color('accent')};
+                border: 1px solid {FluentColors.get_color('accent')};
+                border-radius: 4px;
+                padding: 2px 8px;
+                font-size: 11px;
+            }}
+            TransparentPushButton:hover {{
+                background-color: {FluentColors.get_color('accent')};
+                color: white;
+            }}
+        """)
+        
+        positive_prompt_layout.addWidget(self.positive_prompt_label)
+        positive_prompt_layout.addStretch()
+        positive_prompt_layout.addWidget(self.positive_translate_btn)
+        
         self.positive_prompt_text = TextEdit()
         self.positive_prompt_text.setMaximumHeight(120)  # 从80增加到120
         self.positive_prompt_text.setPlaceholderText("正向提示词...")
         
-        # 反向提示词
+        # 反向提示词区域
+        negative_prompt_layout = QHBoxLayout()
         self.negative_prompt_label = BodyLabel("反向提示词:")
         self.negative_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        
+        # 反向提示词跳转翻译按钮
+        self.negative_translate_btn = TransparentPushButton("跳转翻译")
+        self.negative_translate_btn.setFixedHeight(24)
+        self.negative_translate_btn.setFixedWidth(80)
+        self.negative_translate_btn.setStyleSheet(f"""
+            TransparentPushButton {{
+                color: {FluentColors.get_color('accent')};
+                border: 1px solid {FluentColors.get_color('accent')};
+                border-radius: 4px;
+                padding: 2px 8px;
+                font-size: 11px;
+            }}
+            TransparentPushButton:hover {{
+                background-color: {FluentColors.get_color('accent')};
+                color: white;
+            }}
+        """)
+        
+        negative_prompt_layout.addWidget(self.negative_prompt_label)
+        negative_prompt_layout.addStretch()
+        negative_prompt_layout.addWidget(self.negative_translate_btn)
+        
         self.negative_prompt_text = TextEdit()
         self.negative_prompt_text.setMaximumHeight(100)  # 从60增加到100
         self.negative_prompt_text.setPlaceholderText("反向提示词...")
+        
+        # 提示词操作按钮区域
+        prompt_buttons_layout = QHBoxLayout()
+        self.save_prompts_btn = PushButton("💾 保存")
+        self.save_prompts_btn.setFixedHeight(32)
+        self.save_prompts_btn.setFixedWidth(80)
+        self.save_prompts_btn.setStyleSheet(f"""
+            PushButton {{
+                background-color: {FluentColors.get_color('primary')};
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-weight: 500;
+                font-size: 12px;
+            }}
+            PushButton:hover {{
+                background-color: rgba(0, 120, 215, 0.8);
+            }}
+            PushButton:pressed {{
+                background-color: rgba(0, 120, 215, 0.9);
+            }}
+        """)
+        
+        self.reset_prompts_btn = PushButton("🔄 重置")
+        self.reset_prompts_btn.setFixedHeight(32)
+        self.reset_prompts_btn.setFixedWidth(80)
+        self.reset_prompts_btn.setStyleSheet(f"""
+            PushButton {{
+                background-color: {FluentColors.get_color('bg_tertiary')};
+                color: {FluentColors.get_color('text_primary')};
+                border: 1px solid {FluentColors.get_color('border_primary')};
+                border-radius: 6px;
+                font-weight: 500;
+                font-size: 12px;
+            }}
+            PushButton:hover {{
+                background-color: {FluentColors.get_color('bg_secondary')};
+                border-color: {FluentColors.get_color('accent')};
+            }}
+        """)
+        
+        prompt_buttons_layout.addWidget(self.save_prompts_btn)
+        prompt_buttons_layout.addWidget(self.reset_prompts_btn)
+        prompt_buttons_layout.addStretch()
         
         # 生成方式
         self.generation_method_label = BodyLabel("生成方式:")
@@ -1118,26 +1216,6 @@ class FluentMainWindow(FluentWindow):
             font-size: 12px;
         """)
         
-        # 编辑提示词按钮
-        edit_prompt_layout = QHBoxLayout()
-        self.edit_prompt_btn = TransparentPushButton("编辑提示词")
-        self.edit_prompt_btn.setFixedHeight(28)
-        self.edit_prompt_btn.setStyleSheet(f"""
-            TransparentPushButton {{
-                color: {FluentColors.get_color('accent')};
-                border: 1px solid {FluentColors.get_color('accent')};
-                border-radius: 4px;
-                padding: 4px 12px;
-                font-size: 12px;
-            }}
-            TransparentPushButton:hover {{
-                background-color: {FluentColors.get_color('accent')};
-                color: white;
-            }}
-        """)
-        edit_prompt_layout.addWidget(self.edit_prompt_btn)
-        edit_prompt_layout.addStretch()
-        
         # 生成参数
         self.params_label = BodyLabel("生成参数:")
         self.params_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
@@ -1145,13 +1223,13 @@ class FluentMainWindow(FluentWindow):
         self.params_layout = QVBoxLayout()
         self.params_widget.setLayout(self.params_layout)
         
-        self.ai_content_layout.addWidget(self.positive_prompt_label)
+        self.ai_content_layout.addLayout(positive_prompt_layout)
         self.ai_content_layout.addWidget(self.positive_prompt_text)
-        self.ai_content_layout.addWidget(self.negative_prompt_label)
+        self.ai_content_layout.addLayout(negative_prompt_layout)
         self.ai_content_layout.addWidget(self.negative_prompt_text)
+        self.ai_content_layout.addLayout(prompt_buttons_layout)
         self.ai_content_layout.addWidget(self.generation_method_label)
         self.ai_content_layout.addWidget(self.generation_method_text)
-        self.ai_content_layout.addLayout(edit_prompt_layout)
         self.ai_content_layout.addWidget(self.params_label)
         self.ai_content_layout.addWidget(self.params_widget)
         self.ai_content_layout.addStretch()
@@ -1261,29 +1339,183 @@ class FluentMainWindow(FluentWindow):
         
         parent_layout.addWidget(third_column, 2)  # 第三列占2份
     
-    def handle_edit_prompt_clicked(self):
-        """处理编辑提示词按钮点击"""
+    def handle_positive_translate_clicked(self):
+        """处理正向提示词跳转翻译按钮点击"""
         try:
-            # 获取当前的提示词
-            positive_prompt = self.positive_prompt_text.toPlainText()
-            negative_prompt = self.negative_prompt_text.toPlainText()
+            # 获取当前的正向提示词
+            positive_prompt = self.positive_prompt_text.toPlainText().strip()
             
-            # 构造提示词文本
-            prompt_text = positive_prompt
-            if negative_prompt:
-                prompt_text += f"\nNegative prompt: {negative_prompt}"
+            if not positive_prompt:
+                InfoBar.warning(
+                    title="提示",
+                    content="正向提示词为空，无法跳转翻译",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=2000,
+                    parent=self
+                )
+                return
             
             # 获取当前图片的场景名称
-            scene_name = "未命名场景"
+            scene_name = "正向提示词"
             if hasattr(self, 'current_file_path') and self.current_file_path:
                 import os
-                scene_name = os.path.splitext(os.path.basename(self.current_file_path))[0]
+                scene_name = f"{os.path.splitext(os.path.basename(self.current_file_path))[0]}_正向"
             
             # 触发编辑提示词请求信号
-            self.handle_edit_prompt_request(prompt_text, scene_name)
+            self.handle_edit_prompt_request(positive_prompt, scene_name)
             
         except Exception as e:
-            print(f"处理编辑提示词请求时出错: {e}")
+            print(f"处理正向提示词跳转翻译时出错: {e}")
+    
+    def handle_negative_translate_clicked(self):
+        """处理反向提示词跳转翻译按钮点击"""
+        try:
+            # 获取当前的反向提示词
+            negative_prompt = self.negative_prompt_text.toPlainText().strip()
+            
+            if not negative_prompt:
+                InfoBar.warning(
+                    title="提示",
+                    content="反向提示词为空，无法跳转翻译",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=2000,
+                    parent=self
+                )
+                return
+            
+            # 获取当前图片的场景名称
+            scene_name = "反向提示词"
+            if hasattr(self, 'current_file_path') and self.current_file_path:
+                import os
+                scene_name = f"{os.path.splitext(os.path.basename(self.current_file_path))[0]}_反向"
+            
+            # 触发编辑提示词请求信号
+            self.handle_edit_prompt_request(negative_prompt, scene_name)
+            
+        except Exception as e:
+            print(f"处理反向提示词跳转翻译时出错: {e}")
+    
+    def save_prompts_only(self):
+        """仅保存提示词到数据库"""
+        if not self.current_file_path:
+            InfoBar.warning(
+                title="提示",
+                content="请先选择一个图片文件",
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self
+            )
+            return
+            
+        try:
+            # 获取当前的提示词
+            positive_prompt = self.positive_prompt_text.toPlainText().strip()
+            negative_prompt = self.negative_prompt_text.toPlainText().strip()
+            
+            # 获取其他用户输入的信息
+            custom_name = self.file_name_edit.text().strip()
+            tags = self.user_tags_edit.toPlainText().strip()
+            notes = self.user_notes_edit.toPlainText().strip()
+            
+            # 重新读取图片信息并更新提示词
+            image_info = self.image_reader.extract_info(self.current_file_path)
+            
+            record_data = {
+                'file_path': self.current_file_path,
+                'custom_name': custom_name,
+                'tags': tags,
+                'notes': notes,
+                'prompt': positive_prompt,
+                'negative_prompt': negative_prompt,
+            }
+            
+            if image_info:
+                # 更新图片信息中的提示词
+                image_info['prompt'] = positive_prompt
+                image_info['negative_prompt'] = negative_prompt
+                record_data.update(image_info)
+            
+            record_id = self.data_manager.save_record(record_data)
+            
+            if record_id:
+                InfoBar.success(
+                    title="保存成功",
+                    content="提示词已保存！",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=2000,
+                    parent=self
+                )
+                # 刷新历史记录和画廊
+                self.history_widget.load_history()
+                self.gallery_interface.load_records()
+                
+                # 更新原始提示词为当前保存的提示词
+                self.original_prompts['positive'] = positive_prompt
+                self.original_prompts['negative'] = negative_prompt
+            else:
+                InfoBar.error(
+                    title="保存失败",
+                    content="保存提示词失败",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=3000,
+                    parent=self
+                )
+                
+        except Exception as e:
+            InfoBar.error(
+                title="保存失败",
+                content=f"保存提示词时出错: {str(e)}",
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self
+            )
+    
+    def reset_prompts(self):
+        """重置提示词到原始状态"""
+        try:
+            # 恢复到原始提示词
+            self.positive_prompt_text.setPlainText(self.original_prompts['positive'])
+            self.negative_prompt_text.setPlainText(self.original_prompts['negative'])
+            
+            InfoBar.success(
+                title="重置成功",
+                content="提示词已重置到原始状态",
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=2000,
+                parent=self
+            )
+            
+        except Exception as e:
+            print(f"重置提示词时出错: {e}")
+            InfoBar.error(
+                title="重置失败",
+                content=f"重置提示词时出错: {str(e)}",
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self
+            )
+    
+    def on_prompt_text_changed(self):
+        """提示词文本变化时的处理（不自动保存，仅用于标记状态）"""
+        # 这里可以添加一些UI状态更新，比如标记提示词已修改
+        # 暂时不做任何处理，只是为了断开自动保存连接
+        pass
     
     def display_image_info(self, file_path, image_info=None):
         """显示图片信息到新布局"""
@@ -1338,6 +1570,10 @@ class FluentMainWindow(FluentWindow):
                 negative_prompt = image_info.get('negative_prompt', '')
                 self.negative_prompt_text.setPlainText(negative_prompt)
                 
+                # 保存原始提示词数据（用于重置功能）
+                self.original_prompts['positive'] = prompt
+                self.original_prompts['negative'] = negative_prompt
+                
                 # 生成方式判断
                 generation_method = self.detect_generation_method(image_info)
                 self.generation_method_text.setText(generation_method)
@@ -1351,6 +1587,10 @@ class FluentMainWindow(FluentWindow):
                 self.negative_prompt_text.setPlainText("")
                 self.generation_method_text.setText("-")
                 self.clear_params_layout()
+                
+                # 清空原始提示词数据
+                self.original_prompts['positive'] = ''
+                self.original_prompts['negative'] = ''
                 
         except Exception as e:
             print(f"显示图片信息时出错: {e}")
@@ -1769,15 +2009,24 @@ class FluentMainWindow(FluentWindow):
         self.save_btn.clicked.connect(self.save_record)
         self.copy_btn.clicked.connect(self.copy_info)
         self.export_btn.clicked.connect(self.share_as_html)
-        self.edit_prompt_btn.clicked.connect(self.handle_edit_prompt_clicked)
+        
+        # 提示词相关按钮连接
+        self.positive_translate_btn.clicked.connect(self.handle_positive_translate_clicked)
+        self.negative_translate_btn.clicked.connect(self.handle_negative_translate_clicked)
+        self.save_prompts_btn.clicked.connect(self.save_prompts_only)
+        self.reset_prompts_btn.clicked.connect(self.reset_prompts)
         
         # 历史记录信号
         self.history_widget.record_selected.connect(self.load_from_history_record)
         
-        # 监听用户输入变化，启动自动保存定时器
+        # 监听用户输入变化，启动自动保存定时器（不包括提示词）
         self.file_name_edit.textChanged.connect(self.on_user_input_changed)
         self.user_tags_edit.textChanged.connect(self.on_user_input_changed)
         self.user_notes_edit.textChanged.connect(self.on_user_input_changed)
+        
+        # 提示词变化处理（仅用于标记修改状态，不自动保存）
+        self.positive_prompt_text.textChanged.connect(self.on_prompt_text_changed)
+        self.negative_prompt_text.textChanged.connect(self.on_prompt_text_changed)
         
     def handle_files_dropped(self, files):
         """处理拖拽的文件"""
