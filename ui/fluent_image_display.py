@@ -535,20 +535,26 @@ class FluentImageDisplay(QObject):
         from qfluentwidgets import BodyLabel
         from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFrame
         
-        # 生成参数映射
-        param_mapping = {
-            'sampler_name': '采样器',
-            'steps': '采样步数',
-            'cfg_scale': 'CFG Scale',
-            'seed': '随机种子',
-            'size': '尺寸',
-            'denoising_strength': '去噪强度',
-            'clip_skip': 'Clip Skip',
-            'ensd': 'ENSD'
-        }
+        # 生成参数映射（按优先级排序）
+        param_mapping = [
+            (['sampler', 'sampler_name'], '采样器'),
+            (['scheduler'], '调度器'),
+            (['steps'], '采样步数'),
+            (['cfg_scale'], 'CFG Scale'),
+            (['seed'], '随机种子'),
+            (['size'], '尺寸'),
+            (['denoising_strength'], '去噪强度'),
+            (['clip_skip'], 'Clip Skip'),
+            (['ensd'], 'ENSD')
+        ]
         
         # 检查是否有参数需要显示
-        has_params = any(image_info.get(key, '') for key in param_mapping.keys())
+        has_params = False
+        for keys, _ in param_mapping:
+            if any(image_info.get(key, '') for key in keys):
+                has_params = True
+                break
+        
         if not has_params:
             return
         
@@ -577,8 +583,14 @@ class FluentImageDisplay(QObject):
         params_container_layout.setContentsMargins(0, 0, 0, 8)
         params_container_layout.setSpacing(4)
         
-        for key, label in param_mapping.items():
-            value = image_info.get(key, '')
+        for keys, label in param_mapping:
+            # 找到第一个有值的字段
+            value = None
+            for key in keys:
+                value = image_info.get(key, '')
+                if value:
+                    break
+            
             if value:
                 # 创建参数卡片
                 param_card = QFrame()
