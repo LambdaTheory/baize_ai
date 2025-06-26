@@ -153,13 +153,39 @@ class FluentExtractionLayout:
         ai_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.LG, 
                                    FluentSpacing.LG, FluentSpacing.LG)
         
-        # 标题
+        # 标题区域 - 添加复制信息按钮
+        ai_title_layout = QHBoxLayout()
         ai_title = SubtitleLabel("🤖 AI生成信息")
         ai_title.setStyleSheet(f"""
             color: {FluentColors.get_color('text_primary')};
             font-weight: 600;
             margin-bottom: 8px;
         """)
+        
+        # 复制信息按钮
+        self.parent.copy_info_btn = PushButton("📋")
+        self.parent.copy_info_btn.setFixedSize(32, 32)
+        self.parent.copy_info_btn.setToolTip("复制所有信息")
+        self.parent.copy_info_btn.setStyleSheet(f"""
+            PushButton {{
+                background-color: {FluentColors.get_color('primary')};
+                color: white;
+                border: none;
+                border-radius: 16px;
+                font-size: 14px;
+                font-weight: 600;
+            }}
+            PushButton:hover {{
+                background-color: rgba(0, 120, 215, 0.8);
+            }}
+            PushButton:pressed {{
+                background-color: rgba(0, 120, 215, 0.6);
+            }}
+        """)
+        
+        ai_title_layout.addWidget(ai_title)
+        ai_title_layout.addStretch()
+        ai_title_layout.addWidget(self.parent.copy_info_btn)
         
         # AI信息滚动区域
         ai_scroll = SmoothScrollArea()
@@ -304,7 +330,7 @@ class FluentExtractionLayout:
         self.parent.ai_content.setLayout(self.parent.ai_content_layout)
         ai_scroll.setWidget(self.parent.ai_content)
         
-        ai_layout.addWidget(ai_title)
+        ai_layout.addLayout(ai_title_layout)
         ai_layout.addWidget(ai_scroll)
         self.parent.ai_info_card.setLayout(ai_layout)
         
@@ -314,28 +340,54 @@ class FluentExtractionLayout:
         parent_layout.addWidget(second_column, 3)  # 第二列占3份
     
     def create_third_column(self, parent_layout):
-        """创建第三列：标签备注(40%) + 历史记录(60%)"""
+        """创建第三列：标签(40%) + 历史记录(60%)"""
         third_column = QWidget()
         column_layout = QVBoxLayout()
         column_layout.setSpacing(FluentSpacing.MD)
         third_column.setLayout(column_layout)
         
-        # 标签备注卡片 (40%)
+        # 标签卡片 (40%)
         self.parent.tags_notes_card = CardWidget()
         self.parent.tags_notes_card.setBorderRadius(16)
         tags_layout = QVBoxLayout()
         tags_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.LG, 
                                      FluentSpacing.LG, FluentSpacing.LG)
         
-        # 标题
-        tags_title = SubtitleLabel("🏷️ 标签与备注")
+        # 标题区域 - 添加分享HTML按钮
+        tags_title_layout = QHBoxLayout()
+        tags_title = SubtitleLabel("🏷️ 标签与标注")
         tags_title.setStyleSheet(f"""
             color: {FluentColors.get_color('text_primary')};
             font-weight: 600;
             margin-bottom: 8px;
         """)
         
-        # 标签备注滚动区域
+        # 分享HTML按钮
+        self.parent.export_btn = PushButton("📤")
+        self.parent.export_btn.setFixedSize(32, 32)
+        self.parent.export_btn.setToolTip("分享HTML")
+        self.parent.export_btn.setStyleSheet(f"""
+            PushButton {{
+                background-color: #10B981;
+                color: white;
+                border: none;
+                border-radius: 16px;
+                font-size: 14px;
+                font-weight: 600;
+            }}
+            PushButton:hover {{
+                background-color: rgba(16, 185, 129, 0.8);
+            }}
+            PushButton:pressed {{
+                background-color: rgba(16, 185, 129, 0.6);
+            }}
+        """)
+        
+        tags_title_layout.addWidget(tags_title)
+        tags_title_layout.addStretch()
+        tags_title_layout.addWidget(self.parent.export_btn)
+        
+        # 标签滚动区域
         tags_scroll = SmoothScrollArea()
         tags_scroll.setWidgetResizable(True)
         tags_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
@@ -348,40 +400,43 @@ class FluentExtractionLayout:
         user_tags_label = BodyLabel("用户标签:")
         user_tags_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
         self.parent.user_tags_edit = TextEdit()
-        self.parent.user_tags_edit.setMaximumHeight(60)
+        self.parent.user_tags_edit.setMaximumHeight(80)
         self.parent.user_tags_edit.setPlaceholderText("输入标签，用逗号分隔...")
         
-        # 用户备注
-        user_notes_label = BodyLabel("用户备注:")
-        user_notes_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
-        self.parent.user_notes_edit = TextEdit()
-        self.parent.user_notes_edit.setPlaceholderText("输入备注信息...")
-        
-        # 操作按钮区域
+        # 操作按钮区域 - 只保留保存标签按钮
         button_layout = QHBoxLayout()
-        self.parent.save_btn = PushButton("保存记录")
-        self.parent.save_btn.setFixedHeight(32)
-        self.parent.copy_btn = PushButton("复制信息")
-        self.parent.copy_btn.setFixedHeight(32)
-        self.parent.export_btn = PushButton("HTML分享")
-        self.parent.export_btn.setFixedHeight(32)
+        self.parent.save_btn = PushButton("💾 保存标签")
+        self.parent.save_btn.setFixedHeight(36)
+        self.parent.save_btn.setMinimumWidth(120)
+        self.parent.save_btn.setStyleSheet(f"""
+            PushButton {{
+                background-color: {FluentColors.get_color('primary')};
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 13px;
+            }}
+            PushButton:hover {{
+                background-color: rgba(0, 120, 215, 0.8);
+            }}
+            PushButton:pressed {{
+                background-color: rgba(0, 120, 215, 0.6);
+            }}
+        """)
         
         button_layout.addWidget(self.parent.save_btn)
-        button_layout.addWidget(self.parent.copy_btn)
-        button_layout.addWidget(self.parent.export_btn)
         button_layout.addStretch()
         
         tags_content_layout.addWidget(user_tags_label)
         tags_content_layout.addWidget(self.parent.user_tags_edit)
-        tags_content_layout.addWidget(user_notes_label)
-        tags_content_layout.addWidget(self.parent.user_notes_edit)
         tags_content_layout.addLayout(button_layout)
         tags_content_layout.addStretch()
         
         tags_content.setLayout(tags_content_layout)
         tags_scroll.setWidget(tags_content)
         
-        tags_layout.addWidget(tags_title)
+        tags_layout.addLayout(tags_title_layout)
         tags_layout.addWidget(tags_scroll)
         self.parent.tags_notes_card.setLayout(tags_layout)
         

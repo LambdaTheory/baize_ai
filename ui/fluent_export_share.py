@@ -58,15 +58,10 @@ class FluentExportShare(QObject):
             
             # 用户标签和备注
             user_tags = self.parent.user_tags_edit.toPlainText().strip()
-            user_notes = self.parent.user_notes_edit.toPlainText().strip()
             
             if user_tags:
                 info_parts.append("\n=== 用户标签 ===")
                 info_parts.append(user_tags)
-            
-            if user_notes:
-                info_parts.append("\n=== 用户备注 ===")
-                info_parts.append(user_notes)
             
             # 生成参数（从当前显示的参数中提取）
             try:
@@ -158,7 +153,6 @@ class FluentExportShare(QObject):
             # 获取用户输入的信息
             custom_name = self.parent.file_name_edit.text().strip()
             tags = self.parent.user_tags_edit.toPlainText().strip()
-            notes = self.parent.user_notes_edit.toPlainText().strip()
             positive_prompt = self.parent.positive_prompt_text.toPlainText().strip()
             negative_prompt = self.parent.negative_prompt_text.toPlainText().strip()
             
@@ -167,7 +161,7 @@ class FluentExportShare(QObject):
                 'file_path': self.parent.current_file_path,
                 'custom_name': custom_name or os.path.basename(self.parent.current_file_path),
                 'tags': tags,
-                'notes': notes,
+                'notes': '',  # 备注功能已移除，设为空字符串
                 'prompt': positive_prompt,
                 'negative_prompt': negative_prompt,
             }

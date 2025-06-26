@@ -107,7 +107,7 @@ class FluentBusinessLogic(QObject):
             # 获取用户输入的信息
             custom_name = self.parent.file_name_edit.text().strip()
             tags = self.parent.user_tags_edit.toPlainText().strip()
-            notes = self.parent.user_notes_edit.toPlainText().strip()
+            notes = ''  # 备注功能已移除，设为空字符串
             
             # 重新读取图片信息
             image_info = self.parent.image_reader.extract_info(self.parent.current_file_path)
@@ -182,7 +182,7 @@ class FluentBusinessLogic(QObject):
             # 获取其他用户输入的信息
             custom_name = self.parent.file_name_edit.text().strip()
             tags = self.parent.user_tags_edit.toPlainText().strip()
-            notes = self.parent.user_notes_edit.toPlainText().strip()
+            notes = ''  # 备注功能已移除，设为空字符串
             
             # 重新读取图片信息并更新提示词
             image_info = self.parent.image_reader.extract_info(self.parent.current_file_path)
@@ -435,7 +435,7 @@ class FluentBusinessLogic(QObject):
             # 获取用户输入的信息
             custom_name = self.parent.file_name_edit.text().strip()
             tags = self.parent.user_tags_edit.toPlainText().strip()
-            notes = self.parent.user_notes_edit.toPlainText().strip()
+            notes = ''  # 备注功能已移除，设为空字符串
             
             # 重新读取图片信息
             image_info = self.parent.image_reader.extract_info(self.parent.current_file_path)

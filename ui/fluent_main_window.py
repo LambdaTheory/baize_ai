@@ -314,8 +314,8 @@ class FluentMainWindow(FluentWindow):
         """设置信号连接"""
         # 新布局的按钮连接
         self.save_btn.clicked.connect(self.business_logic.save_record)
-        self.copy_btn.clicked.connect(self.copy_info)
-        self.export_btn.clicked.connect(self.share_as_html)
+        self.copy_info_btn.clicked.connect(self.copy_info)  # 复制按钮在第二列AI信息标题右边
+        self.export_btn.clicked.connect(self.share_as_html)  # 分享HTML按钮在第三列标签标题右边
         
         # 提示词相关按钮连接
         self.positive_translate_btn.clicked.connect(self.event_handlers.handle_positive_translate_clicked)
@@ -332,7 +332,6 @@ class FluentMainWindow(FluentWindow):
         # 监听用户输入变化，启动自动保存定时器（不包括提示词）
         self.file_name_edit.textChanged.connect(self.on_user_input_changed)
         self.user_tags_edit.textChanged.connect(self.on_user_input_changed)
-        self.user_notes_edit.textChanged.connect(self.on_user_input_changed)
         
         # 提示词变化处理（仅用于标记修改状态，不自动保存）
         self.positive_prompt_text.textChanged.connect(self.on_prompt_text_changed)
@@ -398,7 +397,6 @@ class FluentMainWindow(FluentWindow):
             # 加载用户自定义信息
             self.file_name_edit.setText(record.get('custom_name', ''))
             self.user_tags_edit.setPlainText(record.get('tags', ''))
-            self.user_notes_edit.setPlainText(record.get('notes', ''))
             
             # 启用自动保存功能
             self.auto_save_enabled = True
