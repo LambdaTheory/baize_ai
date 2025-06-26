@@ -76,9 +76,9 @@ class FluentImageDisplay(QObject):
                 self.parent.original_prompts['positive'] = prompt
                 self.parent.original_prompts['negative'] = negative_prompt
                 
-                # 生成方式判断 (现在通过卡片展示，不需要设置旧的文本控件)
-                # generation_method = self.detect_generation_method(image_info)
-                # self.parent.generation_method_text.setText(generation_method)
+                # 生成方式判断
+                generation_method = self.detect_generation_method(image_info)
+                self.parent.generation_method_text.setText(generation_method)
                 
                 # 生成参数
                 self.clear_params_layout()
@@ -87,7 +87,7 @@ class FluentImageDisplay(QObject):
                 # 清空AI信息
                 self.parent.positive_prompt_text.setPlainText("")
                 self.parent.negative_prompt_text.setPlainText("")
-                # self.parent.generation_method_text.setText("-")  # 现在通过卡片展示
+                self.parent.generation_method_text.setText("-")
                 self.clear_params_layout()
                 
                 # 清空原始提示词数据
@@ -149,16 +149,20 @@ class FluentImageDisplay(QObject):
         if not isinstance(image_info, dict):
             return
         
-        # 显示模型信息
-        self.create_model_display(image_info)
-        
-        # 显示生成方式
+        # 显示顺序：生成方式 → 模型 → LoRA → 生成参数
+        # 0. 显示生成方式
         self.create_generation_method_display(image_info)
         
-        # 显示LoRA信息
+        # 1. 显示模型信息
+        self.create_model_display(image_info)
+        
+        # 2. 显示LoRA信息
         self.create_lora_display(image_info)
         
-        # 定义生成参数映射 (移除模型相关信息，将sampler加回来)
+        # 3. 显示生成参数
+        self.create_generation_params_display(image_info)
+        
+        # 定义生成参数映射（移除模型相关，加入sampler）
         param_mapping = {
             'sampler_name': '采样器',
             'steps': '采样步数',
@@ -170,69 +174,7 @@ class FluentImageDisplay(QObject):
             'ensd': 'ENSD'
         }
         
-        # 生成参数标题
-        if any(image_info.get(key, '') for key in param_mapping.keys()):
-            # 添加分隔线
-            separator = QWidget()
-            separator.setFixedHeight(1)
-            separator.setStyleSheet("background-color: rgba(229, 231, 235, 0.6);")
-            self.parent.params_layout.addWidget(separator)
-            
-            params_title_widget = QWidget()
-            params_title_layout = QHBoxLayout()
-            params_title_layout.setContentsMargins(0, 8, 0, 4)
-            params_title_layout.setSpacing(8)
-            
-            params_title = BodyLabel("📊 生成参数:")
-            params_title.setStyleSheet("""
-                color: #6B7280;
-                font-size: 12px;
-                font-weight: 600;
-            """)
-            
-            params_title_layout.addWidget(params_title)
-            params_title_layout.addStretch()
-            params_title_widget.setLayout(params_title_layout)
-            
-            self.parent.params_layout.addWidget(params_title_widget)
-        
-        # 显示主要参数
-        for key, label in param_mapping.items():
-            value = image_info.get(key, '')
-            if value:
-                param_widget = QWidget()
-                param_layout = QVBoxLayout()
-                param_layout.setSpacing(2)
-                param_layout.setContentsMargins(0, 4, 0, 4)
-                
-                # 参数标签
-                param_label = BodyLabel(f"{label}:")
-                param_label.setStyleSheet("""
-                    color: #6B7280;
-                    font-size: 12px;
-                    font-weight: 500;
-                    margin-bottom: 2px;
-                """)
-                
-                # 参数值
-                param_value = BodyLabel(str(value))
-                param_value.setStyleSheet("""
-                    color: #1F2937;
-                    font-size: 13px;
-                    font-weight: 500;
-                    background-color: rgba(248, 250, 252, 0.8);
-                    border: 1px solid rgba(229, 231, 235, 0.6);
-                    padding: 6px 10px;
-                    border-radius: 6px;
-                    margin-top: 2px;
-                """)
-                param_value.setWordWrap(True)
-                
-                param_layout.addWidget(param_label)
-                param_layout.addWidget(param_value)
-                param_widget.setLayout(param_layout)
-                
-                self.parent.params_layout.addWidget(param_widget)
+        # 注意：主要的显示逻辑已经移到上面的专门方法中
         
         # 如果有其他参数，显示"更多参数"部分
         excluded_keys = list(param_mapping.keys()) + [
@@ -304,6 +246,126 @@ class FluentImageDisplay(QObject):
                 self.parent.params_layout.addWidget(param_widget)
                 count += 1 
     
+    def create_generation_method_display(self, image_info):
+        """创建生成方式展示"""
+        from qfluentwidgets import BodyLabel
+        from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFrame
+        
+        generation_method = self.detect_generation_method(image_info)
+        
+        if generation_method == "-":
+            return
+        
+        # 生成方式标题区域
+        method_title_widget = QWidget()
+        method_title_layout = QHBoxLayout()
+        method_title_layout.setContentsMargins(0, 0, 0, 4)
+        method_title_layout.setSpacing(8)
+        
+        method_title = BodyLabel("🚀 生成方式:")
+        method_title.setStyleSheet("""
+            color: #6B7280;
+            font-size: 12px;
+            font-weight: 600;
+        """)
+        
+        method_title_layout.addWidget(method_title)
+        method_title_layout.addStretch()
+        method_title_widget.setLayout(method_title_layout)
+        
+        self.parent.params_layout.addWidget(method_title_widget)
+        
+        # 生成方式卡片
+        method_card = QFrame()
+        method_card.setFrameStyle(QFrame.NoFrame)
+        
+        # 根据不同生成方式设置不同颜色
+        if generation_method == "ComfyUI":
+            card_style = """
+                QFrame {
+                    background-color: rgba(243, 232, 255, 0.6);
+                    border: 1px solid rgba(147, 51, 234, 0.2);
+                    border-radius: 8px;
+                    padding: 0px;
+                }
+                QFrame:hover {
+                    background-color: rgba(243, 232, 255, 0.8);
+                    border-color: rgba(147, 51, 234, 0.3);
+                }
+            """
+            icon = "🎨"
+        elif generation_method == "SD WebUI":
+            card_style = """
+                QFrame {
+                    background-color: rgba(254, 242, 242, 0.6);
+                    border: 1px solid rgba(239, 68, 68, 0.2);
+                    border-radius: 8px;
+                    padding: 0px;
+                }
+                QFrame:hover {
+                    background-color: rgba(254, 242, 242, 0.8);
+                    border-color: rgba(239, 68, 68, 0.3);
+                }
+            """
+            icon = "🖼️"
+        else:
+            card_style = """
+                QFrame {
+                    background-color: rgba(240, 253, 250, 0.6);
+                    border: 1px solid rgba(16, 185, 129, 0.2);
+                    border-radius: 8px;
+                    padding: 0px;
+                }
+                QFrame:hover {
+                    background-color: rgba(240, 253, 250, 0.8);
+                    border-color: rgba(16, 185, 129, 0.3);
+                }
+            """
+            icon = "🔧"
+        
+        method_card.setStyleSheet(card_style)
+        
+        method_layout = QHBoxLayout()
+        method_layout.setContentsMargins(12, 8, 12, 8)
+        method_layout.setSpacing(10)
+        
+        # 图标
+        method_icon = BodyLabel(icon)
+        method_icon.setStyleSheet("font-size: 16px;")
+        
+        # 生成方式名称
+        method_label = BodyLabel(generation_method)
+        method_label.setStyleSheet("""
+            color: #1F2937;
+            font-size: 14px;
+            font-weight: 600;
+        """)
+        
+        # 状态标签
+        status_label = BodyLabel("已识别")
+        status_label.setStyleSheet("""
+            color: #065F46;
+            font-size: 10px;
+            font-weight: 500;
+            background-color: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 2px 6px;
+            border-radius: 10px;
+        """)
+        status_label.setFixedHeight(18)
+        
+        method_layout.addWidget(method_icon)
+        method_layout.addWidget(method_label, 1)
+        method_layout.addWidget(status_label)
+        
+        method_card.setLayout(method_layout)
+        self.parent.params_layout.addWidget(method_card)
+        
+        # 添加间距
+        spacer = QWidget()
+        spacer.setFixedHeight(8)
+        self.parent.params_layout.addWidget(spacer)
+    
     def create_model_display(self, image_info):
         """创建模型信息展示"""
         from qfluentwidgets import BodyLabel
@@ -318,10 +380,10 @@ class FluentImageDisplay(QObject):
         # 模型标题区域
         model_title_widget = QWidget()
         model_title_layout = QHBoxLayout()
-        model_title_layout.setContentsMargins(0, 8, 0, 4)
+        model_title_layout.setContentsMargins(0, 0, 0, 4)
         model_title_layout.setSpacing(8)
         
-        model_title = BodyLabel("🤖 使用模型:")
+        model_title = BodyLabel("🤖 AI模型:")
         model_title.setStyleSheet("""
             color: #6B7280;
             font-size: 12px;
@@ -339,14 +401,14 @@ class FluentImageDisplay(QObject):
         model_card.setFrameStyle(QFrame.NoFrame)
         model_card.setStyleSheet("""
             QFrame {
-                background-color: rgba(254, 249, 195, 0.6);
-                border: 1px solid rgba(251, 191, 36, 0.4);
+                background-color: rgba(252, 231, 243, 0.6);
+                border: 1px solid rgba(236, 72, 153, 0.2);
                 border-radius: 8px;
                 padding: 0px;
             }
             QFrame:hover {
-                background-color: rgba(254, 243, 199, 0.8);
-                border-color: rgba(251, 191, 36, 0.6);
+                background-color: rgba(252, 231, 243, 0.8);
+                border-color: rgba(236, 72, 153, 0.3);
             }
         """)
         
@@ -354,8 +416,14 @@ class FluentImageDisplay(QObject):
         model_layout.setContentsMargins(12, 10, 12, 10)
         model_layout.setSpacing(6)
         
+        # 模型名称
         if model_name:
-            # 模型名称
+            name_layout = QHBoxLayout()
+            name_layout.setSpacing(8)
+            
+            name_icon = BodyLabel("📋")
+            name_icon.setStyleSheet("font-size: 14px;")
+            
             name_label = BodyLabel(model_name)
             name_label.setStyleSheet("""
                 color: #1F2937;
@@ -363,135 +431,36 @@ class FluentImageDisplay(QObject):
                 font-weight: 600;
             """)
             name_label.setWordWrap(True)
-            model_layout.addWidget(name_label)
-        
-        if model_hash:
-            # 模型哈希
-            hash_container = QWidget()
-            hash_layout = QHBoxLayout()
-            hash_layout.setContentsMargins(0, 0, 0, 0)
-            hash_layout.setSpacing(6)
             
-            hash_prefix = BodyLabel("哈希:")
-            hash_prefix.setStyleSheet("""
+            name_layout.addWidget(name_icon)
+            name_layout.addWidget(name_label, 1)
+            model_layout.addLayout(name_layout)
+        
+        # 模型哈希
+        if model_hash:
+            hash_layout = QHBoxLayout()
+            hash_layout.setSpacing(8)
+            
+            hash_icon = BodyLabel("🔑")
+            hash_icon.setStyleSheet("font-size: 12px;")
+            
+            hash_label = BodyLabel(f"哈希: {model_hash[:16]}..." if len(model_hash) > 16 else f"哈希: {model_hash}")
+            hash_label.setStyleSheet("""
                 color: #6B7280;
                 font-size: 11px;
-                font-weight: 500;
-            """)
-            
-            hash_value = BodyLabel(model_hash)
-            hash_value.setStyleSheet("""
-                color: #374151;
-                font-size: 11px;
-                font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+                font-weight: 400;
                 background-color: rgba(243, 244, 246, 0.8);
-                border: 1px solid rgba(209, 213, 219, 0.6);
+                border: 1px solid rgba(209, 213, 219, 0.5);
                 padding: 2px 6px;
                 border-radius: 4px;
             """)
             
-            hash_layout.addWidget(hash_prefix)
-            hash_layout.addWidget(hash_value, 1)
-            hash_container.setLayout(hash_layout)
-            model_layout.addWidget(hash_container)
+            hash_layout.addWidget(hash_icon)
+            hash_layout.addWidget(hash_label, 1)
+            model_layout.addLayout(hash_layout)
         
         model_card.setLayout(model_layout)
         self.parent.params_layout.addWidget(model_card)
-        
-        # 添加间距
-        spacer = QWidget()
-        spacer.setFixedHeight(8)
-        self.parent.params_layout.addWidget(spacer)
-    
-    def create_generation_method_display(self, image_info):
-        """创建生成方式展示"""
-        from qfluentwidgets import BodyLabel
-        from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFrame
-        
-        generation_method = self.detect_generation_method(image_info)
-        if generation_method == "-":
-            return
-        
-        # 生成方式标题区域
-        method_title_widget = QWidget()
-        method_title_layout = QHBoxLayout()
-        method_title_layout.setContentsMargins(0, 0, 0, 4)
-        method_title_layout.setSpacing(8)
-        
-        method_title = BodyLabel("⚙️ 生成方式:")
-        method_title.setStyleSheet("""
-            color: #6B7280;
-            font-size: 12px;
-            font-weight: 600;
-        """)
-        
-        method_title_layout.addWidget(method_title)
-        method_title_layout.addStretch()
-        method_title_widget.setLayout(method_title_layout)
-        
-        self.parent.params_layout.addWidget(method_title_widget)
-        
-        # 生成方式卡片
-        method_card = QFrame()
-        method_card.setFrameStyle(QFrame.NoFrame)
-        
-        # 根据不同的生成方式设置不同的颜色
-        if generation_method == "ComfyUI":
-            card_style = """
-                QFrame {
-                    background-color: rgba(236, 254, 255, 0.6);
-                    border: 1px solid rgba(6, 182, 212, 0.4);
-                    border-radius: 8px;
-                    padding: 0px;
-                }
-                QFrame:hover {
-                    background-color: rgba(207, 250, 254, 0.8);
-                    border-color: rgba(6, 182, 212, 0.6);
-                }
-            """
-        else:  # SD WebUI
-            card_style = """
-                QFrame {
-                    background-color: rgba(239, 246, 255, 0.6);
-                    border: 1px solid rgba(59, 130, 246, 0.4);
-                    border-radius: 8px;
-                    padding: 0px;
-                }
-                QFrame:hover {
-                    background-color: rgba(219, 234, 254, 0.8);
-                    border-color: rgba(59, 130, 246, 0.6);
-                }
-            """
-        
-        method_card.setStyleSheet(card_style)
-        
-        method_layout = QHBoxLayout()
-        method_layout.setContentsMargins(12, 8, 12, 8)
-        method_layout.setSpacing(8)
-        
-        # 生成方式图标和名称
-        if generation_method == "ComfyUI":
-            icon_text = "🔗"
-        else:
-            icon_text = "🖼️"
-        
-        icon_label = BodyLabel(icon_text)
-        icon_label.setStyleSheet("""
-            font-size: 16px;
-        """)
-        
-        method_label = BodyLabel(generation_method)
-        method_label.setStyleSheet("""
-            color: #1F2937;
-            font-size: 13px;
-            font-weight: 600;
-        """)
-        
-        method_layout.addWidget(icon_label)
-        method_layout.addWidget(method_label, 1)
-        method_card.setLayout(method_layout)
-        
-        self.parent.params_layout.addWidget(method_card)
         
         # 添加间距
         spacer = QWidget()
@@ -632,3 +601,105 @@ class FluentImageDisplay(QObject):
         
         lora_container.setLayout(lora_container_layout)
         self.parent.params_layout.addWidget(lora_container)
+        
+        # 添加间距
+        spacer = QWidget()
+        spacer.setFixedHeight(8)
+        self.parent.params_layout.addWidget(spacer)
+    
+    def create_generation_params_display(self, image_info):
+        """创建生成参数展示"""
+        from qfluentwidgets import BodyLabel
+        from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFrame
+        
+        # 生成参数映射
+        param_mapping = {
+            'sampler_name': '采样器',
+            'steps': '采样步数',
+            'cfg_scale': 'CFG Scale',
+            'seed': '随机种子',
+            'size': '尺寸',
+            'denoising_strength': '去噪强度',
+            'clip_skip': 'Clip Skip',
+            'ensd': 'ENSD'
+        }
+        
+        # 检查是否有参数需要显示
+        has_params = any(image_info.get(key, '') for key in param_mapping.keys())
+        if not has_params:
+            return
+        
+        # 参数标题区域
+        params_title_widget = QWidget()
+        params_title_layout = QHBoxLayout()
+        params_title_layout.setContentsMargins(0, 0, 0, 4)
+        params_title_layout.setSpacing(8)
+        
+        params_title = BodyLabel("⚙️ 生成参数:")
+        params_title.setStyleSheet("""
+            color: #6B7280;
+            font-size: 12px;
+            font-weight: 600;
+        """)
+        
+        params_title_layout.addWidget(params_title)
+        params_title_layout.addStretch()
+        params_title_widget.setLayout(params_title_layout)
+        
+        self.parent.params_layout.addWidget(params_title_widget)
+        
+        # 参数容器
+        params_container = QWidget()
+        params_container_layout = QVBoxLayout()
+        params_container_layout.setContentsMargins(0, 0, 0, 8)
+        params_container_layout.setSpacing(4)
+        
+        for key, label in param_mapping.items():
+            value = image_info.get(key, '')
+            if value:
+                # 创建参数卡片
+                param_card = QFrame()
+                param_card.setFrameStyle(QFrame.NoFrame)
+                param_card.setStyleSheet("""
+                    QFrame {
+                        background-color: rgba(236, 253, 245, 0.6);
+                        border: 1px solid rgba(34, 197, 94, 0.2);
+                        border-radius: 6px;
+                        padding: 0px;
+                    }
+                    QFrame:hover {
+                        background-color: rgba(236, 253, 245, 0.8);
+                        border-color: rgba(34, 197, 94, 0.3);
+                    }
+                """)
+                
+                param_layout = QHBoxLayout()
+                param_layout.setContentsMargins(10, 6, 10, 6)
+                param_layout.setSpacing(8)
+                
+                # 参数标签
+                param_label = BodyLabel(f"{label}:")
+                param_label.setStyleSheet("""
+                    color: #6B7280;
+                    font-size: 11px;
+                    font-weight: 600;
+                    min-width: 60px;
+                """)
+                
+                # 参数值
+                param_value = BodyLabel(str(value))
+                param_value.setStyleSheet("""
+                    color: #1F2937;
+                    font-size: 12px;
+                    font-weight: 500;
+                """)
+                param_value.setWordWrap(True)
+                
+                param_layout.addWidget(param_label)
+                param_layout.addWidget(param_value, 1)
+                
+                param_card.setLayout(param_layout)
+                params_container_layout.addWidget(param_card)
+        
+        params_container.setLayout(params_container_layout)
+        self.parent.params_layout.addWidget(params_container)

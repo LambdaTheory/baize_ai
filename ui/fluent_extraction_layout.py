@@ -276,18 +276,12 @@ class FluentExtractionLayout:
         prompt_buttons_layout.addWidget(self.parent.reset_prompts_btn)
         prompt_buttons_layout.addStretch()
         
-        # 生成方式
+        # 生成方式 - 不在这里创建，将在image_display中创建卡片式显示
+        # 保留这些引用以维持兼容性
         self.parent.generation_method_label = BodyLabel("生成方式:")
-        self.parent.generation_method_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        self.parent.generation_method_label.hide()  # 隐藏旧的标签
         self.parent.generation_method_text = BodyLabel("-")
-        self.parent.generation_method_text.setStyleSheet("""
-            color: #1F2937;
-            background-color: rgba(248, 250, 252, 0.8);
-            border: 1px solid rgba(229, 231, 235, 0.6);
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 12px;
-        """)
+        self.parent.generation_method_text.hide()  # 隐藏旧的显示
         
         # 生成参数
         self.parent.params_label = BodyLabel("生成参数:")
