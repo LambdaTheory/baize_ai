@@ -42,22 +42,6 @@ from .fluent_license_manager import FluentLicenseManager
 from .fluent_interface_creator import FluentInterfaceCreator
 from core.license_manager import LicenseManager
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class FluentMainWindow(FluentWindow):
     """Fluent Design 主窗口"""
     
@@ -129,15 +113,15 @@ class FluentMainWindow(FluentWindow):
                     icon = QIcon(icon_path)
                     if not icon.isNull():
                         self.setWindowIcon(icon)
-                        print(f"✅ 设置窗口图标: {icon_path}")
+                        print(f"[成功] 设置窗口图标: {icon_path}")
                         icon_set = True
                         break
                 except Exception as e:
-                    print(f"⚠️ 加载图标失败 {icon_path}: {e}")
+                    print(f"[警告] 加载图标失败 {icon_path}: {e}")
                     continue
         
         if not icon_set:
-            print("⚠️ 未找到图标文件，使用默认图标")
+            print("[警告] 未找到图标文件，使用默认图标")
 
     def init_ui(self):
         """初始化用户界面"""
@@ -222,20 +206,22 @@ class FluentMainWindow(FluentWindow):
                 
                 # 参数标签
                 param_label = BodyLabel(f"{label}:")
-                param_label.setStyleSheet(f"""
-                    color: {FluentColors.get_color('text_secondary')};
+                param_label.setStyleSheet("""
+                    color: #6B7280;
                     font-size: 12px;
+                    font-weight: 500;
                     margin-bottom: 2px;
                 """)
                 
                 # 参数值
                 param_value = BodyLabel(str(value))
                 param_value.setWordWrap(True)
-                param_value.setStyleSheet(f"""
-                    color: {FluentColors.get_color('text_primary')};
-                    background-color: {FluentColors.get_color('bg_secondary')};
+                param_value.setStyleSheet("""
+                    color: #1F2937;
+                    background-color: rgba(248, 250, 252, 0.8);
+                    border: 1px solid rgba(229, 231, 235, 0.6);
                     padding: 4px 8px;
-                    border-radius: 4px;
+                    border-radius: 6px;
                     font-size: 12px;
                 """)
                 
@@ -271,9 +257,10 @@ class FluentMainWindow(FluentWindow):
                 
                 # LoRA标题
                 lora_label = BodyLabel("LoRA:")
-                lora_label.setStyleSheet(f"""
-                    color: {FluentColors.get_color('text_secondary')};
+                lora_label.setStyleSheet("""
+                    color: #6B7280;
                     font-size: 12px;
+                    font-weight: 500;
                     margin-bottom: 2px;
                 """)
                 lora_layout.addWidget(lora_label)
@@ -284,11 +271,12 @@ class FluentMainWindow(FluentWindow):
                         lora_text = f"• {lora.get('name', 'Unknown')} (权重: {lora.get('weight', 'N/A')})"
                         lora_item = BodyLabel(lora_text)
                         lora_item.setWordWrap(True)
-                        lora_item.setStyleSheet(f"""
-                            color: {FluentColors.get_color('text_primary')};
-                            background-color: {FluentColors.get_color('bg_secondary')};
+                        lora_item.setStyleSheet("""
+                            color: #1F2937;
+                            background-color: rgba(248, 250, 252, 0.8);
+                            border: 1px solid rgba(229, 231, 235, 0.6);
                             padding: 4px 8px;
-                            border-radius: 4px;
+                            border-radius: 6px;
                             font-size: 12px;
                             margin-bottom: 2px;
                         """)
@@ -457,7 +445,7 @@ class FluentMainWindow(FluentWindow):
             image_info = self.image_reader.extract_info(file_path)
             
             # 显示图片信息
-            self.display_image_info(file_path, image_info)
+            self.image_display.display_image_info(file_path, image_info)
             
             # 加载用户自定义信息
             self.file_name_edit.setText(record.get('custom_name', ''))
