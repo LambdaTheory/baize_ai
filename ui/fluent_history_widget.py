@@ -233,9 +233,9 @@ class FluentHistoryWidget(CardWidget):
     def create_history_table(self, parent_layout):
         """创建历史记录表格"""
         self.history_table = TableWidget()
-        self.history_table.setColumnCount(3)  # 只保留3列：缩略图、标签、来源
+        self.history_table.setColumnCount(4)  # 只保留4列：缩略图、标签、来源、文件名
         self.history_table.setHorizontalHeaderLabels([
-            "缩略图", "标签", "来源"
+            "缩略图", "标签", "来源", "文件名"
         ])
         
         # 设置表格属性
@@ -313,14 +313,16 @@ class FluentHistoryWidget(CardWidget):
         # 设置列的调整模式
         header.setSectionResizeMode(0, QHeaderView.Fixed)  # 缩略图列固定宽度
         header.setSectionResizeMode(1, QHeaderView.Interactive)  # 标签列可调整
-        header.setSectionResizeMode(2, QHeaderView.Stretch)  # 来源列自动拉伸
+        header.setSectionResizeMode(2, QHeaderView.Interactive)  # 来源列可调整
+        header.setSectionResizeMode(3, QHeaderView.Interactive)  # 文件名列可调整
         
         # 设置初始列宽
         self.history_table.setColumnWidth(0, 100)  # 缩略图
-        self.history_table.setColumnWidth(1, 150)  # 标签
-        # 来源列使用自动拉伸，无需设置宽度
+        self.history_table.setColumnWidth(1, 120)  # 标签
+        self.history_table.setColumnWidth(2, 120)  # 来源
+        self.history_table.setColumnWidth(3, 250)  # 文件名（增加宽度）
         
-        # 禁用最后一列的自动拉伸，让来源列使用手动设置的拉伸模式
+        # 禁用最后一列的自动拉伸，避免影响前面列的显示
         header.setStretchLastSection(False)
         
     def setup_connections(self):
@@ -454,11 +456,19 @@ class FluentHistoryWidget(CardWidget):
                     'Unknown': '未知'
                 }.get(generation_source, generation_source)
                 
+
+                
                 # 创建缩略图小部件
                 thumbnail_widget = self.create_thumbnail_widget(file_path)
                 
-                # 创建表格项
-                tags_item = QTableWidgetItem(tags)
+                # 创建表格项并存储记录ID
+                filename_item = QTableWidgetItem(display_name)
+                filename_item.setData(Qt.UserRole, record.get('id'))  # 存储记录ID
+                
+                # 为无效文件设置特殊样式
+                if not file_exists:
+                    filename_item.setBackground(QColor(254, 242, 242))  # 很淡的红色背景
+                    filename_item.setForeground(QColor(185, 28, 28))  # 深红色文字
                 
                 # 生成来源项
                 source_item = QTableWidgetItem(source_display)
@@ -469,23 +479,17 @@ class FluentHistoryWidget(CardWidget):
                 else:
                     source_item.setForeground(QColor(156, 163, 175))  # 灰色
                 
-                # 为无效文件设置特殊样式
-                if not file_exists:
-                    tags_item.setBackground(QColor(254, 242, 242))  # 很淡的红色背景
-                    tags_item.setForeground(QColor(185, 28, 28))  # 深红色文字
-                    source_item.setBackground(QColor(254, 242, 242))  # 很淡的红色背景
-                    source_item.setForeground(QColor(185, 28, 28))  # 深红色文字
+                tags_item = QTableWidgetItem(tags)
                 
                 # 设置工具提示显示完整信息
-                tags_item.setToolTip(f"文件名: {display_name}\n文件路径: {file_path}")
+                if len(display_name) > 20:
+                    filename_item.setToolTip(f"完整文件名: {display_name}\n文件路径: {file_path}")
                 
-                # 设置表格项（按新顺序：缩略图、标签、来源）
+                # 设置表格项（按新顺序：缩略图、标签、来源、文件名）
                 self.history_table.setCellWidget(i, 0, thumbnail_widget)  # 缩略图（使用setCellWidget）
                 self.history_table.setItem(i, 1, tags_item)      # 标签
                 self.history_table.setItem(i, 2, source_item)    # 来源
-                
-                # 存储记录ID到标签项中（用于删除操作）
-                tags_item.setData(Qt.UserRole, record.get('id'))
+                self.history_table.setItem(i, 3, filename_item)  # 文件名
                 
             # 更新统计信息
             self.update_statistics(len(records), valid_count, invalid_count, 0)
@@ -579,7 +583,7 @@ class FluentHistoryWidget(CardWidget):
                 record_ids = []
                 for index in selected_rows:
                     row = index.row()
-                    item = self.history_table.item(row, 1)  # 标签列现在是第1列，记录ID存储在这里
+                    item = self.history_table.item(row, 3)  # 文件名列现在是第3列
                     if item:
                         record_id = item.data(Qt.UserRole)
                         if record_id:

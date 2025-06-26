@@ -985,11 +985,6 @@ class FluentMainWindow(FluentWindow):
         # 第三列 - 标签备注和历史记录
         self.create_third_column(layout)
         
-        # 设置明确的拉伸因子，确保1:2:1的比例
-        layout.setStretchFactor(layout.itemAt(0).widget(), 1)  # 第一列: 1份
-        layout.setStretchFactor(layout.itemAt(1).widget(), 2)  # 第二列: 2份
-        layout.setStretchFactor(layout.itemAt(2).widget(), 1)  # 第三列: 1份
-        
         # 将主要内容布局添加到主布局
         main_layout.addLayout(layout)
         
@@ -1010,27 +1005,28 @@ class FluentMainWindow(FluentWindow):
         self.history_widget.load_history()
     
     def create_first_column(self, parent_layout):
-        """创建第一列：图片预览(100%高度)"""
+        """创建第一列：图片预览区域(100%高度)"""
         from qfluentwidgets import CardWidget, SubtitleLabel, BodyLabel, LineEdit
         
         first_column = QWidget()
-        first_column.setMinimumWidth(250)  # 设置最小宽度
-        first_column.setMaximumWidth(450)  # 适当增加最大宽度
         column_layout = QVBoxLayout()
-        column_layout.setSpacing(0)  # 移除间距，让图片预览占满整个列
+        column_layout.setSpacing(0)  # 移除间距以实现100%高度
+        column_layout.setContentsMargins(0, 0, 0, 0)  # 移除边距
         first_column.setLayout(column_layout)
         
-        # 图片预览卡片 (100%高度)
+        # 图片预览卡片 (100%)
         self.image_preview_card = CardWidget()
         self.image_preview_card.setBorderRadius(16)
         preview_layout = QVBoxLayout()
         preview_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.LG, 
                                         FluentSpacing.LG, FluentSpacing.LG)
         
-        # 图片标签，占据整个可用空间
+        # 移除标题，用户不需要
+        
+        # 图片标签 - 占用所有可用空间
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setMinimumHeight(400)  # 增加最小高度
+        self.image_label.setMinimumHeight(500)  # 增加最小高度
         self.image_label.setScaledContents(False)
         self.image_label.setStyleSheet(f"""
             QLabel {{
@@ -1043,30 +1039,31 @@ class FluentMainWindow(FluentWindow):
         """)
         self.image_label.setText("🖼️ 将图片拖拽到此处\n💻 支持从SD WebUI、ComfyUI等浏览器拖拽")
         
-        preview_layout.addWidget(self.image_label, 1)  # 让图片标签占据所有可用空间
+        # 图片标签占用全部空间
+        preview_layout.addWidget(self.image_label, 1)
         self.image_preview_card.setLayout(preview_layout)
         
-        # 隐藏的基础信息变量（用于保存文件信息，但不显示在界面上）
+        # 创建隐藏的控件来保持与其他代码的兼容性
+        # 这些控件不会显示在界面上，但需要保留以避免其他代码报错
         self.file_name_edit = LineEdit()
-        self.file_name_edit.setVisible(False)
+        self.file_name_edit.hide()
         self.file_path_label = BodyLabel("-")
-        self.file_path_label.setVisible(False)
+        self.file_path_label.hide()
         self.file_size_label = BodyLabel("-")
-        self.file_size_label.setVisible(False)
+        self.file_size_label.hide()
         self.image_size_label = BodyLabel("-")
-        self.image_size_label.setVisible(False)
+        self.image_size_label.hide()
         
-        # 图片预览卡片占100%高度
+        # 图片预览卡片占用100%高度
         column_layout.addWidget(self.image_preview_card, 1)
         
-        parent_layout.addWidget(first_column, 1)  # 第一列占1份
+        parent_layout.addWidget(first_column, 3)  # 第一列占3份
     
     def create_second_column(self, parent_layout):
         """创建第二列：AI信息(100%)"""
         from qfluentwidgets import CardWidget, SubtitleLabel, BodyLabel, TextEdit, SmoothScrollArea, FlowLayout, TransparentPushButton, PushButton
         
         second_column = QWidget()
-        second_column.setMinimumWidth(500)  # 设置最小宽度，确保有足够空间
         column_layout = QVBoxLayout()
         column_layout.setSpacing(FluentSpacing.MD)
         second_column.setLayout(column_layout)
@@ -1099,16 +1096,14 @@ class FluentMainWindow(FluentWindow):
         self.positive_prompt_label = BodyLabel("正向提示词:")
         self.positive_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
         self.positive_prompt_text = TextEdit()
-        self.positive_prompt_text.setMaximumHeight(120)  # 从80增加到120
-        self.positive_prompt_text.setMinimumHeight(120)  # 设置最小高度确保一致性
+        self.positive_prompt_text.setMaximumHeight(80)
         self.positive_prompt_text.setPlaceholderText("正向提示词...")
         
         # 反向提示词
         self.negative_prompt_label = BodyLabel("反向提示词:")
         self.negative_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
         self.negative_prompt_text = TextEdit()
-        self.negative_prompt_text.setMaximumHeight(100)  # 从60增加到100
-        self.negative_prompt_text.setMinimumHeight(100)  # 设置最小高度确保一致性
+        self.negative_prompt_text.setMaximumHeight(60)
         self.negative_prompt_text.setPlaceholderText("反向提示词...")
         
         # 生成方式
@@ -1171,15 +1166,13 @@ class FluentMainWindow(FluentWindow):
         # AI信息卡片占满整个列
         column_layout.addWidget(self.ai_info_card, 1)
         
-        parent_layout.addWidget(second_column, 2)  # 第二列占2份
+        parent_layout.addWidget(second_column, 3)  # 第二列占3份
     
     def create_third_column(self, parent_layout):
         """创建第三列：标签备注(40%) + 历史记录(60%)"""
         from qfluentwidgets import CardWidget, SubtitleLabel, BodyLabel, TextEdit, SmoothScrollArea, PushButton
         
         third_column = QWidget()
-        third_column.setMinimumWidth(300)  # 增加最小宽度
-        third_column.setMaximumWidth(500)  # 增加最大宽度，给更多显示空间
         column_layout = QVBoxLayout()
         column_layout.setSpacing(FluentSpacing.MD)
         third_column.setLayout(column_layout)
@@ -1263,10 +1256,10 @@ class FluentMainWindow(FluentWindow):
         self.history_card.setLayout(history_layout)
         
         # 按30%和70%的比例添加到列布局
-        column_layout.addWidget(self.tags_notes_card, 1)    # 30%
-        column_layout.addWidget(self.history_card, 2)       # 70%
+        column_layout.addWidget(self.tags_notes_card, 3)    # 30%
+        column_layout.addWidget(self.history_card, 7)       # 70%
         
-        parent_layout.addWidget(third_column, 1)  # 第三列占1份
+        parent_layout.addWidget(third_column, 3)  # 第三列占3份
     
     def handle_edit_prompt_clicked(self):
         """处理编辑提示词按钮点击"""
