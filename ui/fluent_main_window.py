@@ -119,7 +119,7 @@ class DragOverlay(QWidget):
         subtitle_rect = self.rect()
         subtitle_rect.setTop(subtitle_y)
         subtitle_rect.setBottom(subtitle_y + 30)
-        painter.drawText(subtitle_rect, Qt.AlignCenter, "支持 PNG、JPG、JPEG 格式或文件夹")
+        painter.drawText(subtitle_rect, Qt.AlignCenter, "支持文件夹或从浏览器拖拽图片")
         
         # 底部装饰点
         dot_pen = QPen(QColor(200, 200, 200, 150))
@@ -983,8 +983,9 @@ class FluentMainWindow(FluentWindow):
         left_widget.setLayout(left_layout)
         
         # 移除原来的拖拽区域组件，改为提示信息
-        info_label = BodyLabel("🖼️ 将图片或文件夹拖拽到此界面的任意位置即可开始处理")
+        info_label = BodyLabel("🖼️ 将图片或文件夹拖拽到此界面的任意位置即可开始处理\n💻 支持从SD WebUI、ComfyUI等浏览器直接拖拽图片")
         info_label.setAlignment(Qt.AlignCenter)
+        info_label.setWordWrap(True)
         info_label.setStyleSheet(f"""
             color: {FluentColors.get_color('text_secondary')};
             font-size: 14px;
@@ -1049,6 +1050,15 @@ class FluentMainWindow(FluentWindow):
                     if os.path.isdir(file_path) or file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
                         has_valid_items = True
                         break
+                else:
+                    # 支持从浏览器拖拽的网络图片URL或临时文件
+                    url_string = url.toString()
+                    # 检查URL是否包含图片扩展名或是常见的图片服务
+                    if (url_string.lower().endswith(('.png', '.jpg', '.jpeg')) or 
+                        'data:image/' in url_string.lower() or
+                        any(service in url_string.lower() for service in ['blob:', 'localhost:', '127.0.0.1:', 'webui', 'comfyui'])):
+                        has_valid_items = True
+                        break
             
             if has_valid_items:
                 event.accept()
@@ -1057,6 +1067,11 @@ class FluentMainWindow(FluentWindow):
                 self.drag_overlay.show()
             else:
                 event.ignore()
+        elif event.mimeData().hasImage():
+            # 直接支持图片数据拖拽（从浏览器复制粘贴的图片）
+            event.accept()
+            self.drag_overlay.resize(self.extraction_interface.size())
+            self.drag_overlay.show()
         else:
             event.ignore()
             
@@ -1068,9 +1083,44 @@ class FluentMainWindow(FluentWindow):
     def dropEvent(self, event: QDropEvent):
         """拖拽放下事件"""
         import os
+        import tempfile
+        import uuid
+        import requests
+        from PyQt5.QtGui import QImage
+        
         files = []
         folders = []
         
+        # 隐藏蒙层
+        self.drag_overlay.hide()
+        
+        # 检查是否有直接的图片数据（从浏览器复制的图片）
+        if event.mimeData().hasImage():
+            try:
+                # 保存图片数据到临时文件
+                image = event.mimeData().imageData()
+                if isinstance(image, QImage) and not image.isNull():
+                    temp_dir = tempfile.gettempdir()
+                    temp_filename = f"browser_image_{uuid.uuid4().hex}.png"
+                    temp_path = os.path.join(temp_dir, temp_filename)
+                    
+                    if image.save(temp_path, "PNG"):
+                        self.handle_files_dropped([temp_path])
+                        InfoBar.success(
+                            title="图片处理成功",
+                            content="从浏览器拖拽的图片已成功加载",
+                            orient=Qt.Horizontal,
+                            isClosable=True,
+                            position=InfoBarPosition.TOP,
+                            duration=3000,
+                            parent=self
+                        )
+                        event.accept()
+                        return
+            except Exception as e:
+                print(f"处理浏览器图片数据失败: {e}")
+        
+        # 处理URL拖拽
         for url in event.mimeData().urls():
             if url.isLocalFile():
                 file_path = url.toLocalFile()
@@ -1078,9 +1128,50 @@ class FluentMainWindow(FluentWindow):
                     folders.append(file_path)
                 elif file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
                     files.append(file_path)
-        
-        # 隐藏蒙层
-        self.drag_overlay.hide()
+            else:
+                # 处理从浏览器拖拽的网络图片URL
+                url_string = url.toString()
+                try:
+                    # 检查是否是支持的图片URL
+                    if (url_string.lower().endswith(('.png', '.jpg', '.jpeg')) or 
+                        'data:image/' in url_string.lower() or
+                        any(service in url_string.lower() for service in ['blob:', 'localhost:', '127.0.0.1:', 'webui', 'comfyui'])):
+                        
+                        # 下载图片到临时文件
+                        temp_dir = tempfile.gettempdir()
+                        temp_filename = f"browser_download_{uuid.uuid4().hex}.png"
+                        temp_path = os.path.join(temp_dir, temp_filename)
+                        
+                        # 处理不同类型的URL
+                        if url_string.startswith('data:image/'):
+                            # Base64编码的图片数据
+                            import base64
+                            header, data = url_string.split(',', 1)
+                            image_data = base64.b64decode(data)
+                            with open(temp_path, 'wb') as f:
+                                f.write(image_data)
+                            files.append(temp_path)
+                        else:
+                            # HTTP/HTTPS URL或本地服务器URL
+                            response = requests.get(url_string, timeout=10)
+                            response.raise_for_status()
+                            
+                            with open(temp_path, 'wb') as f:
+                                f.write(response.content)
+                            files.append(temp_path)
+                            
+                except Exception as e:
+                    print(f"下载图片失败: {url_string}, 错误: {e}")
+                    InfoBar.warning(
+                        title="图片下载失败",
+                        content=f"无法从浏览器下载图片: {str(e)[:50]}...",
+                        orient=Qt.Horizontal,
+                        isClosable=True,
+                        position=InfoBarPosition.TOP,
+                        duration=3000,
+                        parent=self
+                    )
+                    continue
         
         # 优先处理文件夹（批量处理）
         if folders:
@@ -1088,6 +1179,16 @@ class FluentMainWindow(FluentWindow):
             self.handle_folder_dropped(folders[0])
         elif files:
             self.handle_files_dropped(files)
+            if any('browser_' in f for f in files):
+                InfoBar.success(
+                    title="浏览器图片处理成功",
+                    content="从浏览器拖拽的图片已成功加载",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=3000,
+                    parent=self
+                )
         
         event.accept()
     

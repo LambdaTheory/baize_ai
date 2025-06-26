@@ -207,6 +207,15 @@ class FluentDropArea(CardWidget):
                     if os.path.isdir(file_path) or file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
                         has_valid_items = True
                         break
+                else:
+                    # 支持从浏览器拖拽的网络图片URL或临时文件
+                    url_string = url.toString()
+                    # 检查URL是否包含图片扩展名或是常见的图片服务
+                    if (url_string.lower().endswith(('.png', '.jpg', '.jpeg')) or 
+                        'data:image/' in url_string.lower() or
+                        any(service in url_string.lower() for service in ['blob:', 'localhost:', '127.0.0.1:', 'webui', 'comfyui'])):
+                        has_valid_items = True
+                        break
             
             if has_valid_items:
                 event.accept()
@@ -215,6 +224,11 @@ class FluentDropArea(CardWidget):
             else:
                 event.ignore()
                 self.set_drag_reject_state()
+        elif event.mimeData().hasImage():
+            # 直接支持图片数据拖拽（从浏览器复制粘贴的图片）
+            event.accept()
+            self.is_drag_active = True
+            self.set_drag_active_state()
         else:
             event.ignore()
             
@@ -226,9 +240,34 @@ class FluentDropArea(CardWidget):
     def dropEvent(self, event: QDropEvent):
         """拖拽放下事件"""
         import os
+        import tempfile
+        import uuid
+        import requests
+        from PyQt5.QtGui import QImage
+        
         files = []
         folders = []
         
+        # 检查是否有直接的图片数据（从浏览器复制的图片）
+        if event.mimeData().hasImage():
+            try:
+                # 保存图片数据到临时文件
+                image = event.mimeData().imageData()
+                if isinstance(image, QImage) and not image.isNull():
+                    temp_dir = tempfile.gettempdir()
+                    temp_filename = f"browser_image_{uuid.uuid4().hex}.png"
+                    temp_path = os.path.join(temp_dir, temp_filename)
+                    
+                    if image.save(temp_path, "PNG"):
+                        self.filesDropped.emit([temp_path])
+                        self.show_success_state("浏览器图片添加成功！")
+                        self.is_drag_active = False
+                        event.accept()
+                        return
+            except Exception as e:
+                print(f"处理浏览器图片数据失败: {e}")
+        
+        # 处理URL拖拽
         for url in event.mimeData().urls():
             if url.isLocalFile():
                 file_path = url.toLocalFile()
@@ -236,6 +275,42 @@ class FluentDropArea(CardWidget):
                     folders.append(file_path)
                 elif file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
                     files.append(file_path)
+            else:
+                # 处理从浏览器拖拽的网络图片URL
+                url_string = url.toString()
+                try:
+                    # 检查是否是支持的图片URL
+                    if (url_string.lower().endswith(('.png', '.jpg', '.jpeg')) or 
+                        'data:image/' in url_string.lower() or
+                        any(service in url_string.lower() for service in ['blob:', 'localhost:', '127.0.0.1:', 'webui', 'comfyui'])):
+                        
+                        # 下载图片到临时文件
+                        temp_dir = tempfile.gettempdir()
+                        temp_filename = f"browser_download_{uuid.uuid4().hex}.png"
+                        temp_path = os.path.join(temp_dir, temp_filename)
+                        
+                        # 处理不同类型的URL
+                        if url_string.startswith('data:image/'):
+                            # Base64编码的图片数据
+                            import base64
+                            header, data = url_string.split(',', 1)
+                            image_data = base64.b64decode(data)
+                            with open(temp_path, 'wb') as f:
+                                f.write(image_data)
+                            files.append(temp_path)
+                        else:
+                            # HTTP/HTTPS URL或本地服务器URL
+                            response = requests.get(url_string, timeout=10)
+                            response.raise_for_status()
+                            
+                            with open(temp_path, 'wb') as f:
+                                f.write(response.content)
+                            files.append(temp_path)
+                            
+                except Exception as e:
+                    print(f"下载图片失败: {url_string}, 错误: {e}")
+                    self.show_success_state("图片下载失败！")
+                    continue
         
         # 优先处理文件夹（批量处理）
         if folders:
@@ -244,7 +319,8 @@ class FluentDropArea(CardWidget):
             self.show_success_state("文件夹添加成功！")
         elif files:
             self.filesDropped.emit(files)
-            self.show_success_state("文件添加成功！")
+            success_msg = "浏览器图片添加成功！" if any('browser_' in f for f in files) else "文件添加成功！"
+            self.show_success_state(success_msg)
         
         self.is_drag_active = False
         event.accept()
