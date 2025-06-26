@@ -233,9 +233,9 @@ class FluentHistoryWidget(CardWidget):
     def create_history_table(self, parent_layout):
         """创建历史记录表格"""
         self.history_table = TableWidget()
-        self.history_table.setColumnCount(9)  # 增加一列用于生成来源
+        self.history_table.setColumnCount(4)  # 只保留4列：缩略图、文件名、来源、标签
         self.history_table.setHorizontalHeaderLabels([
-            "缩略图", "文件名", "状态", "来源", "标签", "模型", "Lora", "导入时间", "备注"
+            "缩略图", "文件名", "来源", "标签"
         ])
         
         # 设置表格属性
@@ -309,23 +309,13 @@ class FluentHistoryWidget(CardWidget):
         # 设置列的调整模式
         header.setSectionResizeMode(0, QHeaderView.Fixed)  # 缩略图列固定宽度
         header.setSectionResizeMode(1, QHeaderView.Interactive)  # 文件名列可调整
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # 状态列自适应内容
-        header.setSectionResizeMode(3, QHeaderView.Interactive)  # 来源列可调整
-        header.setSectionResizeMode(4, QHeaderView.Interactive)  # 标签列可调整
-        header.setSectionResizeMode(5, QHeaderView.Interactive)  # 模型列可调整
-        header.setSectionResizeMode(6, QHeaderView.Interactive)  # Lora列可调整
-        header.setSectionResizeMode(7, QHeaderView.ResizeToContents)  # 时间列自适应内容
-        header.setSectionResizeMode(8, QHeaderView.Stretch)  # 备注列拉伸填充
+        header.setSectionResizeMode(2, QHeaderView.Interactive)  # 来源列可调整
+        header.setSectionResizeMode(3, QHeaderView.Stretch)  # 标签列拉伸填充
         
         # 设置初始列宽
-        self.history_table.setColumnWidth(0, 100)  # 缩略图（增加宽度）
-        self.history_table.setColumnWidth(1, 120)  # 文件名
-        self.history_table.setColumnWidth(2, 60)   # 状态
-        self.history_table.setColumnWidth(3, 100)  # 来源
-        self.history_table.setColumnWidth(4, 80)   # 标签
-        self.history_table.setColumnWidth(5, 150)  # 模型
-        self.history_table.setColumnWidth(6, 100)  # Lora
-        self.history_table.setColumnWidth(7, 110)  # 时间
+        self.history_table.setColumnWidth(0, 100)  # 缩略图
+        self.history_table.setColumnWidth(1, 200)  # 文件名（增加宽度）
+        self.history_table.setColumnWidth(2, 120)  # 来源
         
         # 禁用最后一列的自动拉伸，避免影响前面列的显示
         header.setStretchLastSection(False)
@@ -451,27 +441,6 @@ class FluentHistoryWidget(CardWidget):
                     status_tooltip = "文件不存在"
                 
                 tags = record.get('tags', '')
-                model = record.get('model', '')
-                
-                # 处理Lora信息显示
-                lora_info_str = record.get('lora_info', '')
-                lora_display = ""
-                if lora_info_str:
-                    try:
-                        lora_info = self.data_manager._deserialize_lora_info(lora_info_str)
-                        if lora_info and 'loras' in lora_info and lora_info['loras']:
-                            # 只显示第一个Lora的名称，如果有多个则显示数量
-                            first_lora = lora_info['loras'][0].get('name', '未知')
-                            if len(lora_info['loras']) > 1:
-                                lora_display = f"{first_lora} (+{len(lora_info['loras'])-1})"
-                            else:
-                                lora_display = first_lora
-                        elif lora_info and 'raw_lora_text' in lora_info:
-                            # 截取原始文本的前20个字符
-                            raw_text = lora_info['raw_lora_text']
-                            lora_display = raw_text[:20] + "..." if len(raw_text) > 20 else raw_text
-                    except:
-                        lora_display = "解析错误"
                 
                 # 获取生成来源
                 generation_source = record.get('generation_source', 'Unknown')
@@ -482,8 +451,7 @@ class FluentHistoryWidget(CardWidget):
                     'Unknown': '未知'
                 }.get(generation_source, generation_source)
                 
-                import_time = record.get('created_at', '')[:16] if record.get('created_at') else ''
-                notes = record.get('notes', '')
+
                 
                 # 创建缩略图小部件
                 thumbnail_widget = self.create_thumbnail_widget(file_path)
@@ -492,14 +460,9 @@ class FluentHistoryWidget(CardWidget):
                 filename_item = QTableWidgetItem(display_name)
                 filename_item.setData(Qt.UserRole, record.get('id'))  # 存储记录ID
                 
-                # 文件状态项
-                status_item = QTableWidgetItem(status_text)
-                status_item.setToolTip(status_tooltip)
-                
                 # 为无效文件设置特殊样式
                 if not file_exists:
                     filename_item.setBackground(QColor(254, 242, 242))  # 很淡的红色背景
-                    status_item.setBackground(QColor(254, 242, 242))
                     filename_item.setForeground(QColor(185, 28, 28))  # 深红色文字
                 
                 # 生成来源项
@@ -512,31 +475,16 @@ class FluentHistoryWidget(CardWidget):
                     source_item.setForeground(QColor(156, 163, 175))  # 灰色
                 
                 tags_item = QTableWidgetItem(tags)
-                model_item = QTableWidgetItem(model)
-                lora_item = QTableWidgetItem(lora_display)
-                time_item = QTableWidgetItem(import_time)
-                notes_item = QTableWidgetItem(notes)
                 
                 # 设置工具提示显示完整信息
                 if len(display_name) > 20:
                     filename_item.setToolTip(f"完整文件名: {display_name}\n文件路径: {file_path}")
-                if len(model) > 30:
-                    model_item.setToolTip(model)
-                if len(lora_display) > 20:
-                    lora_item.setToolTip(lora_info_str)
-                if len(notes) > 30:
-                    notes_item.setToolTip(notes)
                 
-                # 设置表格项（注意列索引都要+1）
+                # 设置表格项（只保留4列）
                 self.history_table.setCellWidget(i, 0, thumbnail_widget)  # 缩略图（使用setCellWidget）
                 self.history_table.setItem(i, 1, filename_item)  # 文件名
-                self.history_table.setItem(i, 2, status_item)    # 状态
-                self.history_table.setItem(i, 3, source_item)    # 来源
-                self.history_table.setItem(i, 4, tags_item)      # 标签
-                self.history_table.setItem(i, 5, model_item)     # 模型
-                self.history_table.setItem(i, 6, lora_item)      # Lora
-                self.history_table.setItem(i, 7, time_item)      # 时间
-                self.history_table.setItem(i, 8, notes_item)     # 备注
+                self.history_table.setItem(i, 2, source_item)    # 来源
+                self.history_table.setItem(i, 3, tags_item)      # 标签
                 
             # 更新统计信息
             self.update_statistics(len(records), valid_count, invalid_count, 0)
@@ -630,7 +578,7 @@ class FluentHistoryWidget(CardWidget):
                 record_ids = []
                 for index in selected_rows:
                     row = index.row()
-                    item = self.history_table.item(row, 1)  # 文件名列现在是第1列
+                    item = self.history_table.item(row, 1)  # 文件名列是第1列
                     if item:
                         record_id = item.data(Qt.UserRole)
                         if record_id:
