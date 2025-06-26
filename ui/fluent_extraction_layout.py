@@ -280,11 +280,12 @@ class FluentExtractionLayout:
         self.parent.generation_method_label = BodyLabel("生成方式:")
         self.parent.generation_method_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
         self.parent.generation_method_text = BodyLabel("-")
-        self.parent.generation_method_text.setStyleSheet(f"""
-            color: {FluentColors.get_color('text_primary')};
-            background-color: {FluentColors.get_color('bg_secondary')};
+        self.parent.generation_method_text.setStyleSheet("""
+            color: #1F2937;
+            background-color: rgba(248, 250, 252, 0.8);
+            border: 1px solid rgba(229, 231, 235, 0.6);
             padding: 4px 8px;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 12px;
         """)
         

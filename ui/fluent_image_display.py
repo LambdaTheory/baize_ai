@@ -174,21 +174,23 @@ class FluentImageDisplay(QObject):
                 
                 # 参数标签
                 param_label = BodyLabel(f"{label}:")
-                param_label.setStyleSheet(f"""
-                    color: {FluentColors.get_color('text_secondary')};
+                param_label.setStyleSheet("""
+                    color: #6B7280;
                     font-size: 12px;
+                    font-weight: 500;
                     margin-bottom: 2px;
                 """)
                 
                 # 参数值
                 param_value = BodyLabel(str(value))
-                param_value.setStyleSheet(f"""
-                    color: {FluentColors.get_color('text_primary')};
+                param_value.setStyleSheet("""
+                    color: #1F2937;
                     font-size: 13px;
                     font-weight: 500;
-                    background-color: {FluentColors.get_color('surface_variant')};
-                    padding: 4px 8px;
-                    border-radius: 4px;
+                    background-color: rgba(248, 250, 252, 0.8);
+                    border: 1px solid rgba(229, 231, 235, 0.6);
+                    padding: 6px 10px;
+                    border-radius: 6px;
                     margin-top: 2px;
                 """)
                 param_value.setWordWrap(True)
@@ -210,13 +212,13 @@ class FluentImageDisplay(QObject):
             # 添加分隔线
             separator = QWidget()
             separator.setFixedHeight(1)
-            separator.setStyleSheet(f"background-color: {FluentColors.get_color('outline_variant')};")
+            separator.setStyleSheet("background-color: rgba(229, 231, 235, 0.6);")
             self.parent.params_layout.addWidget(separator)
             
             # 其他参数标题
             other_title = BodyLabel("其他参数:")
-            other_title.setStyleSheet(f"""
-                color: {FluentColors.get_color('text_secondary')};
+            other_title.setStyleSheet("""
+                color: #6B7280;
                 font-size: 12px;
                 font-weight: 600;
                 margin: 8px 0 4px 0;
@@ -236,9 +238,10 @@ class FluentImageDisplay(QObject):
                 
                 # 参数标签
                 param_label = BodyLabel(f"{key}:")
-                param_label.setStyleSheet(f"""
-                    color: {FluentColors.get_color('text_secondary')};
+                param_label.setStyleSheet("""
+                    color: #6B7280;
                     font-size: 11px;
+                    font-weight: 500;
                 """)
                 
                 # 参数值（截断长文本）
@@ -247,12 +250,13 @@ class FluentImageDisplay(QObject):
                     value_str = value_str[:100] + "..."
                 
                 param_value = BodyLabel(value_str)
-                param_value.setStyleSheet(f"""
-                    color: {FluentColors.get_color('text_primary')};
+                param_value.setStyleSheet("""
+                    color: #1F2937;
                     font-size: 11px;
-                    background-color: {FluentColors.get_color('surface_variant')};
-                    padding: 2px 6px;
-                    border-radius: 3px;
+                    background-color: rgba(248, 250, 252, 0.8);
+                    border: 1px solid rgba(229, 231, 235, 0.5);
+                    padding: 3px 8px;
+                    border-radius: 4px;
                 """)
                 param_value.setWordWrap(True)
                 
