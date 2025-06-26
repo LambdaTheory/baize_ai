@@ -128,7 +128,7 @@ def main():
         # 如果通过命令行传入了图片文件路径，则自动加载
         if args.file_path and os.path.exists(args.file_path):
             print(f"从命令行加载图片: {args.file_path}")
-            window.process_image(args.file_path)
+            window.business_logic.process_image(args.file_path)
     
     splash.finished.connect(on_splash_finished)
     
@@ -137,7 +137,7 @@ def main():
         if instance_manager.start_server():
             server = instance_manager.get_server()
             # 连接新文件接收信号
-            server.new_file_received.connect(window.handle_new_file_from_instance)
+            server.new_file_received.connect(window.event_handlers.handle_new_file_from_instance)
         
         # 清理函数
         def cleanup():

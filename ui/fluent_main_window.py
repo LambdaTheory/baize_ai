@@ -232,34 +232,7 @@ class FluentMainWindow(FluentWindow):
     
 
     
-    def reset_prompts(self):
-        """重置提示词到原始状态"""
-        try:
-            # 恢复到原始提示词
-            self.positive_prompt_text.setPlainText(self.original_prompts['positive'])
-            self.negative_prompt_text.setPlainText(self.original_prompts['negative'])
-            
-            InfoBar.success(
-                title="重置成功",
-                content="提示词已重置到原始状态",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=2000,
-                parent=self
-            )
-            
-        except Exception as e:
-            print(f"重置提示词时出错: {e}")
-            InfoBar.error(
-                title="重置失败",
-                content=f"重置提示词时出错: {str(e)}",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            )
+
     
     def on_prompt_text_changed(self):
         """提示词文本变化时的处理（不自动保存，仅用于标记状态）"""
@@ -584,7 +557,7 @@ class FluentMainWindow(FluentWindow):
         self.positive_translate_btn.clicked.connect(self.event_handlers.handle_positive_translate_clicked)
         self.negative_translate_btn.clicked.connect(self.event_handlers.handle_negative_translate_clicked)
         self.save_prompts_btn.clicked.connect(self.business_logic.save_prompts_only)
-        self.reset_prompts_btn.clicked.connect(self.reset_prompts)
+        self.reset_prompts_btn.clicked.connect(self.business_logic.reset_prompts)
         
         # 许可证相关按钮连接
         self.quick_activate_btn.clicked.connect(self.show_activation_dialog)
@@ -1008,7 +981,7 @@ class FluentMainWindow(FluentWindow):
         
         # Ctrl+S 保存快捷键
         save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
-        save_shortcut.activated.connect(self.save_record)
+        save_shortcut.activated.connect(self.business_logic.save_record)
         print("设置Ctrl+S快捷键")
         
     def on_user_input_changed(self):
