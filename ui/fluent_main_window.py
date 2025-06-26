@@ -985,6 +985,11 @@ class FluentMainWindow(FluentWindow):
         # 第三列 - 标签备注和历史记录
         self.create_third_column(layout)
         
+        # 设置明确的拉伸因子，确保1:2:1的比例
+        layout.setStretchFactor(layout.itemAt(0).widget(), 1)  # 第一列: 1份
+        layout.setStretchFactor(layout.itemAt(1).widget(), 2)  # 第二列: 2份
+        layout.setStretchFactor(layout.itemAt(2).widget(), 1)  # 第三列: 1份
+        
         # 将主要内容布局添加到主布局
         main_layout.addLayout(layout)
         
@@ -1009,6 +1014,8 @@ class FluentMainWindow(FluentWindow):
         from qfluentwidgets import CardWidget, SubtitleLabel, BodyLabel, LineEdit
         
         first_column = QWidget()
+        first_column.setMinimumWidth(250)  # 设置最小宽度
+        first_column.setMaximumWidth(450)  # 适当增加最大宽度
         column_layout = QVBoxLayout()
         column_layout.setSpacing(0)  # 移除间距，让图片预览占满整个列
         first_column.setLayout(column_layout)
@@ -1059,6 +1066,7 @@ class FluentMainWindow(FluentWindow):
         from qfluentwidgets import CardWidget, SubtitleLabel, BodyLabel, TextEdit, SmoothScrollArea, FlowLayout, TransparentPushButton, PushButton
         
         second_column = QWidget()
+        second_column.setMinimumWidth(500)  # 设置最小宽度，确保有足够空间
         column_layout = QVBoxLayout()
         column_layout.setSpacing(FluentSpacing.MD)
         second_column.setLayout(column_layout)
@@ -1091,14 +1099,16 @@ class FluentMainWindow(FluentWindow):
         self.positive_prompt_label = BodyLabel("正向提示词:")
         self.positive_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
         self.positive_prompt_text = TextEdit()
-        self.positive_prompt_text.setMaximumHeight(80)
+        self.positive_prompt_text.setMaximumHeight(120)  # 从80增加到120
+        self.positive_prompt_text.setMinimumHeight(120)  # 设置最小高度确保一致性
         self.positive_prompt_text.setPlaceholderText("正向提示词...")
         
         # 反向提示词
         self.negative_prompt_label = BodyLabel("反向提示词:")
         self.negative_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
         self.negative_prompt_text = TextEdit()
-        self.negative_prompt_text.setMaximumHeight(60)
+        self.negative_prompt_text.setMaximumHeight(100)  # 从60增加到100
+        self.negative_prompt_text.setMinimumHeight(100)  # 设置最小高度确保一致性
         self.negative_prompt_text.setPlaceholderText("反向提示词...")
         
         # 生成方式
@@ -1168,6 +1178,8 @@ class FluentMainWindow(FluentWindow):
         from qfluentwidgets import CardWidget, SubtitleLabel, BodyLabel, TextEdit, SmoothScrollArea, PushButton
         
         third_column = QWidget()
+        third_column.setMinimumWidth(300)  # 增加最小宽度
+        third_column.setMaximumWidth(500)  # 增加最大宽度，给更多显示空间
         column_layout = QVBoxLayout()
         column_layout.setSpacing(FluentSpacing.MD)
         third_column.setLayout(column_layout)
