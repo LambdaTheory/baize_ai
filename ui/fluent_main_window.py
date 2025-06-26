@@ -231,59 +231,7 @@ class FluentMainWindow(FluentWindow):
                 
                 self.params_layout.addWidget(param_widget)
         
-        # 显示LoRA信息
-        lora_info = image_info.get('lora_info', {})
-        if lora_info:
-            # 兼容不同的LoRA数据格式
-            lora_list = []
-            
-            if isinstance(lora_info, dict):
-                # 格式1: {"loras": [{"name": "xxx", "weight": 0.8}]}
-                if 'loras' in lora_info and isinstance(lora_info['loras'], list):
-                    lora_list = lora_info['loras']
-                # 格式2: {"lora_name": weight}
-                elif 'loras' not in lora_info:
-                    for name, weight in lora_info.items():
-                        lora_list.append({"name": name, "weight": weight})
-            elif isinstance(lora_info, list):
-                # 格式3: [{"name": "xxx", "weight": 0.8}]
-                lora_list = lora_info
-            
-            if lora_list:
-                lora_widget = QWidget()
-                lora_layout = QVBoxLayout()
-                lora_layout.setSpacing(2)
-                lora_layout.setContentsMargins(0, 4, 0, 4)
-                
-                # LoRA标题
-                lora_label = BodyLabel("LoRA:")
-                lora_label.setStyleSheet("""
-                    color: #6B7280;
-                    font-size: 12px;
-                    font-weight: 500;
-                    margin-bottom: 2px;
-                """)
-                lora_layout.addWidget(lora_label)
-                
-                # LoRA列表
-                for lora in lora_list:
-                    if isinstance(lora, dict):
-                        lora_text = f"• {lora.get('name', 'Unknown')} (权重: {lora.get('weight', 'N/A')})"
-                        lora_item = BodyLabel(lora_text)
-                        lora_item.setWordWrap(True)
-                        lora_item.setStyleSheet("""
-                            color: #1F2937;
-                            background-color: rgba(248, 250, 252, 0.8);
-                            border: 1px solid rgba(229, 231, 235, 0.6);
-                            padding: 4px 8px;
-                            border-radius: 6px;
-                            font-size: 12px;
-                            margin-bottom: 2px;
-                        """)
-                        lora_layout.addWidget(lora_item)
-                
-                lora_widget.setLayout(lora_layout)
-                self.params_layout.addWidget(lora_widget)
+
     
     def resizeEvent(self, event):
         """窗口大小变化事件"""

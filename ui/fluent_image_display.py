@@ -201,10 +201,16 @@ class FluentImageDisplay(QObject):
                 
                 self.parent.params_layout.addWidget(param_widget)
         
+        # 显示LoRA信息
+        self.create_lora_display(image_info)
+        
         # 如果有其他参数，显示"更多参数"部分
+        excluded_keys = list(param_mapping.keys()) + [
+            'prompt', 'negative_prompt', 'workflow', 'lora_info', 'generation_source'
+        ]
         other_params = {}
         for key, value in image_info.items():
-            if key not in param_mapping and key not in ['prompt', 'negative_prompt', 'workflow']:
+            if key not in excluded_keys:
                 if value and str(value).strip():
                     other_params[key] = value
         
@@ -266,3 +272,138 @@ class FluentImageDisplay(QObject):
                 
                 self.parent.params_layout.addWidget(param_widget)
                 count += 1 
+    
+    def create_lora_display(self, image_info):
+        """创建LoRA信息展示"""
+        from qfluentwidgets import BodyLabel
+        from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFrame
+        
+        lora_info = image_info.get('lora_info', {})
+        if not lora_info:
+            return
+        
+        # 解析LoRA数据
+        lora_list = []
+        if isinstance(lora_info, dict):
+            if 'loras' in lora_info and isinstance(lora_info['loras'], list):
+                lora_list = lora_info['loras']
+            elif 'loras' not in lora_info:
+                for name, weight in lora_info.items():
+                    lora_list.append({"name": name, "weight": weight})
+        elif isinstance(lora_info, list):
+            lora_list = lora_info
+        
+        if not lora_list:
+            return
+        
+        # 添加分隔线
+        separator = QWidget()
+        separator.setFixedHeight(1)
+        separator.setStyleSheet("background-color: rgba(229, 231, 235, 0.6);")
+        self.parent.params_layout.addWidget(separator)
+        
+        # LoRA标题区域
+        lora_title_widget = QWidget()
+        lora_title_layout = QHBoxLayout()
+        lora_title_layout.setContentsMargins(0, 8, 0, 4)
+        lora_title_layout.setSpacing(8)
+        
+        lora_title = BodyLabel("🎨 LoRA模型:")
+        lora_title.setStyleSheet("""
+            color: #6B7280;
+            font-size: 12px;
+            font-weight: 600;
+        """)
+        
+        lora_count = BodyLabel(f"({len(lora_list)}个)")
+        lora_count.setStyleSheet("""
+            color: #9CA3AF;
+            font-size: 11px;
+            font-weight: 400;
+        """)
+        
+        lora_title_layout.addWidget(lora_title)
+        lora_title_layout.addWidget(lora_count)
+        lora_title_layout.addStretch()
+        lora_title_widget.setLayout(lora_title_layout)
+        
+        self.parent.params_layout.addWidget(lora_title_widget)
+        
+        # LoRA列表容器
+        lora_container = QWidget()
+        lora_container_layout = QVBoxLayout()
+        lora_container_layout.setContentsMargins(0, 0, 0, 8)
+        lora_container_layout.setSpacing(6)
+        
+        for i, lora in enumerate(lora_list):
+            if isinstance(lora, dict):
+                name = lora.get('name', 'Unknown')
+                weight = lora.get('weight', 'N/A')
+                
+                # 创建单个LoRA卡片
+                lora_card = QFrame()
+                lora_card.setFrameStyle(QFrame.NoFrame)
+                lora_card.setStyleSheet("""
+                    QFrame {
+                        background-color: rgba(248, 250, 252, 0.6);
+                        border: 1px solid rgba(229, 231, 235, 0.4);
+                        border-radius: 8px;
+                        padding: 0px;
+                    }
+                    QFrame:hover {
+                        background-color: rgba(240, 245, 251, 0.8);
+                        border-color: rgba(99, 102, 241, 0.3);
+                    }
+                """)
+                
+                lora_layout = QHBoxLayout()
+                lora_layout.setContentsMargins(10, 8, 10, 8)
+                lora_layout.setSpacing(8)
+                
+                # LoRA名称
+                name_label = BodyLabel(name)
+                name_label.setStyleSheet("""
+                    color: #1F2937;
+                    font-size: 12px;
+                    font-weight: 500;
+                """)
+                name_label.setWordWrap(True)
+                
+                # 权重标签
+                weight_label = BodyLabel(f"权重: {weight}")
+                weight_label.setStyleSheet("""
+                    color: #6B7280;
+                    font-size: 11px;
+                    font-weight: 400;
+                    background-color: rgba(239, 246, 255, 0.8);
+                    border: 1px solid rgba(147, 197, 253, 0.3);
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                """)
+                weight_label.setFixedHeight(20)
+                
+                # 序号标签
+                index_label = BodyLabel(f"{i+1}")
+                index_label.setStyleSheet("""
+                    color: #6B7280;
+                    font-size: 10px;
+                    font-weight: 600;
+                    background-color: rgba(229, 231, 235, 0.6);
+                    border-radius: 8px;
+                    min-width: 16px;
+                    max-width: 16px;
+                    min-height: 16px;
+                    max-height: 16px;
+                    text-align: center;
+                """)
+                index_label.setAlignment(Qt.AlignCenter)
+                
+                lora_layout.addWidget(index_label)
+                lora_layout.addWidget(name_label, 1)
+                lora_layout.addWidget(weight_label)
+                
+                lora_card.setLayout(lora_layout)
+                lora_container_layout.addWidget(lora_card)
+        
+        lora_container.setLayout(lora_container_layout)
+        self.parent.params_layout.addWidget(lora_container)
