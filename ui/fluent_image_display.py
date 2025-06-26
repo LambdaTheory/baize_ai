@@ -175,76 +175,7 @@ class FluentImageDisplay(QObject):
         }
         
         # 注意：主要的显示逻辑已经移到上面的专门方法中
-        
-        # 如果有其他参数，显示"更多参数"部分
-        excluded_keys = list(param_mapping.keys()) + [
-            'prompt', 'negative_prompt', 'workflow', 'lora_info', 'generation_source',
-            'model_name', 'model_hash'
-        ]
-        other_params = {}
-        for key, value in image_info.items():
-            if key not in excluded_keys:
-                if value and str(value).strip():
-                    other_params[key] = value
-        
-        if other_params:
-            # 添加分隔线
-            separator = QWidget()
-            separator.setFixedHeight(1)
-            separator.setStyleSheet("background-color: rgba(229, 231, 235, 0.6);")
-            self.parent.params_layout.addWidget(separator)
-            
-            # 其他参数标题
-            other_title = BodyLabel("其他参数:")
-            other_title.setStyleSheet("""
-                color: #6B7280;
-                font-size: 12px;
-                font-weight: 600;
-                margin: 8px 0 4px 0;
-            """)
-            self.parent.params_layout.addWidget(other_title)
-            
-            # 显示其他参数（限制显示数量）
-            count = 0
-            for key, value in other_params.items():
-                if count >= 5:  # 最多显示5个其他参数
-                    break
-                
-                param_widget = QWidget()
-                param_layout = QVBoxLayout()
-                param_layout.setSpacing(2)
-                param_layout.setContentsMargins(0, 2, 0, 2)
-                
-                # 参数标签
-                param_label = BodyLabel(f"{key}:")
-                param_label.setStyleSheet("""
-                    color: #6B7280;
-                    font-size: 11px;
-                    font-weight: 500;
-                """)
-                
-                # 参数值（截断长文本）
-                value_str = str(value)
-                if len(value_str) > 100:
-                    value_str = value_str[:100] + "..."
-                
-                param_value = BodyLabel(value_str)
-                param_value.setStyleSheet("""
-                    color: #1F2937;
-                    font-size: 11px;
-                    background-color: rgba(248, 250, 252, 0.8);
-                    border: 1px solid rgba(229, 231, 235, 0.5);
-                    padding: 3px 8px;
-                    border-radius: 4px;
-                """)
-                param_value.setWordWrap(True)
-                
-                param_layout.addWidget(param_label)
-                param_layout.addWidget(param_value)
-                param_widget.setLayout(param_layout)
-                
-                self.parent.params_layout.addWidget(param_widget)
-                count += 1 
+        # 不再显示其他参数区域 
     
     def create_generation_method_display(self, image_info):
         """创建生成方式展示"""
@@ -383,7 +314,7 @@ class FluentImageDisplay(QObject):
         model_title_layout.setContentsMargins(0, 0, 0, 4)
         model_title_layout.setSpacing(8)
         
-        model_title = BodyLabel("🤖 AI模型:")
+        model_title = BodyLabel("🤖 模型:")
         model_title.setStyleSheet("""
             color: #6B7280;
             font-size: 12px;
