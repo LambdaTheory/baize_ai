@@ -1475,39 +1475,70 @@ class FluentMainWindow(FluentWindow):
             )
             
     def copy_info(self):
-        """复制信息到剪贴板"""
+        """复制信息到剪贴板（Stable Diffusion WebUI格式）"""
         try:
-            info_text = []
+            info_lines = []
             
-            if self.current_file_path:
-                info_text.append(f"文件路径: {self.current_file_path}")
-                
-            if self.image_info_widget.prompt_text.toPlainText():
-                info_text.append(f"Prompt: {self.image_info_widget.prompt_text.toPlainText()}")
-                
-            if self.image_info_widget.neg_prompt_text.toPlainText():
-                info_text.append(f"Negative Prompt: {self.image_info_widget.neg_prompt_text.toPlainText()}")
-                
-            if self.image_info_widget.model_edit.text():
-                info_text.append(f"模型: {self.image_info_widget.model_edit.text()}")
-                
-            if self.image_info_widget.sampler_edit.text():
-                info_text.append(f"采样器: {self.image_info_widget.sampler_edit.text()}")
-                
-            if self.image_info_widget.steps_edit.text():
-                info_text.append(f"Steps: {self.image_info_widget.steps_edit.text()}")
-                
-            if self.image_info_widget.cfg_edit.text():
-                info_text.append(f"CFG Scale: {self.image_info_widget.cfg_edit.text()}")
-                
-            if self.image_info_widget.seed_edit.text():
-                info_text.append(f"Seed: {self.image_info_widget.seed_edit.text()}")
-                
-            if self.image_info_widget.lora_text.toPlainText():
-                info_text.append(f"Lora信息: {self.image_info_widget.lora_text.toPlainText()}")
+            # 第一行：Prompt（正向提示词）
+            prompt = self.image_info_widget.prompt_text.toPlainText().strip()
+            if prompt:
+                info_lines.append(prompt)
+            
+            # 第二行：Negative prompt
+            negative_prompt = self.image_info_widget.neg_prompt_text.toPlainText().strip()
+            if negative_prompt:
+                info_lines.append(f"Negative prompt: {negative_prompt}")
+            
+            # 第三行：参数信息（逗号分隔）
+            params = []
+            
+            # Steps
+            if hasattr(self.image_info_widget, 'steps_edit') and self.image_info_widget.steps_edit.text():
+                params.append(f"Steps: {self.image_info_widget.steps_edit.text()}")
+            
+            # Size（从图片尺寸获取）
+            if hasattr(self.image_info_widget, 'image_size_label'):
+                size_text = self.image_info_widget.image_size_label.text()
+                if size_text and size_text != "-":
+                    # 将 "1024 × 768" 格式转换为 "1024x768" 格式
+                    size_text = size_text.replace(" × ", "x").replace(" x ", "x")
+                    params.append(f"Size: {size_text}")
+            
+            # Seed
+            if hasattr(self.image_info_widget, 'seed_edit') and self.image_info_widget.seed_edit.text():
+                params.append(f"Seed: {self.image_info_widget.seed_edit.text()}")
+            
+            # Model
+            if hasattr(self.image_info_widget, 'model_edit') and self.image_info_widget.model_edit.text():
+                params.append(f"Model: {self.image_info_widget.model_edit.text()}")
+            elif hasattr(self.image_info_widget, 'unet_edit') and self.image_info_widget.unet_edit.text():
+                # 对于Flux模型，使用UNET模型名称
+                params.append(f"Model: {self.image_info_widget.unet_edit.text()}")
+            
+            # Sampler
+            if hasattr(self.image_info_widget, 'sampler_edit') and self.image_info_widget.sampler_edit.text():
+                params.append(f"Sampler: {self.image_info_widget.sampler_edit.text()}")
+            
+            # CFG Scale 或 Guidance
+            if hasattr(self.image_info_widget, 'cfg_edit') and self.image_info_widget.cfg_edit.text():
+                params.append(f"CFG scale: {self.image_info_widget.cfg_edit.text()}")
+            elif hasattr(self.image_info_widget, 'guidance_edit') and self.image_info_widget.guidance_edit.text():
+                params.append(f"CFG scale: {self.image_info_widget.guidance_edit.text()}")
+            
+            # Clip skip（如果有的话）
+            # 注意：这个通常在WebUI中默认存在，这里设为undefined表示未指定
+            params.append("Clip skip: undefined")
+            
+            # 如果有参数，添加到信息中
+            if params:
+                info_lines.append(", ".join(params))
+            
+            # 如果没有任何信息，提供默认提示
+            if not info_lines:
+                info_lines.append("暂无可复制的生成信息")
             
             clipboard = QApplication.clipboard()
-            clipboard.setText("\n".join(info_text))
+            clipboard.setText("\n".join(info_lines))
             
             InfoBar.success(
                 title="复制成功",
