@@ -1259,7 +1259,7 @@ class FluentMainWindow(FluentWindow):
         column_layout.addWidget(self.tags_notes_card, 3)    # 30%
         column_layout.addWidget(self.history_card, 7)       # 70%
         
-        parent_layout.addWidget(third_column, 3)  # 第三列占3份
+        parent_layout.addWidget(third_column, 2)  # 第三列占2份
     
     def handle_edit_prompt_clicked(self):
         """处理编辑提示词按钮点击"""
