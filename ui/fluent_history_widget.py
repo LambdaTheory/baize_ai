@@ -313,16 +313,15 @@ class FluentHistoryWidget(CardWidget):
         
         # 设置列的调整模式
         header.setSectionResizeMode(0, QHeaderView.Fixed)  # 缩略图列固定宽度
-        header.setSectionResizeMode(1, QHeaderView.Interactive)  # 标签列可调整
-        header.setSectionResizeMode(2, QHeaderView.Interactive)  # 来源列可调整
+        header.setSectionResizeMode(1, QHeaderView.Stretch)  # 标签列自动拉伸，占用大部分空间
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # 来源列根据内容自适应
         
         # 设置初始列宽
-        self.history_table.setColumnWidth(0, 100)  # 缩略图
-        self.history_table.setColumnWidth(1, 150)  # 标签（增加宽度）
-        self.history_table.setColumnWidth(2, 120)  # 来源
+        self.history_table.setColumnWidth(0, 100)  # 缩略图固定宽度
+        # 标签列和来源列的宽度由拉伸模式自动管理
         
-        # 禁用最后一列的自动拉伸，避免影响前面列的显示
-        header.setStretchLastSection(False)
+        # 启用最后一列的自动拉伸，让表格充满整个宽度
+        header.setStretchLastSection(True)
         
     def setup_connections(self):
         """设置信号连接"""
