@@ -7,7 +7,7 @@ Fluent Design 业务逻辑处理器
 
 import os
 from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox
-from PyQt5.QtCore import QObject, pyqtSignal, QThread
+from PyQt5.QtCore import QObject, pyqtSignal, QThread, Qt
 from PyQt5.QtGui import QPixmap
 from qfluentwidgets import InfoBar, InfoBarPosition
 from .fluent_ai_worker import AITagWorker
