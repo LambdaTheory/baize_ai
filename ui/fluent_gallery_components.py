@@ -408,15 +408,23 @@ class LoadingOverlay(QWidget):
         # 设置背景为半透明
         self.setStyleSheet(f"""
             QWidget#LoadingOverlay {{
-                background-color: rgba(255, 255, 255, 0.9);
+                background-color: rgba(255, 255, 255, 0.95);
                 border-radius: 12px;
             }}
         """)
         
-        # 主布局
+        # 主布局 - 完全居中
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
         layout.setSpacing(FluentSpacing.LG)
+        layout.setContentsMargins(40, 40, 40, 40)  # 添加适当边距
+        
+        # 加载环容器 - 确保居中
+        ring_container = QWidget()
+        ring_container.setFixedSize(120, 120)  # 给加载环更多空间
+        ring_layout = QVBoxLayout(ring_container)
+        ring_layout.setAlignment(Qt.AlignCenter)
+        ring_layout.setContentsMargins(0, 0, 0, 0)
         
         # 加载环
         self.progress_ring = ProgressRing()
@@ -430,34 +438,54 @@ class LoadingOverlay(QWidget):
             }}
         """)
         
+        ring_layout.addWidget(self.progress_ring)
+        
+        # 文字容器 - 确保文字居中
+        text_container = QWidget()
+        text_layout = QVBoxLayout(text_container)
+        text_layout.setAlignment(Qt.AlignCenter)
+        text_layout.setSpacing(FluentSpacing.SM)
+        text_layout.setContentsMargins(20, 0, 20, 0)
+        
         # 加载文本
         self.loading_label = BodyLabel("正在渲染布局...")
         self.loading_label.setAlignment(Qt.AlignCenter)
+        self.loading_label.setWordWrap(True)  # 允许换行
         self.loading_label.setStyleSheet(f"""
             BodyLabel {{
                 color: {FluentColors.get_color('text_primary')};
-                font-size: 16px;
-                font-weight: 500;
+                font-size: 18px;
+                font-weight: 600;
                 background: transparent;
-                padding: 8px 16px;
+                padding: 4px 8px;
+                text-align: center;
             }}
         """)
         
         # 子标题
         self.subtitle_label = BodyLabel("请稍候，正在优化卡片布局...")
         self.subtitle_label.setAlignment(Qt.AlignCenter)
+        self.subtitle_label.setWordWrap(True)  # 允许换行
         self.subtitle_label.setStyleSheet(f"""
             BodyLabel {{
                 color: {FluentColors.get_color('text_secondary')};
-                font-size: 13px;
+                font-size: 14px;
+                font-weight: 400;
                 background: transparent;
-                padding: 4px 16px;
+                padding: 2px 8px;
+                text-align: center;
+                line-height: 1.4;
             }}
         """)
         
-        layout.addWidget(self.progress_ring)
-        layout.addWidget(self.loading_label)
-        layout.addWidget(self.subtitle_label)
+        text_layout.addWidget(self.loading_label)
+        text_layout.addWidget(self.subtitle_label)
+        
+        # 添加组件到主布局
+        layout.addStretch(1)  # 上方弹性空间
+        layout.addWidget(ring_container)
+        layout.addWidget(text_container)
+        layout.addStretch(1)  # 下方弹性空间
         
         self.setLayout(layout)
         
@@ -467,9 +495,24 @@ class LoadingOverlay(QWidget):
         self.fade_animation.setDuration(200)
         self.fade_animation.setEasingCurve(QEasingCurve.OutCubic)
         
-    def show_loading(self, message="正在渲染布局..."):
+    def show_loading(self, message="正在渲染布局...", subtitle=""):
         """显示加载界面"""
         self.loading_label.setText(message)
+        
+        # 根据主消息自动设置合适的子标题
+        if not subtitle:
+            if "布局" in message or "调整" in message:
+                subtitle = "请稍候，正在优化卡片布局..."
+            elif "加载" in message or "记录" in message:
+                subtitle = "正在从数据库获取图片信息..."
+            elif "筛选" in message:
+                subtitle = "正在过滤符合条件的记录..."
+            elif "选项" in message or "更新" in message:
+                subtitle = "正在分析数据并更新选项..."
+            else:
+                subtitle = "请稍候，操作进行中..."
+        
+        self.subtitle_label.setText(subtitle)
         self.show()
         self.raise_()  # 确保在最上层
         
