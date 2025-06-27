@@ -250,6 +250,10 @@ class FluentExtractionLayout:
         ai_layout.addLayout(prompt_actions_layout)
         ai_layout.addWidget(params_scroll)
         
+        # 创建隐藏的兼容性属性（保持与其他代码兼容）
+        self.parent.generation_method_text = BodyLabel("-")
+        self.parent.generation_method_text.hide()
+        
         self.parent.ai_info_card.setLayout(ai_layout)
         column_layout.addWidget(self.parent.ai_info_card)
         
@@ -345,7 +349,7 @@ class FluentExtractionLayout:
         
         # 用户标签输入框
         self.parent.user_tags_edit = TextEdit()
-        self.parent.user_tags_edit.setMaximumHeight(80)
+        self.parent.user_tags_edit.setMaximumHeight(60)
         self.parent.user_tags_edit.setPlaceholderText("输入标签，用逗号分隔...")
         
         # 操作按钮区域 - 只保留保存标签按钮
