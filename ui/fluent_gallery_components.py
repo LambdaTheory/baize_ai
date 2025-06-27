@@ -6,7 +6,7 @@
 
 import os
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QApplication
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QPixmap
 
 from qfluentwidgets import (EditableComboBox, CardWidget, SmoothScrollArea, 
@@ -98,12 +98,14 @@ class FluentImageCard(CardWidget):
         
     def init_ui(self):
         """初始化卡片UI"""
-        # 设置最小大小和固定高度，宽度自适应
-        self.setMinimumSize(self.card_width, 360)
-        self.setMaximumHeight(360)
-        # 设置大小策略为水平扩展，垂直固定
+        # 设置大小策略，允许水平和垂直都能伸缩
         from PyQt5.QtWidgets import QSizePolicy
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        
+        # 设置固定高度，但允许宽度变化
+        self.setFixedHeight(360)
+        self.setMinimumWidth(180)  # 设置最小宽度而非固定宽度
+        self.setMaximumWidth(320)  # 设置最大宽度
         self.setBorderRadius(20)
         
         # 主布局
@@ -114,12 +116,9 @@ class FluentImageCard(CardWidget):
         
         # 图片预览
         self.image_label = QLabel()
-        # 图片宽度根据卡片宽度动态调整
-        image_width = self.card_width - 32  # 减去边距
-        self.image_label.setMinimumSize(image_width, 170)
-        self.image_label.setMaximumSize(16777215, 170)  # 宽度不限制，高度固定
         self.image_label.setAlignment(Qt.AlignCenter)
-        # 设置图片预览的大小策略
+        self.image_label.setFixedHeight(170)  # 固定高度
+        # 设置图片预览的大小策略，允许水平拉伸
         self.image_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.image_label.setStyleSheet(f"""
             QLabel {{
@@ -130,42 +129,8 @@ class FluentImageCard(CardWidget):
             }}
         """)
         
-        # 加载图片
-        file_path = self.record_data.get('file_path', '')
-        if os.path.exists(file_path):
-            pixmap = QPixmap(file_path)
-            if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(image_width, 170, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-                self.image_label.setPixmap(scaled_pixmap)
-                self.image_label.setStyleSheet(f"""
-                    QLabel {{
-                        border: none;
-                        border-radius: 16px;
-                        background-color: {FluentColors.get_color('bg_primary')};
-                    }}
-                """)
-            else:
-                self.image_label.setText("🖼️\n图片无法加载")
-                self.image_label.setStyleSheet(f"""
-                    QLabel {{
-                        border: 2px dashed {FluentColors.get_color('border_primary')};
-                        border-radius: 16px;
-                        background-color: {FluentColors.get_color('bg_secondary')};
-                        color: {FluentColors.get_color('text_tertiary')};
-                        font-size: 14px;
-                    }}
-                """)
-        else:
-            self.image_label.setText("❌\n图片不存在")
-            self.image_label.setStyleSheet(f"""
-                QLabel {{
-                    border: 2px dashed {FluentColors.get_color('error')};
-                    border-radius: 16px;
-                    background-color: rgba(239, 68, 68, 0.05);
-                    color: {FluentColors.get_color('error')};
-                    font-size: 14px;
-                }}
-            """)
+        # 初始加载图片
+        self.load_image()
         
         # 文件名
         file_name = self.record_data.get('custom_name') or self.record_data.get('file_name', '未知')
@@ -313,6 +278,46 @@ class FluentImageCard(CardWidget):
         
         self.setLayout(layout)
         
+    def load_image(self):
+        """加载图片到标签中"""
+        file_path = self.record_data.get('file_path', '')
+        current_width = self.width() - 32 if self.width() > 32 else self.card_width - 32
+        
+        if os.path.exists(file_path):
+            pixmap = QPixmap(file_path)
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(current_width, 170, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                self.image_label.setPixmap(scaled_pixmap)
+                self.image_label.setStyleSheet(f"""
+                    QLabel {{
+                        border: none;
+                        border-radius: 16px;
+                        background-color: {FluentColors.get_color('bg_primary')};
+                    }}
+                """)
+            else:
+                self.image_label.setText("🖼️\n图片无法加载")
+                self.image_label.setStyleSheet(f"""
+                    QLabel {{
+                        border: 2px dashed {FluentColors.get_color('border_primary')};
+                        border-radius: 16px;
+                        background-color: {FluentColors.get_color('bg_secondary')};
+                        color: {FluentColors.get_color('text_tertiary')};
+                        font-size: 14px;
+                    }}
+                """)
+        else:
+            self.image_label.setText("❌\n图片不存在")
+            self.image_label.setStyleSheet(f"""
+                QLabel {{
+                    border: 2px dashed {FluentColors.get_color('error')};
+                    border-radius: 16px;
+                    background-color: rgba(239, 68, 68, 0.05);
+                    color: {FluentColors.get_color('error')};
+                    font-size: 14px;
+                }}
+            """)
+            
     def setup_animations(self):
         """设置动画效果"""
         # 这里可以添加更复杂的动画效果
@@ -341,6 +346,12 @@ class FluentImageCard(CardWidget):
                     self.image_label.setPixmap(scaled_pixmap)
         except Exception as e:
             print(f"更新图片尺寸时出错: {e}")
+    
+    def update_card_width(self, new_width):
+        """更新卡片宽度"""
+        self.card_width = new_width
+        # 重新加载图片以适应新宽度
+        self.load_image()
     
     def enterEvent(self, event):
         """鼠标进入事件"""
@@ -394,6 +405,8 @@ class FluentGalleryWidget(SmoothScrollArea):
         self.current_filter_value = ""
         self._updating_filters = False  # 添加标志位防止递归
         self.current_card_width = 240  # 当前卡片宽度
+        self.current_columns = 4  # 当前列数
+        self.current_rows = 0  # 当前行数
         self.init_ui()
         self.load_records()
         
@@ -480,65 +493,85 @@ class FluentGalleryWidget(SmoothScrollArea):
         self.grid_layout.setHorizontalSpacing(FluentSpacing.MD)
         self.grid_widget.setLayout(self.grid_layout)
         
-        # 存储当前的行列数
-        self.current_columns = 4  # 默认4列
-        self.current_rows = 0
-        
         main_layout.addWidget(header_card)
         main_layout.addWidget(self.grid_widget, 1)  # 让网格容器占用所有可用空间
         
         main_widget.setLayout(main_layout)
         self.setWidget(main_widget)
         
+    def showEvent(self, event):
+        """组件显示时触发响应式布局更新"""
+        super().showEvent(event)
+        # 延迟执行布局更新，确保组件完全显示后再计算
+        QTimer.singleShot(100, self.update_card_layout)
+        
     def resizeEvent(self, event):
         """窗口大小改变事件，动态调整卡片大小"""
         super().resizeEvent(event)
-        self.update_card_layout()
+        # 延迟执行布局更新，避免频繁触发
+        if not hasattr(self, '_resize_timer'):
+            from PyQt5.QtCore import QTimer
+            self._resize_timer = QTimer()
+            self._resize_timer.setSingleShot(True)
+            self._resize_timer.timeout.connect(self.update_card_layout)
+        
+        self._resize_timer.stop()
+        self._resize_timer.start(50)  # 50ms延迟
     
     def update_card_layout(self):
-        """更新卡片布局，实现响应式设计"""
+        """更新卡片布局，实现响应式设计，避免横向滚动条"""
         if not hasattr(self, 'grid_widget') or not self.grid_widget:
             return
             
-        # 获取可用宽度
-        available_width = self.width() - 60  # 减去边距和滚动条
+        # 获取滚动区域的实际可用宽度
+        viewport_width = self.viewport().width()
+        available_width = viewport_width - 60  # 减去边距
         
-        # 计算最佳列数
-        min_card_width = 200  # 最小卡片宽度
-        max_card_width = 300  # 最大卡片宽度
+        if available_width <= 0:
+            return
+        
+        # 计算最佳列数和卡片宽度
+        min_card_width = 180  # 最小卡片宽度
+        max_card_width = 320  # 最大卡片宽度
         spacing = 16          # 卡片间距
         
-        # 计算最佳列数（2-6列）
-        best_columns = 4  # 默认4列
-        for columns in range(6, 1, -1):  # 从6列到2列
+        # 计算最佳列数（1-6列）
+        best_columns = 1
+        best_card_width = max_card_width
+        
+        for columns in range(1, 7):  # 从1列到6列
             total_spacing = (columns - 1) * spacing + 32  # 加上左右边距
             card_width = (available_width - total_spacing) / columns
             
             if card_width >= min_card_width:
                 best_columns = columns
-                # 限制最大宽度
-                if card_width > max_card_width:
-                    card_width = max_card_width
-                break
+                best_card_width = min(card_width, max_card_width)
+            else:
+                break  # 如果卡片宽度太小，停止尝试更多列
         
-        # 如果列数发生变化，重新布局
-        if self.current_columns != best_columns:
-            self.current_columns = best_columns
-            # 计算新的卡片宽度（平分可用宽度）
-            total_spacing = (best_columns - 1) * spacing + 32
-            self.current_card_width = (available_width - total_spacing) / best_columns
-            # 限制在合理范围内
-            self.current_card_width = min(max(self.current_card_width, min_card_width), max_card_width)
-            self.current_card_width = int(self.current_card_width)
+        # 确保计算出的宽度合理
+        best_card_width = max(min_card_width, min(best_card_width, max_card_width))
+        best_card_width = int(best_card_width)
+        
+        # 检查是否需要更新布局
+        layout_changed = (self.current_columns != best_columns or 
+                         abs(self.current_card_width - best_card_width) > 5)
+        
+        if layout_changed:
+            print(f"更新画廊布局: 可用宽度={available_width}, 列数={best_columns}, 卡片宽度={best_card_width}")
             
-            # 设置列的拉伸因子，实现平分效果
+            self.current_columns = best_columns
+            self.current_card_width = best_card_width
+            
+            # 设置网格布局列的拉伸因子
             for col in range(best_columns):
                 self.grid_layout.setColumnStretch(col, 1)
             
             # 清除多余列的拉伸因子
-            for col in range(best_columns, 6):
+            for col in range(best_columns, 10):  # 清理更多列
                 self.grid_layout.setColumnStretch(col, 0)
                 
+            # 刷新所有卡片
             self.refresh_cards()
     
     def refresh_cards(self):
@@ -566,73 +599,13 @@ class FluentGalleryWidget(SmoothScrollArea):
             print(f"加载失败: {str(e)}")
     
     def display_records(self, records):
-        """显示记录"""
-        # 更安全的清理方法
-        try:
-            # 方法1：直接删除所有子widget
-            for i in reversed(range(self.grid_layout.count())):
-                child = self.grid_layout.itemAt(i)
-                if child:
-                    widget = child.widget()
-                    if widget:
-                        self.grid_layout.removeWidget(widget)
-                        widget.setParent(None)
-                        widget.deleteLater()
-        except Exception as e:
-            print(f"清理布局时出错: {e}")
-            # 备用清理方法
-            try:
-                while self.grid_layout.count():
-                    item = self.grid_layout.takeAt(0)
-                    if item and item.widget():
-                        item.widget().deleteLater()
-            except:
-                pass
-        
-        # 强制处理事件，确保widget被删除
-        QApplication.processEvents()
+        """显示记录，使用响应式网格布局"""
+        # 清理现有的卡片
+        self.clear_grid_layout()
         
         if not records:
-            # 显示空状态
-            empty_card = CardWidget()
-            empty_card.setBorderRadius(20)
-            empty_card.setFixedSize(400, 200)
-            
-            empty_layout = QVBoxLayout()
-            empty_layout.setAlignment(Qt.AlignCenter)
-            
-            icon_label = QLabel("🖼️")
-            icon_label.setAlignment(Qt.AlignCenter)
-            icon_label.setStyleSheet(f"""
-                QLabel {{
-                    font-size: 48px;
-                    color: {FluentColors.get_color('text_tertiary')};
-                    background: transparent;
-                    border: none;
-                    padding: 20px;
-                }}
-            """)
-            
-            text_label = BodyLabel("暂无图片记录\n\n请先在信息提取页面处理一些图片")
-            text_label.setAlignment(Qt.AlignCenter)
-            text_label.setStyleSheet(f"""
-                BodyLabel {{
-                    color: {FluentColors.get_color('text_secondary')};
-                    background: transparent;
-                    border: none;
-                    line-height: 24px;
-                }}
-            """)
-            
-            empty_layout.addWidget(icon_label)
-            empty_layout.addWidget(text_label)
-            empty_card.setLayout(empty_layout)
-            
-            self.grid_layout.addWidget(empty_card)
+            self.show_empty_state()
             return
-        
-        # 重置行数
-        self.current_rows = 0
         
         # 创建图片卡片并按网格排列
         for i, record in enumerate(records):
@@ -659,7 +632,7 @@ class FluentGalleryWidget(SmoothScrollArea):
             self.grid_layout.setRowStretch(self.current_rows, 1)
         
         # 强制更新布局
-        self.grid_widget.update()
+        self.grid_widget.updateGeometry()
         self.update()
     
     def on_card_clicked(self, record_data):
@@ -859,3 +832,66 @@ class FluentGalleryWidget(SmoothScrollArea):
             self.display_records(self.filtered_records)
         finally:
             self._updating_filters = False 
+    
+    def clear_grid_layout(self):
+        """清理网格布局中的所有项目"""
+        try:
+            # 首先移除所有widget
+            for i in reversed(range(self.grid_layout.count())):
+                item = self.grid_layout.itemAt(i)
+                if item:
+                    widget = item.widget()
+                    if widget:
+                        self.grid_layout.removeWidget(widget)
+                        widget.setParent(None)
+                        widget.deleteLater()
+            
+            # 清除所有行的拉伸因子
+            for row in range(self.current_rows + 5):  # 多清理几行确保完全清除
+                self.grid_layout.setRowStretch(row, 0)
+                
+            self.current_rows = 0
+            
+        except Exception as e:
+            print(f"清理网格布局时出错: {e}")
+        
+        # 强制处理待删除的事件
+        QApplication.processEvents()
+        
+    def show_empty_state(self):
+        """显示空状态"""
+        empty_card = CardWidget()
+        empty_card.setBorderRadius(20)
+        empty_card.setFixedSize(400, 200)
+        
+        empty_layout = QVBoxLayout()
+        empty_layout.setAlignment(Qt.AlignCenter)
+        
+        icon_label = QLabel("🖼️")
+        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setStyleSheet(f"""
+            QLabel {{
+                font-size: 48px;
+                color: {FluentColors.get_color('text_tertiary')};
+                background: transparent;
+                border: none;
+                padding: 20px;
+            }}
+        """)
+        
+        text_label = BodyLabel("暂无图片记录\n\n请先在信息提取页面处理一些图片")
+        text_label.setAlignment(Qt.AlignCenter)
+        text_label.setStyleSheet(f"""
+            BodyLabel {{
+                color: {FluentColors.get_color('text_secondary')};
+                background: transparent;
+                border: none;
+                line-height: 24px;
+            }}
+        """)
+        
+        empty_layout.addWidget(icon_label)
+        empty_layout.addWidget(text_label)
+        empty_card.setLayout(empty_layout)
+        
+        self.grid_layout.addWidget(empty_card, 0, 0, 1, self.current_columns or 1) 
