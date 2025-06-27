@@ -253,7 +253,7 @@ class FluentExtractionLayout:
         self.parent.ai_info_card.setLayout(ai_layout)
         column_layout.addWidget(self.parent.ai_info_card)
         
-        parent_layout.addWidget(second_column, 60)  # 60% 宽度
+        parent_layout.addWidget(second_column, 3)  # 第二列占3份
     
     def create_third_column(self, parent_layout):
         """创建第三列：标签(40%) + 历史记录(60%)"""
@@ -391,44 +391,22 @@ class FluentExtractionLayout:
         self.parent.history_card = CardWidget()
         self.parent.history_card.setBorderRadius(16)
         history_layout = QVBoxLayout()
-        history_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.LG, 
-                                        FluentSpacing.LG, FluentSpacing.LG)
+        history_layout.setContentsMargins(FluentSpacing.SM, FluentSpacing.SM, 
+                                        FluentSpacing.SM, FluentSpacing.SM)
         
-        # 历史记录标题和按钮
-        history_title_layout = QHBoxLayout()
-        history_title = SubtitleLabel("📚 历史记录")
-        history_title.setStyleSheet(f"""
-            color: {FluentColors.get_color('text_primary')};
-            font-weight: 600;
-            margin-bottom: 8px;
-        """)
-        
-        # 历史记录操作按钮
-        self.parent.refresh_btn = PushButton("刷新")
-        self.parent.batch_export_btn = PushButton("批量导出")
-        self.parent.clear_history_btn = PushButton("删除记录") 
-        self.parent.clear_all_btn = PushButton("清空全部")
-        
-        for btn in [self.parent.refresh_btn, self.parent.batch_export_btn, 
-                   self.parent.clear_history_btn, self.parent.clear_all_btn]:
-            btn.setFixedHeight(28)
-            btn.setMinimumWidth(60)
-        
-        history_title_layout.addWidget(history_title)
-        history_title_layout.addStretch()
-        history_title_layout.addWidget(self.parent.refresh_btn)
-        history_title_layout.addWidget(self.parent.batch_export_btn)
-        history_title_layout.addWidget(self.parent.clear_history_btn)
-        history_title_layout.addWidget(self.parent.clear_all_btn)
-        
-        # 历史记录列表
+        # 历史记录列表（直接添加，不需要额外标题）
         from .fluent_history_widget import FluentHistoryWidget
-        self.parent.history_widget = FluentHistoryWidget(self.parent)
+        self.parent.history_widget = FluentHistoryWidget(self.parent.data_manager)
         
-        history_layout.addLayout(history_title_layout)
-        history_layout.addWidget(self.parent.history_widget)
+        # 加载历史记录
+        self.parent.history_widget.load_history()
         
+        history_layout.addWidget(self.parent.history_widget, 1)  # 添加拉伸因子，让历史记录组件占用全部空间
         self.parent.history_card.setLayout(history_layout)
-        column_layout.addWidget(self.parent.history_card, 60)  # 60% 高度
         
-        parent_layout.addWidget(third_column, 40)  # 40% 宽度 
+        # 按30%和70%的比例添加到列布局
+        column_layout.addWidget(self.parent.tags_notes_card, 3)    # 30%
+        column_layout.addWidget(self.parent.history_card, 7)       # 70%
+        
+        parent_layout.addWidget(third_column, 2)  # 第三列占2份
+    
