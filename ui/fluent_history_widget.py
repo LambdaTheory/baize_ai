@@ -14,7 +14,8 @@ from PyQt5.QtGui import QColor, QPixmap
 
 from qfluentwidgets import (CardWidget, PushButton, GroupHeaderCardWidget,
                            TableWidget, InfoBar, InfoBarPosition, MessageBox,
-                           SubtitleLabel, BodyLabel, TransparentPushButton)
+                           SubtitleLabel, BodyLabel, TransparentPushButton,
+                           SearchLineEdit)
 from .fluent_styles import FluentTheme, FluentIcons, FluentColors, FluentSpacing
 
 
@@ -28,6 +29,8 @@ class FluentHistoryWidget(CardWidget):
         super().__init__(parent)
         self.data_manager = data_manager
         self.history_records = []  # 存储历史记录数据
+        self.filtered_records = []  # 存储过滤后的记录数据
+        self.current_search_text = ""  # 当前搜索文本
         self.init_ui()
         self.setup_connections()
         
@@ -51,6 +54,9 @@ class FluentHistoryWidget(CardWidget):
         """)
         main_layout.addWidget(title)
         
+        # 添加搜索框
+        self.create_search_area(main_layout)
+        
         # 操作按钮区域
         self.create_action_buttons(main_layout)
         
@@ -66,6 +72,45 @@ class FluentHistoryWidget(CardWidget):
         card_layout.setContentsMargins(0, 0, 0, 0)  # 移除边距
         card_layout.addWidget(main_widget, 1)  # 添加拉伸因子
         self.setLayout(card_layout)
+        
+    def create_search_area(self, parent_layout):
+        """创建搜索区域"""
+        search_layout = QHBoxLayout()
+        search_layout.setSpacing(FluentSpacing.SM)
+        
+        # 搜索框
+        self.search_edit = SearchLineEdit()
+        self.search_edit.setPlaceholderText("搜索历史记录（支持搜索模型、标签、LoRA等）...")
+        self.search_edit.setFixedHeight(36)
+        self.search_edit.setMinimumWidth(300)
+        
+        # 设置搜索框样式
+        self.search_edit.setStyleSheet(f"""
+            SearchLineEdit {{
+                border: 1px solid {FluentColors.get_color('border_primary')};
+                border-radius: 8px;
+                padding: 6px 12px;
+                background-color: {FluentColors.get_color('bg_primary')};
+                color: {FluentColors.get_color('text_primary')};
+                font-size: 13px;
+            }}
+            SearchLineEdit:focus {{
+                border: 2px solid {FluentColors.get_color('primary')};
+                background-color: {FluentColors.get_color('bg_primary')};
+            }}
+        """)
+        
+        # 清除搜索按钮
+        self.clear_search_btn = PushButton("清除")
+        self.clear_search_btn.setFixedHeight(36)
+        self.clear_search_btn.setMinimumWidth(60)
+        self.clear_search_btn.setEnabled(False)  # 初始禁用
+        
+        search_layout.addWidget(self.search_edit)
+        search_layout.addWidget(self.clear_search_btn)
+        search_layout.addStretch()
+        
+        parent_layout.addLayout(search_layout)
         
     def create_action_buttons(self, parent_layout):
         """创建操作按钮"""
@@ -272,9 +317,12 @@ class FluentHistoryWidget(CardWidget):
         # 按钮相关
         self.delete_record_btn.clicked.connect(self.delete_selected_records)
         self.delete_all_btn.clicked.connect(self.delete_all_records)
-
         self.refresh_btn.clicked.connect(self.load_history)
         self.batch_export_btn.clicked.connect(self.batch_export_selected)
+        
+        # 搜索相关
+        self.search_edit.textChanged.connect(self.on_search_text_changed)
+        self.clear_search_btn.clicked.connect(self.clear_search)
         
     def create_thumbnail_widget(self, file_path):
         """创建缩略图小部件"""
@@ -371,66 +419,73 @@ class FluentHistoryWidget(CardWidget):
             records = self.data_manager.get_all_records()
             self.history_records = records  # 存储完整记录用于删除操作
             
-            self.history_table.setRowCount(len(records))
-            
-            valid_count = 0
-            invalid_count = 0
-            
-            for i, record in enumerate(records):
-                file_path = record.get('file_path', '')
-                
-                # 检查文件状态
-                file_exists = os.path.exists(file_path)
-                if file_exists:
-                    valid_count += 1
-                else:
-                    invalid_count += 1
-                
-                # 获取生成来源
-                generation_source = record.get('generation_source', 'Unknown')
-                # 转换为中文显示
-                source_display = {
-                    'ComfyUI': 'ComfyUI',
-                    'Stable Diffusion WebUI': 'SD WebUI',
-                    'Unknown': '未知'
-                }.get(generation_source, generation_source)
-                
-                # 创建缩略图小部件
-                thumbnail_widget = self.create_thumbnail_widget(file_path)
-                
-                # 创建富文本生成信息项（替换原来的tags）
-                generation_info_item = self.create_generation_info_item(record)
-                
-                # 生成来源项
-                source_item = QTableWidgetItem(source_display)
-                if generation_source == 'ComfyUI':
-                    source_item.setForeground(QColor(59, 130, 246))  # 蓝色
-                elif generation_source == 'Stable Diffusion WebUI':
-                    source_item.setForeground(QColor(16, 185, 129))  # 绿色
-                else:
-                    source_item.setForeground(QColor(156, 163, 175))  # 灰色
-                
-                # 为无效文件设置特殊样式
-                if not file_exists:
-                    generation_info_item.setBackground(QColor(254, 242, 242))  # 很淡的红色背景
-                    generation_info_item.setForeground(QColor(185, 28, 28))  # 深红色文字
-                    source_item.setBackground(QColor(254, 242, 242))  # 很淡的红色背景
-                    source_item.setForeground(QColor(185, 28, 28))  # 深红色文字
-                
-                # 设置表格项（按新顺序：缩略图、生成信息、来源）
-                self.history_table.setCellWidget(i, 0, thumbnail_widget)  # 缩略图（使用setCellWidget）
-                self.history_table.setItem(i, 1, generation_info_item)    # 生成信息（替换原来的标签）
-                self.history_table.setItem(i, 2, source_item)             # 来源
-                
-                # 为了保持兼容性，将记录ID存储在生成信息项中
-                generation_info_item.setData(Qt.UserRole, record.get('id'))
-                
-
+            # 如果有搜索文本，应用搜索过滤
+            if self.current_search_text:
+                self.apply_search_filter()
+            else:
+                self.filtered_records = self.history_records.copy()
+                self.display_records(self.filtered_records)
             
         except Exception as e:
             print(f"加载历史记录失败: {str(e)}")
             import traceback
             traceback.print_exc()
+            
+    def display_records(self, records):
+        """显示记录"""
+        self.history_table.setRowCount(len(records))
+        
+        valid_count = 0
+        invalid_count = 0
+        
+        for i, record in enumerate(records):
+            file_path = record.get('file_path', '')
+            
+            # 检查文件状态
+            file_exists = os.path.exists(file_path)
+            if file_exists:
+                valid_count += 1
+            else:
+                invalid_count += 1
+            
+            # 获取生成来源
+            generation_source = record.get('generation_source', 'Unknown')
+            # 转换为中文显示
+            source_display = {
+                'ComfyUI': 'ComfyUI',
+                'Stable Diffusion WebUI': 'SD WebUI',
+                'Unknown': '未知'
+            }.get(generation_source, generation_source)
+            
+            # 创建缩略图小部件
+            thumbnail_widget = self.create_thumbnail_widget(file_path)
+            
+            # 创建富文本生成信息项（替换原来的tags）
+            generation_info_item = self.create_generation_info_item(record)
+            
+            # 生成来源项
+            source_item = QTableWidgetItem(source_display)
+            if generation_source == 'ComfyUI':
+                source_item.setForeground(QColor(59, 130, 246))  # 蓝色
+            elif generation_source == 'Stable Diffusion WebUI':
+                source_item.setForeground(QColor(16, 185, 129))  # 绿色
+            else:
+                source_item.setForeground(QColor(156, 163, 175))  # 灰色
+            
+            # 为无效文件设置特殊样式
+            if not file_exists:
+                generation_info_item.setBackground(QColor(254, 242, 242))  # 很淡的红色背景
+                generation_info_item.setForeground(QColor(185, 28, 28))  # 深红色文字
+                source_item.setBackground(QColor(254, 242, 242))  # 很淡的红色背景
+                source_item.setForeground(QColor(185, 28, 28))  # 深红色文字
+            
+            # 设置表格项（按新顺序：缩略图、生成信息、来源）
+            self.history_table.setCellWidget(i, 0, thumbnail_widget)  # 缩略图（使用setCellWidget）
+            self.history_table.setItem(i, 1, generation_info_item)    # 生成信息（替换原来的标签）
+            self.history_table.setItem(i, 2, source_item)             # 来源
+            
+            # 为了保持兼容性，将记录ID存储在生成信息项中
+            generation_info_item.setData(Qt.UserRole, record.get('id'))
             
 
         
@@ -438,8 +493,9 @@ class FluentHistoryWidget(CardWidget):
         """表格项点击事件"""
         try:
             row = item.row()
-            if 0 <= row < len(self.history_records):
-                record = self.history_records[row]
+            # 注意：这里需要使用过滤后的记录
+            if 0 <= row < len(self.filtered_records):
+                record = self.filtered_records[row]
                 print(f"历史记录点击: 发出信号，文件名: {record.get('file_path', '未知')}")
                 self.record_selected.emit(record)
         except Exception as e:
@@ -477,8 +533,8 @@ class FluentHistoryWidget(CardWidget):
         
         # 检查文件状态
         row = item.row()
-        if 0 <= row < len(self.history_records):
-            record = self.history_records[row]
+        if 0 <= row < len(self.filtered_records):
+            record = self.filtered_records[row]
             file_path = record.get('file_path', '')
             
             if not os.path.exists(file_path):
@@ -509,9 +565,10 @@ class FluentHistoryWidget(CardWidget):
                 record_ids = []
                 for index in selected_rows:
                     row = index.row()
-                    item = self.history_table.item(row, 1)  # 生成信息列现在是第1列，存储记录ID
-                    if item:
-                        record_id = item.data(Qt.UserRole)
+                    # 使用过滤后的记录获取正确的记录
+                    if 0 <= row < len(self.filtered_records):
+                        record = self.filtered_records[row]
+                        record_id = record.get('id')
                         if record_id:
                             record_ids.append(record_id)
                 
@@ -557,8 +614,8 @@ class FluentHistoryWidget(CardWidget):
             
     def update_file_path(self, row):
         """更新文件路径"""
-        if 0 <= row < len(self.history_records):
-            record = self.history_records[row]
+        if 0 <= row < len(self.filtered_records):
+            record = self.filtered_records[row]
             old_path = record.get('file_path', '')
             
             file_dialog = QFileDialog()
@@ -587,12 +644,12 @@ class FluentHistoryWidget(CardWidget):
             QMessageBox.information(self, "提示", "请先选择要导出的记录")
             return
             
-        # 获取选中的记录
+        # 获取选中的记录（使用过滤后的记录）
         selected_records = []
         for index in selected_rows:
             row = index.row()
-            if 0 <= row < len(self.history_records):
-                selected_records.append(self.history_records[row])
+            if 0 <= row < len(self.filtered_records):
+                selected_records.append(self.filtered_records[row])
         
         if not selected_records:
             QMessageBox.information(self, "提示", "没有有效的记录可导出")
@@ -800,4 +857,88 @@ class FluentHistoryWidget(CardWidget):
             print(f"格式化详细LoRA信息失败: {e}")
             return "LoRA信息解析错误"
     
+    def on_search_text_changed(self, text):
+        """搜索文本改变事件"""
+        self.current_search_text = text.strip()
+        self.clear_search_btn.setEnabled(bool(self.current_search_text))
+        
+        if self.current_search_text:
+            self.apply_search_filter()
+        else:
+            # 如果搜索文本为空，显示所有记录
+            self.filtered_records = self.history_records.copy()
+            self.display_records(self.filtered_records)
+            
+    def apply_search_filter(self):
+        """应用搜索过滤"""
+        if not self.current_search_text or not self.history_records:
+            self.filtered_records = self.history_records.copy()
+            self.display_records(self.filtered_records)
+            return
+        
+        # 搜索关键词（不区分大小写）
+        search_lower = self.current_search_text.lower()
+        self.filtered_records = []
+        
+        for record in self.history_records:
+            match = False
+            
+            # 在多个字段中搜索
+            search_fields = [
+                record.get('file_name', ''),
+                record.get('model', ''),
+                record.get('tags', ''),
+                record.get('prompt', ''),
+                record.get('negative_prompt', ''),
+                record.get('sampler', ''),
+                record.get('notes', ''),
+                record.get('generation_source', ''),
+                str(record.get('steps', '')),
+                str(record.get('cfg_scale', '')),
+                str(record.get('seed', ''))
+            ]
+            
+            # 搜索LoRA信息
+            lora_info = record.get('lora_info', '')
+            if lora_info:
+                try:
+                    import json
+                    if isinstance(lora_info, str) and lora_info.strip():
+                        lora_data = json.loads(lora_info)
+                        if isinstance(lora_data, dict) and 'loras' in lora_data:
+                            # 正确的LoRA数据结构
+                            for lora_item in lora_data['loras']:
+                                if isinstance(lora_item, dict) and 'name' in lora_item:
+                                    search_fields.append(lora_item['name'])
+                        elif isinstance(lora_data, dict):
+                            # 备用：直接从字典键中查找
+                            for key in lora_data.keys():
+                                if key != 'loras':
+                                    search_fields.append(key)
+                except Exception:
+                    # 如果解析失败，直接添加原始字符串
+                    search_fields.append(lora_info)
+            
+            # 检查是否匹配
+            for field in search_fields:
+                if field and search_lower in str(field).lower():
+                    match = True
+                    break
+            
+            if match:
+                self.filtered_records.append(record)
+        
+        # 显示过滤后的记录
+        self.display_records(self.filtered_records)
+        
+        # 打印搜索结果信息
+        print(f"搜索结果: 找到 {len(self.filtered_records)} 条匹配 '{self.current_search_text}' 的记录")
+        
+    def clear_search(self):
+        """清除搜索"""
+        self.search_edit.clear()
+        self.current_search_text = ""
+        self.clear_search_btn.setEnabled(False)
+        self.filtered_records = self.history_records.copy()
+        self.display_records(self.filtered_records)
  
