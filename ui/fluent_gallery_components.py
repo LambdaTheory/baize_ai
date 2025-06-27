@@ -5,13 +5,14 @@
 """
 
 import os
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QApplication
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QApplication, 
+                            QStackedWidget)
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QPropertyAnimation, QEasingCurve
+from PyQt5.QtGui import QPixmap, QPainter, QColor
 
 from qfluentwidgets import (EditableComboBox, CardWidget, SmoothScrollArea, 
                            FlowLayout, TitleLabel, BodyLabel, PushButton, ComboBox,
-                           InfoBar, InfoBarPosition)
+                           InfoBar, InfoBarPosition, ProgressRing)
 
 from .fluent_styles import FluentTheme, FluentIcons, FluentColors, FluentSpacing
 
@@ -392,6 +393,106 @@ class FluentImageCard(CardWidget):
         # 不调用父类的 mouseReleaseEvent，避免发出无参数的 clicked 信号
 
 
+class LoadingOverlay(QWidget):
+    """加载覆盖层组件"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("LoadingOverlay")
+        self.init_ui()
+        self.setup_animation()
+        self.hide()  # 初始隐藏
+        
+    def init_ui(self):
+        """初始化UI"""
+        # 设置背景为半透明
+        self.setStyleSheet(f"""
+            QWidget#LoadingOverlay {{
+                background-color: rgba(255, 255, 255, 0.9);
+                border-radius: 12px;
+            }}
+        """)
+        
+        # 主布局
+        layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignCenter)
+        layout.setSpacing(FluentSpacing.LG)
+        
+        # 加载环
+        self.progress_ring = ProgressRing()
+        self.progress_ring.setFixedSize(80, 80)
+        self.progress_ring.setStrokeWidth(6)
+        # 设置进度环样式
+        self.progress_ring.setStyleSheet(f"""
+            ProgressRing {{
+                background-color: transparent;
+                color: {FluentColors.get_color('primary')};
+            }}
+        """)
+        
+        # 加载文本
+        self.loading_label = BodyLabel("正在渲染布局...")
+        self.loading_label.setAlignment(Qt.AlignCenter)
+        self.loading_label.setStyleSheet(f"""
+            BodyLabel {{
+                color: {FluentColors.get_color('text_primary')};
+                font-size: 16px;
+                font-weight: 500;
+                background: transparent;
+                padding: 8px 16px;
+            }}
+        """)
+        
+        # 子标题
+        self.subtitle_label = BodyLabel("请稍候，正在优化卡片布局...")
+        self.subtitle_label.setAlignment(Qt.AlignCenter)
+        self.subtitle_label.setStyleSheet(f"""
+            BodyLabel {{
+                color: {FluentColors.get_color('text_secondary')};
+                font-size: 13px;
+                background: transparent;
+                padding: 4px 16px;
+            }}
+        """)
+        
+        layout.addWidget(self.progress_ring)
+        layout.addWidget(self.loading_label)
+        layout.addWidget(self.subtitle_label)
+        
+        self.setLayout(layout)
+        
+    def setup_animation(self):
+        """设置淡入淡出动画"""
+        self.fade_animation = QPropertyAnimation(self, b"windowOpacity")
+        self.fade_animation.setDuration(200)
+        self.fade_animation.setEasingCurve(QEasingCurve.OutCubic)
+        
+    def show_loading(self, message="正在渲染布局..."):
+        """显示加载界面"""
+        self.loading_label.setText(message)
+        self.show()
+        self.raise_()  # 确保在最上层
+        
+        # 淡入动画
+        self.fade_animation.setStartValue(0.0)
+        self.fade_animation.setEndValue(1.0)
+        self.fade_animation.start()
+        
+    def hide_loading(self):
+        """隐藏加载界面"""
+        # 淡出动画
+        self.fade_animation.setStartValue(1.0)
+        self.fade_animation.setEndValue(0.0)
+        self.fade_animation.finished.connect(self.hide)
+        self.fade_animation.start()
+        
+    def resizeEvent(self, event):
+        """调整大小时保持覆盖整个父组件"""
+        super().resizeEvent(event)
+        if self.parent():
+            self.setGeometry(self.parent().rect())
+
+
 class FluentGalleryWidget(SmoothScrollArea):
     """Fluent Design 图片画廊组件"""
     record_selected = pyqtSignal(dict)
@@ -407,6 +508,7 @@ class FluentGalleryWidget(SmoothScrollArea):
         self.current_card_width = 240  # 当前卡片宽度
         self.current_columns = 4  # 当前列数
         self.current_rows = 0  # 当前行数
+        self.loading_overlay = LoadingOverlay()
         self.init_ui()
         self.load_records()
         
@@ -499,6 +601,9 @@ class FluentGalleryWidget(SmoothScrollArea):
         main_widget.setLayout(main_layout)
         self.setWidget(main_widget)
         
+        # 创建loading界面并添加到主容器
+        self.loading_overlay = LoadingOverlay(main_widget)
+        
     def showEvent(self, event):
         """组件显示时触发响应式布局更新"""
         super().showEvent(event)
@@ -508,26 +613,35 @@ class FluentGalleryWidget(SmoothScrollArea):
     def resizeEvent(self, event):
         """窗口大小改变事件，动态调整卡片大小"""
         super().resizeEvent(event)
+        
+        # 同步更新loading界面大小
+        if hasattr(self, 'loading_overlay') and self.loading_overlay:
+            self.loading_overlay.setGeometry(self.widget().rect())
+        
         # 延迟执行布局更新，避免频繁触发
         if not hasattr(self, '_resize_timer'):
-            from PyQt5.QtCore import QTimer
             self._resize_timer = QTimer()
             self._resize_timer.setSingleShot(True)
             self._resize_timer.timeout.connect(self.update_card_layout)
         
         self._resize_timer.stop()
-        self._resize_timer.start(50)  # 50ms延迟
-    
+        self._resize_timer.start(100)  # 增加延迟到100ms，给loading界面更多时间显示
+        
     def update_card_layout(self):
         """更新卡片布局，实现响应式设计，避免横向滚动条"""
         if not hasattr(self, 'grid_widget') or not self.grid_widget:
             return
+            
+        # 显示loading界面
+        if hasattr(self, 'loading_overlay') and self.loading_overlay:
+            self.loading_overlay.show_loading("正在调整布局...")
             
         # 获取滚动区域的实际可用宽度
         viewport_width = self.viewport().width()
         available_width = viewport_width - 60  # 减去边距
         
         if available_width <= 0:
+            self.hide_loading_with_delay()
             return
         
         # 计算最佳列数和卡片宽度
@@ -573,14 +687,30 @@ class FluentGalleryWidget(SmoothScrollArea):
                 
             # 刷新所有卡片
             self.refresh_cards()
+        else:
+            # 即使布局没有变化，也要隐藏loading
+            self.hide_loading_with_delay()
+    
+    def hide_loading_with_delay(self):
+        """延迟隐藏loading界面"""
+        if hasattr(self, 'loading_overlay') and self.loading_overlay:
+            # 最小显示时间200ms，确保用户能看到loading
+            QTimer.singleShot(200, self.loading_overlay.hide_loading)
     
     def refresh_cards(self):
         """使用新的卡片宽度重新创建所有卡片"""
         if hasattr(self, 'filtered_records') and self.filtered_records:
-            self.display_records(self.filtered_records)
+            # 延迟执行显示记录，让loading有时间显示
+            QTimer.singleShot(50, lambda: self.display_records_with_loading(self.filtered_records))
+        else:
+            self.hide_loading_with_delay()
         
     def load_records(self):
         """加载记录"""
+        # 显示loading
+        if hasattr(self, 'loading_overlay') and self.loading_overlay:
+            self.loading_overlay.show_loading("正在加载图片记录...")
+            
         try:
             self.all_records = self.data_manager.get_all_records()
             self.filtered_records = self.all_records.copy()
@@ -592,11 +722,18 @@ class FluentGalleryWidget(SmoothScrollArea):
                 self.field_combo.setCurrentIndex(0)
                 self.value_combo.clear()
             
-            self.display_records(self.filtered_records)
+            # 延迟显示记录，让loading有时间显示
+            QTimer.singleShot(100, lambda: self.display_records_with_loading(self.filtered_records))
             
             print(f"加载完成: 共加载 {len(self.all_records)} 条记录")
         except Exception as e:
             print(f"加载失败: {str(e)}")
+            self.hide_loading_with_delay()
+    
+    def display_records_with_loading(self, records):
+        """带loading效果的显示记录"""
+        self.display_records(records)
+        self.hide_loading_with_delay()
     
     def display_records(self, records):
         """显示记录，使用响应式网格布局"""
@@ -677,8 +814,15 @@ class FluentGalleryWidget(SmoothScrollArea):
                 # 如果是"全部"，清除筛选值并显示所有记录
                 self.current_filter_value = ""
                 self.filtered_records = self.all_records.copy()
-                self.display_records(self.filtered_records)
+                # 显示loading
+                if hasattr(self, 'loading_overlay') and self.loading_overlay:
+                    self.loading_overlay.show_loading("正在加载所有记录...")
+                QTimer.singleShot(50, lambda: self.display_records_with_loading(self.filtered_records))
                 return
+            
+            # 显示loading
+            if hasattr(self, 'loading_overlay') and self.loading_overlay:
+                self.loading_overlay.show_loading("正在更新筛选选项...")
             
             # 根据筛选字段获取所有可能的值
             values = set()
@@ -736,6 +880,11 @@ class FluentGalleryWidget(SmoothScrollArea):
             # 恢复信号发射
             self.value_combo.blockSignals(False)
         
+        # 延迟处理选项选择
+        QTimer.singleShot(100, lambda: self._process_value_options(sorted_values))
+    
+    def _process_value_options(self, sorted_values):
+        """处理筛选值选项"""
         # 如果有选项，自动选择第一个并触发筛选
         if sorted_values:
             # 设置当前选中的值
@@ -748,13 +897,22 @@ class FluentGalleryWidget(SmoothScrollArea):
             # 如果没有选项，清除筛选值
             self.current_filter_value = ""
             self.filtered_records = self.all_records.copy()
-            self.display_records(self.filtered_records)
+            self.display_records_with_loading(self.filtered_records)
     
     def apply_filters(self):
         """应用筛选"""
         if not self.all_records:
             return
         
+        # 显示loading
+        if hasattr(self, 'loading_overlay') and self.loading_overlay:
+            self.loading_overlay.show_loading("正在筛选记录...")
+        
+        # 延迟执行筛选，让loading有时间显示
+        QTimer.singleShot(50, self._do_apply_filters)
+    
+    def _do_apply_filters(self):
+        """实际执行筛选逻辑"""
         if self.current_filter_field == "全部" or not self.current_filter_value:
             self.filtered_records = self.all_records.copy()
         else:
@@ -806,32 +964,32 @@ class FluentGalleryWidget(SmoothScrollArea):
                     tags = record.get('tags', '').lower()
                     match = filter_value_lower in tags
                 
-
-                
                 if match:
                     self.filtered_records.append(record)
         
-        self.display_records(self.filtered_records)
-        
-        # 更新状态信息（暂时移除InfoBar以避免主题问题）
-        if self.current_filter_field != "全部" and self.current_filter_value:
-            print(f"筛选结果: 找到 {len(self.filtered_records)} 条匹配记录")
+        # 显示筛选结果
+        self.display_records_with_loading(self.filtered_records)
+        print(f"筛选完成: 找到 {len(self.filtered_records)} 条匹配记录")
     
     def clear_filters(self):
-        """清除所有筛选"""
-        if self._updating_filters:
-            return
+        """清除筛选"""
+        # 显示loading
+        if hasattr(self, 'loading_overlay') and self.loading_overlay:
+            self.loading_overlay.show_loading("正在重置筛选...")
             
         self._updating_filters = True
         try:
-            self.field_combo.setCurrentIndex(0)  # 选择"全部"
-            self.value_combo.clear()
             self.current_filter_field = "全部"
             self.current_filter_value = ""
+            self.field_combo.setCurrentIndex(0)
+            self.value_combo.clear()
             self.filtered_records = self.all_records.copy()
-            self.display_records(self.filtered_records)
+            
+            # 延迟显示所有记录
+            QTimer.singleShot(50, lambda: self.display_records_with_loading(self.filtered_records))
+            
         finally:
-            self._updating_filters = False 
+            self._updating_filters = False
     
     def clear_grid_layout(self):
         """清理网格布局中的所有项目"""
