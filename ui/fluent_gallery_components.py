@@ -98,8 +98,12 @@ class FluentImageCard(CardWidget):
         
     def init_ui(self):
         """初始化卡片UI"""
-        # 使用动态宽度，高度保持固定
-        self.setFixedSize(self.card_width, 360)
+        # 设置最小大小和固定高度，宽度自适应
+        self.setMinimumSize(self.card_width, 360)
+        self.setMaximumHeight(360)
+        # 设置大小策略为水平扩展，垂直固定
+        from PyQt5.QtWidgets import QSizePolicy
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.setBorderRadius(20)
         
         # 主布局
@@ -112,8 +116,11 @@ class FluentImageCard(CardWidget):
         self.image_label = QLabel()
         # 图片宽度根据卡片宽度动态调整
         image_width = self.card_width - 32  # 减去边距
-        self.image_label.setFixedSize(image_width, 170)
+        self.image_label.setMinimumSize(image_width, 170)
+        self.image_label.setMaximumSize(16777215, 170)  # 宽度不限制，高度固定
         self.image_label.setAlignment(Qt.AlignCenter)
+        # 设置图片预览的大小策略
+        self.image_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.image_label.setStyleSheet(f"""
             QLabel {{
                 border: none;
@@ -311,6 +318,30 @@ class FluentImageCard(CardWidget):
         # 这里可以添加更复杂的动画效果
         pass
     
+    def resizeEvent(self, event):
+        """卡片大小改变时更新图片尺寸"""
+        super().resizeEvent(event)
+        # 动态调整图片预览大小
+        if hasattr(self, 'image_label') and self.image_label.pixmap():
+            current_width = self.width() - 32  # 减去边距
+            if current_width > 0:
+                self.update_image_size(current_width)
+    
+    def update_image_size(self, new_width):
+        """更新图片显示尺寸"""
+        if not hasattr(self, 'image_label') or not self.image_label.pixmap():
+            return
+        
+        try:
+            file_path = self.record_data.get('file_path', '')
+            if os.path.exists(file_path):
+                pixmap = QPixmap(file_path)
+                if not pixmap.isNull():
+                    scaled_pixmap = pixmap.scaled(new_width, 170, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                    self.image_label.setPixmap(scaled_pixmap)
+        except Exception as e:
+            print(f"更新图片尺寸时出错: {e}")
+    
     def enterEvent(self, event):
         """鼠标进入事件"""
         self.setStyleSheet(f"""
@@ -439,13 +470,19 @@ class FluentGalleryWidget(SmoothScrollArea):
         
         # 图片网格容器
         self.grid_widget = QWidget()
-        self.grid_layout = FlowLayout()
-        self.grid_layout.setSpacing(FluentSpacing.LG)
+        from PyQt5.QtWidgets import QGridLayout
+        self.grid_layout = QGridLayout()
+        self.grid_layout.setSpacing(FluentSpacing.MD)
         self.grid_layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.MD, 
                                            FluentSpacing.MD, FluentSpacing.MD)
-        # 设置FlowLayout对齐方式，让卡片从左上角开始排列
-        self.grid_layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        # 设置网格布局属性
+        self.grid_layout.setVerticalSpacing(FluentSpacing.MD)
+        self.grid_layout.setHorizontalSpacing(FluentSpacing.MD)
         self.grid_widget.setLayout(self.grid_layout)
+        
+        # 存储当前的行列数
+        self.current_columns = 4  # 默认4列
+        self.current_rows = 0
         
         main_layout.addWidget(header_card)
         main_layout.addWidget(self.grid_widget, 1)  # 让网格容器占用所有可用空间
@@ -464,28 +501,45 @@ class FluentGalleryWidget(SmoothScrollArea):
             return
             
         # 获取可用宽度
-        available_width = self.width() - 80  # 减去边距和滚动条
+        available_width = self.width() - 60  # 减去边距和滚动条
         
-        # 计算最佳卡片宽度和每行卡片数量
+        # 计算最佳列数
         min_card_width = 200  # 最小卡片宽度
-        max_card_width = 280  # 最大卡片宽度
-        card_spacing = 20     # 卡片间距
+        max_card_width = 300  # 最大卡片宽度
+        spacing = 16          # 卡片间距
         
-        # 计算每行能放置的卡片数量
-        for cards_per_row in range(6, 1, -1):  # 最多6列，最少2列
-            total_spacing = (cards_per_row - 1) * card_spacing
-            card_width = (available_width - total_spacing) / cards_per_row
+        # 计算最佳列数（2-6列）
+        best_columns = 4  # 默认4列
+        for columns in range(6, 1, -1):  # 从6列到2列
+            total_spacing = (columns - 1) * spacing + 32  # 加上左右边距
+            card_width = (available_width - total_spacing) / columns
             
             if card_width >= min_card_width:
+                best_columns = columns
                 # 限制最大宽度
                 if card_width > max_card_width:
                     card_width = max_card_width
-                
-                # 如果卡片宽度发生显著变化，重新创建卡片
-                if abs(self.current_card_width - card_width) > 10:
-                    self.current_card_width = int(card_width)
-                    self.refresh_cards()
                 break
+        
+        # 如果列数发生变化，重新布局
+        if self.current_columns != best_columns:
+            self.current_columns = best_columns
+            # 计算新的卡片宽度（平分可用宽度）
+            total_spacing = (best_columns - 1) * spacing + 32
+            self.current_card_width = (available_width - total_spacing) / best_columns
+            # 限制在合理范围内
+            self.current_card_width = min(max(self.current_card_width, min_card_width), max_card_width)
+            self.current_card_width = int(self.current_card_width)
+            
+            # 设置列的拉伸因子，实现平分效果
+            for col in range(best_columns):
+                self.grid_layout.setColumnStretch(col, 1)
+            
+            # 清除多余列的拉伸因子
+            for col in range(best_columns, 6):
+                self.grid_layout.setColumnStretch(col, 0)
+                
+            self.refresh_cards()
     
     def refresh_cards(self):
         """使用新的卡片宽度重新创建所有卡片"""
@@ -577,14 +631,32 @@ class FluentGalleryWidget(SmoothScrollArea):
             self.grid_layout.addWidget(empty_card)
             return
         
-        # 创建图片卡片
-        for record in records:
+        # 重置行数
+        self.current_rows = 0
+        
+        # 创建图片卡片并按网格排列
+        for i, record in enumerate(records):
             try:
                 card = FluentImageCard(record, self, self.current_card_width)
                 card.clicked.connect(self.on_card_clicked)
-                self.grid_layout.addWidget(card)
+                
+                # 计算行列位置
+                row = i // self.current_columns
+                col = i % self.current_columns
+                
+                # 添加到网格布局
+                self.grid_layout.addWidget(card, row, col)
+                
+                # 更新行数
+                if row >= self.current_rows:
+                    self.current_rows = row + 1
+                    
             except Exception as e:
                 print(f"创建图片卡片时出错: {e}")
+        
+        # 在最后一行添加拉伸，确保卡片顶部对齐
+        if self.current_rows > 0:
+            self.grid_layout.setRowStretch(self.current_rows, 1)
         
         # 强制更新布局
         self.grid_widget.update()
