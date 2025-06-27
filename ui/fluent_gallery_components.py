@@ -97,7 +97,7 @@ class FluentImageCard(CardWidget):
         
     def init_ui(self):
         """初始化卡片UI"""
-        self.setFixedSize(240, 320)  # 稍微减小卡片尺寸，让更多卡片能在一行显示
+        self.setFixedSize(240, 340)  # 增加高度以容纳标签行
         self.setBorderRadius(20)
         
         # 主布局
@@ -190,6 +190,29 @@ class FluentImageCard(CardWidget):
             }}
         """)
         
+        # 标签信息
+        tags = self.record_data.get('tags', '').strip()
+        if tags:
+            # 限制标签显示长度，避免卡片过高
+            if len(tags) > 30:
+                tags_display = tags[:27] + "..."
+            else:
+                tags_display = tags
+            tags_label = QLabel(f"🏷️ {tags_display}")
+        else:
+            tags_label = QLabel("🏷️ 暂无标签")
+        
+        tags_label.setStyleSheet(f"""
+            QLabel {{
+                font-size: 12px;
+                color: {FluentColors.get_color('text_tertiary')};
+                border: none;
+                background: transparent;
+                padding: 2px 4px;
+            }}
+        """)
+        tags_label.setWordWrap(True)
+        
         # 创建时间
         created_at = self.record_data.get('created_at', '')
         if created_at:
@@ -216,6 +239,7 @@ class FluentImageCard(CardWidget):
         layout.addWidget(self.image_label)
         layout.addWidget(name_label)
         layout.addWidget(model_label)
+        layout.addWidget(tags_label)
         layout.addWidget(time_label)
         layout.addStretch()
         
