@@ -12,7 +12,36 @@
         "有着即将来临的风和雨水。",
         "相比之下，使车辆非常引人注目"
       ]
+    },
+    {
+      "title": "browser_download_567a02779e00476793fefaf51a7a20d4_反向",
+      "english_prompts": [
+        "ng_deepnegative_v1_75t",
+        "(badhandv4:1.2)",
+        "EasyNegative",
+        "(worst quality:2)",
+        "nsfw"
+      ],
+      "chinese_prompts": []
+    },
+    {
+      "title": "browser_download_567a02779e00476793fefaf51a7a20d4_正向",
+      "english_prompts": [
+        "This is a high-resolution photograph of a young Asian woman with fair skin and black",
+        "short hair styled in a casual",
+        "slightly messy manner. She wears a sleeveless",
+        "backless",
+        "burnt-orange dress that accentuates her slim figure. The dress features thin straps and a plunging neckline. Her right arm displays a tattoo of text in a foreign script. The background is a minimalist",
+        "gradient blue sky",
+        "giving the image a serene",
+        "almost ethereal quality. The lighting appears natural",
+        "soft",
+        "and diffused",
+        "likely from an overcast sky",
+        "enhancing the calm and contemplative mood of the scene."
+      ],
+      "chinese_prompts": []
     }
   ],
-  "last_updated": "2025-06-27 11:58:25"
+  "last_updated": "2025-06-27 12:03:24"
 }

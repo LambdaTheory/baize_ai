@@ -448,16 +448,16 @@ class FluentBusinessLogic(QObject):
             
             if record_id:
                 print(f"[自动保存] 自动保存成功，记录ID: {record_id}")
-                # 显示静默的自动保存提示
-                InfoBar.info(
-                    title="自动保存",
-                    content="记录已自动保存",
-                    orient=Qt.Horizontal,
-                    isClosable=True,
-                    position=InfoBarPosition.TOP,
-                    duration=1500,
-                    parent=self.parent
-                )
+                # 注释掉自动保存提示，减少干扰
+                # InfoBar.info(
+                #     title="自动保存",
+                #     content="记录已自动保存",
+                #     orient=Qt.Horizontal,
+                #     isClosable=True,
+                #     position=InfoBarPosition.TOP,
+                #     duration=1500,
+                #     parent=self.parent
+                # )
                 # 刷新历史记录和画廊
                 self.parent.history_widget.load_history()
                 self.parent.gallery_interface.load_records()

@@ -358,6 +358,16 @@ class FluentHistoryWidget(CardWidget):
     def load_history(self):
         """加载历史记录"""
         try:
+            # 添加调试信息
+            print(f"[调试] data_manager 类型: {type(self.data_manager)}")
+            print(f"[调试] data_manager 对象: {self.data_manager}")
+            print(f"[调试] data_manager 是否有 get_all_records 方法: {hasattr(self.data_manager, 'get_all_records')}")
+            
+            if not hasattr(self.data_manager, 'get_all_records'):
+                print(f"[错误] data_manager 对象没有 get_all_records 方法!")
+                print(f"[错误] data_manager 可用方法: {[method for method in dir(self.data_manager) if not method.startswith('_')]}")
+                return
+            
             records = self.data_manager.get_all_records()
             self.history_records = records  # 存储完整记录用于删除操作
             
@@ -419,6 +429,8 @@ class FluentHistoryWidget(CardWidget):
             
         except Exception as e:
             print(f"加载历史记录失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
             
 
         
