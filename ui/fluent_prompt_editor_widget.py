@@ -53,36 +53,9 @@ class PromptTag(CardWidget):
         
     def init_ui(self):
         """初始化UI"""
-        layout = QVBoxLayout()  # 改为垂直布局以更好地支持换行
-        layout.setContentsMargins(8, 6, 8, 6)  # 减少边距
-        layout.setSpacing(4)
-        
-        # 删除按钮放在顶部右侧
-        header_layout = QHBoxLayout()
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.addStretch()
-        
-        self.delete_btn = QPushButton("×")
-        self.delete_btn.setFixedSize(18, 18)  # 稍微小一点
-        self.delete_btn.setStyleSheet(f"""
-            QPushButton {{
-                border: none;
-                border-radius: 9px;
-                background-color: {FluentColors.get_color('error')};
-                color: white;
-                font-size: 11px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: rgba(220, 38, 38, 0.8);
-            }}
-            QPushButton:pressed {{
-                background-color: rgba(220, 38, 38, 0.9);
-            }}
-        """)
-        self.delete_btn.clicked.connect(self.on_delete)
-        
-        header_layout.addWidget(self.delete_btn)
+        layout = QHBoxLayout()  # 恢复水平布局
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(8)
         
         # 显示文本
         if self.english_text and self.chinese_text:
@@ -97,9 +70,12 @@ class PromptTag(CardWidget):
         self.text_label = QLabel(display_text)
         # 设置自动换行和最大宽度
         self.text_label.setWordWrap(True)  # 启用自动换行
-        self.text_label.setMaximumWidth(180)  # 稍微减少最大宽度为删除按钮留空间
+        self.text_label.setMaximumWidth(200)  # 设置最大宽度，超过后换行
         self.text_label.setMinimumWidth(50)   # 设置最小宽度
-        self.text_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # 左对齐顶部对齐
+        self.text_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)  # 左对齐垂直居中
+        # 设置尺寸策略让文本标签能够根据内容调整高度
+        from PyQt5.QtWidgets import QSizePolicy
+        self.text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
         self.text_label.setStyleSheet(f"""
             QLabel {{
                 color: {FluentColors.get_color('text_primary')};
@@ -108,14 +84,37 @@ class PromptTag(CardWidget):
                 border: none;
                 background: transparent;
                 padding: 2px;
-                line-height: 1.2;
             }}
         """)
         
-        layout.addLayout(header_layout)
-        layout.addWidget(self.text_label)
+        # 删除按钮放在右侧
+        self.delete_btn = QPushButton("×")
+        self.delete_btn.setFixedSize(20, 20)
+        self.delete_btn.setStyleSheet(f"""
+            QPushButton {{
+                border: none;
+                border-radius: 10px;
+                background-color: {FluentColors.get_color('error')};
+                color: white;
+                font-size: 12px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: rgba(220, 38, 38, 0.8);
+            }}
+            QPushButton:pressed {{
+                background-color: rgba(220, 38, 38, 0.9);
+            }}
+        """)
+        self.delete_btn.clicked.connect(self.on_delete)
+        
+        layout.addWidget(self.text_label, 1)  # 文本标签占用剩余空间
+        layout.addWidget(self.delete_btn, 0)  # 删除按钮固定大小
         
         self.setLayout(layout)
+        
+        # 设置整个标签的尺寸策略
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
         
         # 设置标签样式
         self.setStyleSheet(f"""
