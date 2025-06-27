@@ -530,10 +530,12 @@ class PromptEditorPanel(QWidget):
             print(f"同步提示词时出错: {e}")
             
     def parse_prompts(self, text):
-        """解析提示词文本，按逗号分割"""
+        """解析提示词文本，按逗号和句号分割"""
         if not text:
             return []
-        prompts = [prompt.strip() for prompt in text.split(',') if prompt.strip()]
+        import re
+        # 支持中文句号、中文逗号、英文句号、英文逗号分隔
+        prompts = [prompt.strip() for prompt in re.split(r'[,，.。]', text) if prompt.strip()]
         return prompts
         
     def update_tags_display(self):

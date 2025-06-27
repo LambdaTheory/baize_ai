@@ -420,8 +420,9 @@ class FluentMainWindow(FluentWindow):
             print(f"开始处理编辑提示词请求: {scene_name}")
             print(f"提示词内容: {prompt_text}")
             
-            # 解析提示词（按逗号分割）
-            prompts = [prompt.strip() for prompt in prompt_text.split(',') if prompt.strip()]
+            # 解析提示词（按逗号和句号分割）
+            import re
+            prompts = [prompt.strip() for prompt in re.split(r'[,，.。]', prompt_text) if prompt.strip()]
             print(f"解析后的提示词: {prompts}")
             
             # 切换到提示词编辑页面
