@@ -406,7 +406,7 @@ class FluentImageCard(CardWidget):
 
 
 class LoadingOverlay(QWidget):
-    """加载覆盖层组件 - 现代化设计"""
+    """加载覆盖层组件 - 简洁美观设计"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -416,106 +416,99 @@ class LoadingOverlay(QWidget):
         self.hide()  # 初始隐藏
         
     def init_ui(self):
-        """初始化UI - 现代化设计"""
-        # 设置现代化背景样式
+        """初始化UI - 简洁美观设计"""
+        # 设置半透明白色背景，确保可见性
         self.setStyleSheet(f"""
             QWidget#LoadingOverlay {{
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 rgba(79, 70, 229, 0.95),
-                    stop:0.5 rgba(99, 102, 241, 0.95),
-                    stop:1 rgba(139, 92, 246, 0.95));
-                border-radius: 20px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                background-color: rgba(255, 255, 255, 0.92);
+                border: none;
             }}
         """)
         
         # 主布局 - 完全居中
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
-        layout.setSpacing(FluentSpacing.XL)
-        layout.setContentsMargins(60, 60, 60, 60)
+        layout.setSpacing(FluentSpacing.LG)
+        layout.setContentsMargins(40, 40, 40, 40)
         
-        # 加载动画容器
-        animation_container = QWidget()
-        animation_container.setFixedSize(140, 140)
-        animation_layout = QVBoxLayout(animation_container)
-        animation_layout.setAlignment(Qt.AlignCenter)
-        animation_layout.setContentsMargins(0, 0, 0, 0)
+        # 创建中心卡片容器
+        card_container = QWidget()
+        card_container.setFixedSize(360, 240)  # 固定合适的尺寸
+        card_container.setStyleSheet(f"""
+            QWidget {{
+                background-color: white;
+                border-radius: 16px;
+                border: 1px solid {FluentColors.get_color('border_primary')};
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            }}
+        """)
         
-        # 现代化加载环
+        # 卡片内部布局
+        card_layout = QVBoxLayout(card_container)
+        card_layout.setAlignment(Qt.AlignCenter)
+        card_layout.setSpacing(FluentSpacing.LG)
+        card_layout.setContentsMargins(30, 30, 30, 30)
+        
+        # 加载环
         self.progress_ring = ProgressRing()
-        self.progress_ring.setFixedSize(100, 100)
-        self.progress_ring.setStrokeWidth(8)
+        self.progress_ring.setFixedSize(60, 60)
+        self.progress_ring.setStrokeWidth(4)
         self.progress_ring.setStyleSheet(f"""
             ProgressRing {{
                 background-color: transparent;
-                color: rgba(255, 255, 255, 0.9);
+                color: {FluentColors.get_color('primary')};
                 border: none;
             }}
         """)
         
-        animation_layout.addWidget(self.progress_ring)
+        # 加载环容器，确保居中
+        ring_container = QWidget()
+        ring_container.setFixedHeight(80)
+        ring_layout = QVBoxLayout(ring_container)
+        ring_layout.setAlignment(Qt.AlignCenter)
+        ring_layout.setContentsMargins(0, 0, 0, 0)
+        ring_layout.addWidget(self.progress_ring)
         
-        # 文字区域
-        text_container = QWidget()
-        text_container.setMaximumWidth(400)
-        text_layout = QVBoxLayout(text_container)
-        text_layout.setAlignment(Qt.AlignCenter)
-        text_layout.setSpacing(FluentSpacing.MD)
-        text_layout.setContentsMargins(0, 0, 0, 0)
-        
-        # 主标题 - 现代化样式
+        # 主标题
         self.loading_label = QLabel("正在渲染布局")
         self.loading_label.setAlignment(Qt.AlignCenter)
-        self.loading_label.setWordWrap(True)
+        self.loading_label.setWordWrap(False)  # 禁止换行，确保单行显示
         self.loading_label.setStyleSheet(f"""
             QLabel {{
-                color: white;
-                font-size: 24px;
-                font-weight: 700;
+                color: {FluentColors.get_color('text_primary')};
+                font-size: 18px;
+                font-weight: 600;
                 background: transparent;
-                padding: 8px 16px;
+                padding: 4px 8px;
                 text-align: center;
-                letter-spacing: 1px;
             }}
         """)
         
-        # 子标题 - 现代化样式
+        # 子标题
         self.subtitle_label = QLabel("请稍候，正在优化卡片布局...")
         self.subtitle_label.setAlignment(Qt.AlignCenter)
-        self.subtitle_label.setWordWrap(True)
+        self.subtitle_label.setWordWrap(True)  # 允许换行
+        self.subtitle_label.setFixedHeight(40)  # 固定高度，最多两行
         self.subtitle_label.setStyleSheet(f"""
             QLabel {{
-                color: rgba(255, 255, 255, 0.85);
-                font-size: 16px;
+                color: {FluentColors.get_color('text_secondary')};
+                font-size: 14px;
                 font-weight: 400;
                 background: transparent;
-                padding: 4px 16px;
+                padding: 4px 8px;
                 text-align: center;
-                line-height: 1.5;
+                line-height: 1.4;
             }}
         """)
         
-        # 装饰性元素
-        decoration_label = QLabel("✨")
-        decoration_label.setAlignment(Qt.AlignCenter)
-        decoration_label.setStyleSheet(f"""
-            QLabel {{
-                color: rgba(255, 255, 255, 0.7);
-                font-size: 20px;
-                background: transparent;
-                padding: 4px;
-            }}
-        """)
+        # 添加组件到卡片布局
+        card_layout.addWidget(ring_container)
+        card_layout.addWidget(self.loading_label)
+        card_layout.addWidget(self.subtitle_label)
         
-        text_layout.addWidget(self.loading_label)
-        text_layout.addWidget(self.subtitle_label)
-        text_layout.addWidget(decoration_label)
-        
-        # 添加组件到主布局
+        # 添加卡片到主布局
         layout.addStretch(1)
-        layout.addWidget(animation_container)
-        layout.addWidget(text_container)
+        layout.addWidget(card_container)
         layout.addStretch(1)
         
         self.setLayout(layout)
@@ -523,23 +516,26 @@ class LoadingOverlay(QWidget):
     def setup_animation(self):
         """设置平滑动画"""
         self.fade_animation = QPropertyAnimation(self, b"windowOpacity")
-        self.fade_animation.setDuration(300)  # 稍微延长动画时间
+        self.fade_animation.setDuration(250)
         self.fade_animation.setEasingCurve(QEasingCurve.OutCubic)
         
     def show_loading(self, message="正在渲染布局", subtitle=""):
         """显示加载界面"""
+        # 确保文字不会被截断
+        if len(message) > 20:
+            message = message[:17] + "..."
         self.loading_label.setText(message)
         
-        # 智能子标题匹配
+        # 智能子标题匹配，确保长度合适
         if not subtitle:
             subtitle_map = {
-                "布局": "正在优化卡片布局，提升浏览体验...",
-                "调整": "正在调整界面尺寸，请稍候...",
-                "加载": "正在从数据库获取图片信息...",
-                "记录": "正在加载图片记录数据...",
-                "筛选": "正在过滤符合条件的记录...",
-                "选项": "正在分析数据并更新筛选选项...",
-                "更新": "正在更新界面数据..."
+                "布局": "正在优化卡片布局，提升浏览体验",
+                "调整": "正在调整界面尺寸，请稍候",
+                "加载": "正在从数据库获取图片信息",
+                "记录": "正在加载图片记录数据",
+                "筛选": "正在过滤符合条件的记录",
+                "选项": "正在分析数据并更新筛选选项",
+                "更新": "正在更新界面数据"
             }
             
             for key, sub in subtitle_map.items():
@@ -547,8 +543,12 @@ class LoadingOverlay(QWidget):
                     subtitle = sub
                     break
             else:
-                subtitle = "请稍候，操作进行中..."
+                subtitle = "请稍候，操作进行中"
         
+        # 确保子标题长度合适
+        if len(subtitle) > 35:
+            subtitle = subtitle[:32] + "..."
+            
         self.subtitle_label.setText(subtitle)
         self.show()
         self.raise_()
