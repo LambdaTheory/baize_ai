@@ -578,6 +578,7 @@ class FluentImageInfoWidget(SmoothScrollArea):
         self.preset_tags_widget = QWidget()
         self.preset_tags_layout = FlowLayout()
         self.preset_tags_layout.setSpacing(8)
+        self.preset_tags_layout.setContentsMargins(4, 4, 4, 4)  # 增加内边距
         self.preset_tags_widget.setLayout(self.preset_tags_layout)
         
         # 备注区域
@@ -644,18 +645,26 @@ class FluentImageInfoWidget(SmoothScrollArea):
         
         for tag in preset_tags:
             tag_btn = TransparentPushButton(tag)
-            tag_btn.setFixedHeight(28)
+            tag_btn.setFixedHeight(32)  # 统一高度
+            tag_btn.setMinimumWidth(60)  # 设置最小宽度
             tag_btn.setStyleSheet(f"""
                 TransparentPushButton {{
                     border: 1px solid {FluentColors.get_color('border_primary')};
-                    border-radius: 14px;
-                    padding: 4px 12px;
+                    border-radius: 16px;
+                    padding: 6px 14px;
                     background-color: {FluentColors.get_color('bg_secondary')};
                     color: {FluentColors.get_color('text_primary')};
+                    font-size: 12px;
+                    font-weight: 500;
                 }}
                 TransparentPushButton:hover {{
                     background-color: {FluentColors.get_color('primary')};
                     color: white;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+                }}
+                TransparentPushButton:pressed {{
+                    transform: translateY(0px);
                 }}
             """)
             tag_btn.clicked.connect(lambda checked, t=tag: self.add_preset_tag(t))
