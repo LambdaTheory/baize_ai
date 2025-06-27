@@ -7,11 +7,7 @@
         "with a deep sense of impending wind and rain. Only the body of the car appears relatively bright in the entire picture",
         "making the vehicle very eye-catching in comparison"
       ],
-      "chinese_prompts": [
-        "一辆粉红色的SUV在豆类大小的雨滴中在海面上行驶。",
-        "有着即将来临的风和雨水。",
-        "相比之下，使车辆非常引人注目"
-      ]
+      "chinese_prompts": []
     },
     {
       "title": "browser_download_567a02779e00476793fefaf51a7a20d4_反向",
@@ -43,5 +39,5 @@
       "chinese_prompts": []
     }
   ],
-  "last_updated": "2025-06-27 16:06:05"
+  "last_updated": "2025-06-27 16:56:57"
 }

@@ -7,7 +7,7 @@ Fluent Design 提示词修改组件
 import sys
 import re
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, 
-                            QScrollArea, QFrame, QPushButton, QLabel, QGridLayout, QApplication)
+                            QScrollArea, QFrame, QPushButton, QLabel, QGridLayout, QApplication, QSizePolicy)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread, pyqtSignal as Signal
 from PyQt5.QtGui import QFont, QPalette
 
@@ -68,14 +68,12 @@ class PromptTag(CardWidget):
             display_text = "空标签"
             
         self.text_label = QLabel(display_text)
-        # 设置自动换行和最大宽度
-        self.text_label.setWordWrap(True)  # 启用自动换行
-        self.text_label.setMaximumWidth(200)  # 设置最大宽度，超过后换行
-        self.text_label.setMinimumWidth(50)   # 设置最小宽度
-        self.text_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)  # 左对齐垂直居中
-        # 设置尺寸策略让文本标签能够根据内容调整高度
-        from PyQt5.QtWidgets import QSizePolicy
-        self.text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
+        # 启用自动换行，让文本充分利用可用宽度
+        self.text_label.setWordWrap(True)
+        # 移除所有宽度限制
+        self.text_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        # 设置尺寸策略让文本标签充分利用可用宽度
+        self.text_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         self.text_label.setStyleSheet(f"""
             QLabel {{
                 color: {FluentColors.get_color('text_primary')};
@@ -113,8 +111,8 @@ class PromptTag(CardWidget):
         
         self.setLayout(layout)
         
-        # 设置整个标签的尺寸策略
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
+        # 设置整个标签的尺寸策略，让它利用更多宽度
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         
         # 设置标签样式
         self.setStyleSheet(f"""
@@ -492,6 +490,9 @@ class PromptEditorPanel(QWidget):
         self.tags_layout.setContentsMargins(8, 8, 8, 8)  # 减少内边距
         self.tags_layout.setHorizontalSpacing(6)  # 减少间距
         self.tags_layout.setVerticalSpacing(6)  # 减少间距
+        
+        # 让标签容器充分利用可用宽度
+        self.tags_widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         
         scroll_area.setWidget(self.tags_widget)
         
