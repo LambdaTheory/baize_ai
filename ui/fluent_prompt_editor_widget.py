@@ -53,9 +53,36 @@ class PromptTag(CardWidget):
         
     def init_ui(self):
         """初始化UI"""
-        layout = QHBoxLayout()
-        layout.setContentsMargins(12, 8, 12, 8)
-        layout.setSpacing(8)
+        layout = QVBoxLayout()  # 改为垂直布局以更好地支持换行
+        layout.setContentsMargins(8, 6, 8, 6)  # 减少边距
+        layout.setSpacing(4)
+        
+        # 删除按钮放在顶部右侧
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.addStretch()
+        
+        self.delete_btn = QPushButton("×")
+        self.delete_btn.setFixedSize(18, 18)  # 稍微小一点
+        self.delete_btn.setStyleSheet(f"""
+            QPushButton {{
+                border: none;
+                border-radius: 9px;
+                background-color: {FluentColors.get_color('error')};
+                color: white;
+                font-size: 11px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: rgba(220, 38, 38, 0.8);
+            }}
+            QPushButton:pressed {{
+                background-color: rgba(220, 38, 38, 0.9);
+            }}
+        """)
+        self.delete_btn.clicked.connect(self.on_delete)
+        
+        header_layout.addWidget(self.delete_btn)
         
         # 显示文本
         if self.english_text and self.chinese_text:
@@ -68,39 +95,25 @@ class PromptTag(CardWidget):
             display_text = "空标签"
             
         self.text_label = QLabel(display_text)
+        # 设置自动换行和最大宽度
+        self.text_label.setWordWrap(True)  # 启用自动换行
+        self.text_label.setMaximumWidth(180)  # 稍微减少最大宽度为删除按钮留空间
+        self.text_label.setMinimumWidth(50)   # 设置最小宽度
+        self.text_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # 左对齐顶部对齐
         self.text_label.setStyleSheet(f"""
             QLabel {{
                 color: {FluentColors.get_color('text_primary')};
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: 500;
                 border: none;
                 background: transparent;
+                padding: 2px;
+                line-height: 1.2;
             }}
         """)
         
-        # 删除按钮
-        self.delete_btn = QPushButton("×")
-        self.delete_btn.setFixedSize(20, 20)
-        self.delete_btn.setStyleSheet(f"""
-            QPushButton {{
-                border: none;
-                border-radius: 10px;
-                background-color: {FluentColors.get_color('error')};
-                color: white;
-                font-size: 12px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: rgba(220, 38, 38, 0.8);
-            }}
-            QPushButton:pressed {{
-                background-color: rgba(220, 38, 38, 0.9);
-            }}
-        """)
-        self.delete_btn.clicked.connect(self.on_delete)
-        
+        layout.addLayout(header_layout)
         layout.addWidget(self.text_label)
-        layout.addWidget(self.delete_btn)
         
         self.setLayout(layout)
         
