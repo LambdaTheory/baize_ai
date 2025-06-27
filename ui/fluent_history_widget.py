@@ -187,12 +187,12 @@ class FluentHistoryWidget(CardWidget):
         self.history_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.history_table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
-        # 设置行高以适应缩略图
-        self.history_table.verticalHeader().setDefaultSectionSize(80)
-        self.history_table.verticalHeader().setMinimumSectionSize(80)
+        # 修改：增加行高以容纳更多内容，确保标签信息能够显示
+        self.history_table.verticalHeader().setDefaultSectionSize(120)  # 从80增加到120
+        self.history_table.verticalHeader().setMinimumSectionSize(100)  # 从80增加到100
         
-        # 设置表格的布局模式，确保列不会相互覆盖
-        self.history_table.setWordWrap(False)
+        # 修改：启用文字换行，让内容能够完整显示
+        self.history_table.setWordWrap(True)  # 从False改为True
         self.history_table.setShowGrid(True)
         
         # 启用右键菜单
@@ -278,16 +278,16 @@ class FluentHistoryWidget(CardWidget):
         
     def create_thumbnail_widget(self, file_path):
         """创建缩略图小部件"""
-        # 创建容器widget，确保正确的布局
+        # 创建容器widget，确保正确的布局，适应新的行高
         container = QWidget()
-        container.setFixedSize(95, 75)  # 设置容器固定尺寸
+        container.setFixedSize(95, 115)  # 从75增加到115，适应120行高
         container_layout = QHBoxLayout(container)
         container_layout.setContentsMargins(5, 2, 5, 2)
         container_layout.setAlignment(Qt.AlignCenter)
         
         thumbnail_label = QLabel()
         thumbnail_label.setAlignment(Qt.AlignCenter)
-        thumbnail_label.setFixedSize(85, 71)  # 适配容器尺寸
+        thumbnail_label.setFixedSize(85, 111)  # 从71增加到111，适应新容器
         thumbnail_label.setScaledContents(False)
         
         # 设置基础样式
@@ -305,9 +305,9 @@ class FluentHistoryWidget(CardWidget):
                 # 加载并缩放图片
                 pixmap = QPixmap(file_path)
                 if not pixmap.isNull():
-                    # 创建缩略图，保持宽高比
+                    # 创建缩略图，保持宽高比，适应新尺寸
                     scaled_pixmap = pixmap.scaled(
-                        81, 67, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                        81, 107, Qt.KeepAspectRatio, Qt.SmoothTransformation  # 从67增加到107
                     )
                     thumbnail_label.setPixmap(scaled_pixmap)
                     thumbnail_label.setToolTip(f"图片尺寸: {pixmap.width()} × {pixmap.height()}")
@@ -596,7 +596,17 @@ class FluentHistoryWidget(CardWidget):
         """创建生成信息项，显示格式化的生成参数"""
         info_parts = []
         
-        # 1. 模型信息 - 优先显示
+        # 1. 标签信息 - 提升优先级到第一位
+        tags = record.get('tags', '').strip()
+        if tags:
+            # 限制标签显示长度并美化
+            if len(tags) > 40:
+                tags_display = tags[:37] + '...'
+            else:
+                tags_display = tags
+            info_parts.append(f"🏷️ {tags_display}")
+        
+        # 2. 模型信息 - 简化显示
         model = record.get('model', '').strip()
         if model:
             # 截取模型名称，避免过长
@@ -607,58 +617,48 @@ class FluentHistoryWidget(CardWidget):
             elif model_display.endswith('.ckpt'):
                 model_display = model_display[:-5]
             
-            if len(model_display) > 30:
-                model_display = model_display[:27] + '...'
+            if len(model_display) > 25:  # 进一步缩短显示长度
+                model_display = model_display[:22] + '...'
             info_parts.append(f"🤖 {model_display}")
         
-        # 2. LoRA信息 - 重点显示，使用更好的格式
-        lora_info_str = record.get('lora_info', '')
-        if lora_info_str:
-            lora_display = self.format_lora_info(lora_info_str)
-            if lora_display:
-                info_parts.append(f"🎯 LoRA: {lora_display}")
-        
-        # 3. 核心生成参数
+        # 3. 核心生成参数 - 合并显示
         param_parts = []
         sampler = record.get('sampler', '').strip()
         steps = record.get('steps')
         cfg_scale = record.get('cfg_scale')
+        seed = record.get('seed')
         
         if sampler:
             # 简化采样器名称显示
             sampler_short = sampler.replace('_', ' ').replace('DPM++', 'DPM++').title()
-            if len(sampler_short) > 12:
-                sampler_short = sampler_short[:9] + '...'
+            if len(sampler_short) > 10:
+                sampler_short = sampler_short[:7] + '...'
             param_parts.append(f"{sampler_short}")
         if steps:
             param_parts.append(f"{steps}步")
         if cfg_scale:
             param_parts.append(f"CFG{cfg_scale}")
+        if seed:
+            seed_display = str(seed)[-4:] if len(str(seed)) > 4 else str(seed)
+            param_parts.append(f"🎲{seed_display}")
         
         if param_parts:
             info_parts.append(f"⚙️ {' • '.join(param_parts)}")
         
-        # 4. 种子信息（如果有）
-        seed = record.get('seed')
-        if seed:
-            seed_display = str(seed)[-6:] if len(str(seed)) > 6 else str(seed)
-            info_parts.append(f"🎲 {seed_display}")
-        
-        # 5. 标签信息（如果有的话）
-        tags = record.get('tags', '').strip()
-        if tags:
-            # 限制标签显示长度并美化
-            if len(tags) > 35:
-                tags_display = tags[:32] + '...'
-            else:
-                tags_display = tags
-            info_parts.append(f"🏷️ {tags_display}")
+        # 4. LoRA信息 - 简化显示
+        lora_info_str = record.get('lora_info', '')
+        if lora_info_str and len(info_parts) < 4:  # 只在有空间时显示LoRA
+            lora_display = self.format_lora_info(lora_info_str)
+            if lora_display:
+                info_parts.append(f"🎯 {lora_display}")
         
         # 合并所有信息
         full_text = '\n'.join(info_parts) if info_parts else '暂无生成信息'
         
         # 创建完整的工具提示信息
         tooltip_parts = []
+        if tags:
+            tooltip_parts.append(f"标签: {tags}")
         if model:
             tooltip_parts.append(f"模型: {record.get('model', '')}")
         if lora_info_str:
@@ -671,8 +671,6 @@ class FluentHistoryWidget(CardWidget):
             tooltip_parts.append(f"CFG Scale: {cfg_scale}")
         if seed:
             tooltip_parts.append(f"种子: {seed}")
-        if tags:
-            tooltip_parts.append(f"标签: {tags}")
         
         full_tooltip = '\n'.join(tooltip_parts) if tooltip_parts else '暂无生成信息'
         
