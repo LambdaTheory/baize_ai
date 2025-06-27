@@ -67,12 +67,8 @@ class PromptTag(CardWidget):
         else:
             display_text = "空标签"
             
-        # 文本长度处理：过长文本进行省略
-        if len(display_text) > 50:
-            display_text = display_text[:47] + "..."
-            
         self.text_label = QLabel(display_text)
-        self.text_label.setWordWrap(False)  # 不自动换行，保持单行
+        self.text_label.setWordWrap(True)  # 允许自动换行显示完整内容
         self.text_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         # 设置固定的尺寸策略
         self.text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -114,10 +110,9 @@ class PromptTag(CardWidget):
         
         self.setLayout(layout)
         
-        # 设置标签统一的最小和最大尺寸
+        # 设置标签统一的最小高度，允许内容自适应
         self.setMinimumHeight(36)  # 统一最小高度
-        self.setMaximumHeight(36)  # 统一最大高度，防止标签过高
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         
         # 设置标签样式 - 更加现代化和统一
         self.setStyleSheet(f"""
@@ -126,7 +121,6 @@ class PromptTag(CardWidget):
                 border: 1px solid {FluentColors.get_color('border_primary')};
                 border-radius: 18px;
                 min-height: 36px;
-                max-height: 36px;
             }}
             CardWidget:hover {{
                 border-color: {FluentColors.get_color('accent')};
