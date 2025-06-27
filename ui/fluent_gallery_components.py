@@ -89,15 +89,17 @@ class FluentImageCard(CardWidget):
     """Fluent Design 图片卡片组件"""
     clicked = pyqtSignal(dict)
     
-    def __init__(self, record_data, parent=None):
+    def __init__(self, record_data, parent=None, card_width=240):
         super().__init__(parent)
         self.record_data = record_data
+        self.card_width = card_width  # 支持动态宽度
         self.init_ui()
         self.setup_animations()
         
     def init_ui(self):
         """初始化卡片UI"""
-        self.setFixedSize(240, 340)  # 增加高度以容纳标签行
+        # 使用动态宽度，高度保持固定
+        self.setFixedSize(self.card_width, 360)
         self.setBorderRadius(20)
         
         # 主布局
@@ -108,7 +110,9 @@ class FluentImageCard(CardWidget):
         
         # 图片预览
         self.image_label = QLabel()
-        self.image_label.setFixedSize(208, 170)  # 调整图片预览尺寸以匹配新的卡片大小
+        # 图片宽度根据卡片宽度动态调整
+        image_width = self.card_width - 32  # 减去边距
+        self.image_label.setFixedSize(image_width, 170)
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setStyleSheet(f"""
             QLabel {{
@@ -124,7 +128,7 @@ class FluentImageCard(CardWidget):
         if os.path.exists(file_path):
             pixmap = QPixmap(file_path)
             if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(208, 170, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                scaled_pixmap = pixmap.scaled(image_width, 170, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 self.image_label.setPixmap(scaled_pixmap)
                 self.image_label.setStyleSheet(f"""
                     QLabel {{
@@ -213,6 +217,62 @@ class FluentImageCard(CardWidget):
         """)
         tags_label.setWordWrap(True)
         
+        # LoRA信息
+        lora_info = self.record_data.get('lora_info', '')
+        if lora_info:
+            try:
+                import json
+                lora_display = ""
+                if isinstance(lora_info, str) and lora_info.strip():
+                    lora_data = json.loads(lora_info)
+                    if isinstance(lora_data, dict) and 'loras' in lora_data and lora_data['loras']:
+                        # 正确的LoRA数据结构
+                        lora_names = []
+                        for lora in lora_data['loras']:
+                            if isinstance(lora, dict) and 'name' in lora:
+                                name = lora.get('name', '未知')
+                                weight = lora.get('weight', 1.0)
+                                lora_names.append(f"{name}({weight})")
+                        
+                        if lora_names:
+                            # 限制显示的LoRA数量，避免卡片过高
+                            if len(lora_names) > 2:
+                                lora_display = ", ".join(lora_names[:2]) + f"等{len(lora_names)}个"
+                            else:
+                                lora_display = ", ".join(lora_names)
+                    elif isinstance(lora_data, dict):
+                        # 备用格式
+                        lora_items = []
+                        for name, weight in lora_data.items():
+                            if name != 'loras':
+                                lora_items.append(f"{name}({weight})")
+                                if len(lora_items) >= 2:
+                                    break
+                        lora_display = ", ".join(lora_items)
+                
+                if lora_display:
+                    # 限制LoRA显示长度
+                    if len(lora_display) > 25:
+                        lora_display = lora_display[:22] + "..."
+                    lora_label = QLabel(f"🎯 {lora_display}")
+                else:
+                    lora_label = QLabel("🎯 暂无LoRA")
+            except Exception as e:
+                lora_label = QLabel("🎯 LoRA解析错误")
+        else:
+            lora_label = QLabel("🎯 暂无LoRA")
+        
+        lora_label.setStyleSheet(f"""
+            QLabel {{
+                font-size: 12px;
+                color: {FluentColors.get_color('text_tertiary')};
+                border: none;
+                background: transparent;
+                padding: 2px 4px;
+            }}
+        """)
+        lora_label.setWordWrap(True)
+        
         # 创建时间
         created_at = self.record_data.get('created_at', '')
         if created_at:
@@ -240,6 +300,7 @@ class FluentImageCard(CardWidget):
         layout.addWidget(name_label)
         layout.addWidget(model_label)
         layout.addWidget(tags_label)
+        layout.addWidget(lora_label)
         layout.addWidget(time_label)
         layout.addStretch()
         
@@ -301,6 +362,7 @@ class FluentGalleryWidget(SmoothScrollArea):
         self.current_filter_field = ""
         self.current_filter_value = ""
         self._updating_filters = False  # 添加标志位防止递归
+        self.current_card_width = 240  # 当前卡片宽度
         self.init_ui()
         self.load_records()
         
@@ -349,7 +411,7 @@ class FluentGalleryWidget(SmoothScrollArea):
         
         # 第一个下拉框：筛选字段
         self.field_combo = ComboBox()
-        self.field_combo.addItems(["全部", "模型", "LoRA", "标签", "备注"])
+        self.field_combo.addItems(["全部", "模型", "LoRA", "标签"])
         self.field_combo.setFixedWidth(120)
         self.field_combo.currentTextChanged.connect(self.on_field_changed)
         
@@ -390,6 +452,45 @@ class FluentGalleryWidget(SmoothScrollArea):
         
         main_widget.setLayout(main_layout)
         self.setWidget(main_widget)
+        
+    def resizeEvent(self, event):
+        """窗口大小改变事件，动态调整卡片大小"""
+        super().resizeEvent(event)
+        self.update_card_layout()
+    
+    def update_card_layout(self):
+        """更新卡片布局，实现响应式设计"""
+        if not hasattr(self, 'grid_widget') or not self.grid_widget:
+            return
+            
+        # 获取可用宽度
+        available_width = self.width() - 80  # 减去边距和滚动条
+        
+        # 计算最佳卡片宽度和每行卡片数量
+        min_card_width = 200  # 最小卡片宽度
+        max_card_width = 280  # 最大卡片宽度
+        card_spacing = 20     # 卡片间距
+        
+        # 计算每行能放置的卡片数量
+        for cards_per_row in range(6, 1, -1):  # 最多6列，最少2列
+            total_spacing = (cards_per_row - 1) * card_spacing
+            card_width = (available_width - total_spacing) / cards_per_row
+            
+            if card_width >= min_card_width:
+                # 限制最大宽度
+                if card_width > max_card_width:
+                    card_width = max_card_width
+                
+                # 如果卡片宽度发生显著变化，重新创建卡片
+                if abs(self.current_card_width - card_width) > 10:
+                    self.current_card_width = int(card_width)
+                    self.refresh_cards()
+                break
+    
+    def refresh_cards(self):
+        """使用新的卡片宽度重新创建所有卡片"""
+        if hasattr(self, 'filtered_records') and self.filtered_records:
+            self.display_records(self.filtered_records)
         
     def load_records(self):
         """加载记录"""
@@ -479,7 +580,7 @@ class FluentGalleryWidget(SmoothScrollArea):
         # 创建图片卡片
         for record in records:
             try:
-                card = FluentImageCard(record)
+                card = FluentImageCard(record, self, self.current_card_width)
                 card.clicked.connect(self.on_card_clicked)
                 self.grid_layout.addWidget(card)
             except Exception as e:
@@ -580,10 +681,7 @@ class FluentGalleryWidget(SmoothScrollArea):
                             tag = tag.strip()
                             if tag:
                                 values.add(tag)
-                elif self.current_filter_field == "备注":
-                    notes = record.get('notes', '').strip()
-                    if notes:
-                        values.add(notes)
+
             
             # 排序并添加到下拉框
             sorted_values = sorted(list(values))
@@ -663,9 +761,7 @@ class FluentGalleryWidget(SmoothScrollArea):
                     tags = record.get('tags', '').lower()
                     match = filter_value_lower in tags
                 
-                elif self.current_filter_field == "备注":
-                    notes = record.get('notes', '').lower()
-                    match = filter_value_lower in notes
+
                 
                 if match:
                     self.filtered_records.append(record)
