@@ -288,19 +288,20 @@ class PromptEditorPanel(QWidget):
         """初始化UI"""
         # 主布局改为水平布局
         main_layout = QHBoxLayout()
-        main_layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.MD, 
-                                FluentSpacing.MD, FluentSpacing.MD)
-        main_layout.setSpacing(FluentSpacing.MD)
+        main_layout.setContentsMargins(8, 8, 8, 8)  # 减少边距
+        main_layout.setSpacing(12)  # 减少间距
         
         # 左侧区域
         left_container = QWidget()
         left_layout = QVBoxLayout()
-        left_layout.setSpacing(FluentSpacing.SM)
+        left_layout.setContentsMargins(0, 0, 0, 0)  # 去掉内边距
+        left_layout.setSpacing(8)  # 减少间距
         
         # 输入框区域（左侧上方）- 只保留英文输入框
         input_frame = QFrame()
         input_layout = QVBoxLayout()
-        input_layout.setSpacing(FluentSpacing.MD)
+        input_layout.setContentsMargins(0, 0, 0, 0)  # 去掉内边距
+        input_layout.setSpacing(8)
         
         # 英文输入框
         english_container = self.create_input_container(
@@ -335,10 +336,12 @@ class PromptEditorPanel(QWidget):
         """创建输入框容器"""
         container = QWidget()
         container_layout = QVBoxLayout()
+        container_layout.setContentsMargins(0, 0, 0, 0)  # 去掉内边距
         container_layout.setSpacing(8)
         
         # 标题和复制按钮
         header = QHBoxLayout()
+        header.setContentsMargins(0, 0, 0, 0)  # 去掉内边距
         label = QLabel(label_text)
         label.setStyleSheet(f"""
             QLabel {{
@@ -394,6 +397,7 @@ class PromptEditorPanel(QWidget):
         """创建展示区域"""
         display_container = QWidget()
         display_layout = QVBoxLayout()
+        display_layout.setContentsMargins(0, 0, 0, 0)  # 去掉内边距
         display_layout.setSpacing(8)
         
         # 展示区域标题
@@ -430,6 +434,7 @@ class PromptEditorPanel(QWidget):
         """创建标签区域"""
         tags_container = QWidget()
         tags_layout = QVBoxLayout()
+        tags_layout.setContentsMargins(0, 0, 0, 0)  # 去掉内边距
         tags_layout.setSpacing(8)
         
         # 标签标题
@@ -447,8 +452,7 @@ class PromptEditorPanel(QWidget):
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setMinimumHeight(120)  # 设置最小高度
-        scroll_area.setMaximumHeight(200)  # 设置最大高度，确保有滚动条
+        # 去掉高度限制，让它自适应
         scroll_area.setStyleSheet(f"""
             QScrollArea {{
                 border: 1px solid {FluentColors.get_color('border_primary')};
@@ -473,9 +477,9 @@ class PromptEditorPanel(QWidget):
         # 标签容器
         self.tags_widget = QWidget()
         self.tags_layout = FlowLayout(self.tags_widget)
-        self.tags_layout.setContentsMargins(12, 12, 12, 12)
-        self.tags_layout.setHorizontalSpacing(8)
-        self.tags_layout.setVerticalSpacing(8)
+        self.tags_layout.setContentsMargins(8, 8, 8, 8)  # 减少内边距
+        self.tags_layout.setHorizontalSpacing(6)  # 减少间距
+        self.tags_layout.setVerticalSpacing(6)  # 减少间距
         
         scroll_area.setWidget(self.tags_widget)
         
