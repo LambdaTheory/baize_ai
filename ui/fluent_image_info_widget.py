@@ -645,7 +645,7 @@ class FluentImageInfoWidget(SmoothScrollArea):
         
         for tag in preset_tags:
             tag_btn = TransparentPushButton(tag)
-            tag_btn.setFixedHeight(32)  # 与提示词标签保持一致的高度
+            tag_btn.setMinimumHeight(32)  # 最小高度与提示词标签保持一致
             tag_btn.setMinimumWidth(60)  # 参考设计图片调整最小宽度
             tag_btn.setMaximumWidth(200)  # 调整最大宽度
             tag_btn.setStyleSheet(f"""

@@ -110,18 +110,17 @@ class PromptTag(CardWidget):
         
         self.setLayout(layout)
         
-        # 设置标签的尺寸策略 - 参考现代设计
-        self.setMinimumHeight(32)  # 调整为32px，更紧凑
-        self.setMaximumHeight(32)  # 固定高度，保持一致性
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        # 设置标签的尺寸策略 - 最小高度保证一致性，但允许内容撑开
+        self.setMinimumHeight(32)  # 最小高度32px，保证基本一致性
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)  # 允许根据内容自适应高度
         
-        # 设置标签样式 - 参考用户提供的设计图片
+        # 设置标签样式 - 最小高度保证一致性，允许内容自适应
         self.setStyleSheet(f"""
             CardWidget {{
                 background-color: {FluentColors.get_color('bg_secondary')};
                 border: 1px solid {FluentColors.get_color('border_primary')};
                 border-radius: 16px;
-                height: 32px;
+                min-height: 32px;
                 font-size: 13px;
                 font-weight: 500;
             }}
