@@ -97,7 +97,7 @@ class FluentImageCard(CardWidget):
         
     def init_ui(self):
         """初始化卡片UI"""
-        self.setFixedSize(260, 340)
+        self.setFixedSize(240, 320)  # 稍微减小卡片尺寸，让更多卡片能在一行显示
         self.setBorderRadius(20)
         
         # 主布局
@@ -108,7 +108,7 @@ class FluentImageCard(CardWidget):
         
         # 图片预览
         self.image_label = QLabel()
-        self.image_label.setFixedSize(228, 190)
+        self.image_label.setFixedSize(208, 170)  # 调整图片预览尺寸以匹配新的卡片大小
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setStyleSheet(f"""
             QLabel {{
@@ -124,7 +124,7 @@ class FluentImageCard(CardWidget):
         if os.path.exists(file_path):
             pixmap = QPixmap(file_path)
             if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(228, 190, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                scaled_pixmap = pixmap.scaled(208, 170, Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 self.image_label.setPixmap(scaled_pixmap)
                 self.image_label.setStyleSheet(f"""
                     QLabel {{
@@ -355,12 +355,14 @@ class FluentGalleryWidget(SmoothScrollArea):
         self.grid_widget = QWidget()
         self.grid_layout = FlowLayout()
         self.grid_layout.setSpacing(FluentSpacing.LG)
-        self.grid_layout.setContentsMargins(0, 0, 0, 0)
+        self.grid_layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.MD, 
+                                           FluentSpacing.MD, FluentSpacing.MD)
+        # 设置FlowLayout对齐方式，让卡片从左上角开始排列
+        self.grid_layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.grid_widget.setLayout(self.grid_layout)
         
         main_layout.addWidget(header_card)
-        main_layout.addWidget(self.grid_widget)
-        main_layout.addStretch()
+        main_layout.addWidget(self.grid_widget, 1)  # 让网格容器占用所有可用空间
         
         main_widget.setLayout(main_layout)
         self.setWidget(main_widget)
