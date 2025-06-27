@@ -53,11 +53,11 @@ class PromptTag(CardWidget):
         
     def init_ui(self):
         """初始化UI"""
-        layout = QHBoxLayout()  # 恢复水平布局
-        layout.setContentsMargins(8, 6, 8, 6)
+        layout = QHBoxLayout()
+        layout.setContentsMargins(12, 8, 12, 8)  # 增加内边距让标签看起来更饱满
         layout.setSpacing(8)
         
-        # 显示文本
+        # 显示文本处理
         if self.english_text and self.chinese_text:
             display_text = f"{self.english_text}({self.chinese_text})"
         elif self.english_text:
@@ -67,13 +67,15 @@ class PromptTag(CardWidget):
         else:
             display_text = "空标签"
             
+        # 文本长度处理：过长文本进行省略
+        if len(display_text) > 50:
+            display_text = display_text[:47] + "..."
+            
         self.text_label = QLabel(display_text)
-        # 启用自动换行，让文本充分利用可用宽度
-        self.text_label.setWordWrap(True)
-        # 移除所有宽度限制
+        self.text_label.setWordWrap(False)  # 不自动换行，保持单行
         self.text_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        # 设置尺寸策略让文本标签充分利用可用宽度
-        self.text_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        # 设置固定的尺寸策略
+        self.text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.text_label.setStyleSheet(f"""
             QLabel {{
                 color: {FluentColors.get_color('text_primary')};
@@ -81,24 +83,25 @@ class PromptTag(CardWidget):
                 font-weight: 500;
                 border: none;
                 background: transparent;
-                padding: 2px;
+                padding: 0px;
             }}
         """)
         
-        # 删除按钮放在右侧
+        # 删除按钮优化
         self.delete_btn = QPushButton("×")
-        self.delete_btn.setFixedSize(20, 20)
+        self.delete_btn.setFixedSize(18, 18)
         self.delete_btn.setStyleSheet(f"""
             QPushButton {{
                 border: none;
-                border-radius: 10px;
+                border-radius: 9px;
                 background-color: {FluentColors.get_color('error')};
                 color: white;
-                font-size: 12px;
+                font-size: 11px;
                 font-weight: bold;
             }}
             QPushButton:hover {{
                 background-color: rgba(220, 38, 38, 0.8);
+                transform: scale(1.1);
             }}
             QPushButton:pressed {{
                 background-color: rgba(220, 38, 38, 0.9);
@@ -106,24 +109,30 @@ class PromptTag(CardWidget):
         """)
         self.delete_btn.clicked.connect(self.on_delete)
         
-        layout.addWidget(self.text_label, 1)  # 文本标签占用剩余空间
-        layout.addWidget(self.delete_btn, 0)  # 删除按钮固定大小
+        layout.addWidget(self.text_label, 1)
+        layout.addWidget(self.delete_btn, 0)
         
         self.setLayout(layout)
         
-        # 设置整个标签的尺寸策略，让它利用更多宽度
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        # 设置标签统一的最小和最大尺寸
+        self.setMinimumHeight(36)  # 统一最小高度
+        self.setMaximumHeight(36)  # 统一最大高度，防止标签过高
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         
-        # 设置标签样式
+        # 设置标签样式 - 更加现代化和统一
         self.setStyleSheet(f"""
             CardWidget {{
                 background-color: {FluentColors.get_color('bg_secondary')};
                 border: 1px solid {FluentColors.get_color('border_primary')};
-                border-radius: 6px;
+                border-radius: 18px;
+                min-height: 36px;
+                max-height: 36px;
             }}
             CardWidget:hover {{
                 border-color: {FluentColors.get_color('accent')};
                 background-color: {FluentColors.get_color('bg_tertiary')};
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             }}
         """)
         
@@ -487,9 +496,9 @@ class PromptEditorPanel(QWidget):
         # 标签容器
         self.tags_widget = QWidget()
         self.tags_layout = FlowLayout(self.tags_widget)
-        self.tags_layout.setContentsMargins(8, 8, 8, 8)  # 减少内边距
-        self.tags_layout.setHorizontalSpacing(6)  # 减少间距
-        self.tags_layout.setVerticalSpacing(6)  # 减少间距
+        self.tags_layout.setContentsMargins(12, 12, 12, 12)  # 适当增加内边距
+        self.tags_layout.setHorizontalSpacing(8)  # 水平间距优化
+        self.tags_layout.setVerticalSpacing(8)  # 垂直间距优化
         
         # 让标签容器充分利用可用宽度
         self.tags_widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
