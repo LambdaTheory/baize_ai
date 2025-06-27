@@ -80,7 +80,7 @@ class FluentHistoryWidget(CardWidget):
         
         # 搜索框
         self.search_edit = SearchLineEdit()
-        self.search_edit.setPlaceholderText("搜索历史记录（支持多个关键词，用空格分隔）...")
+        self.search_edit.setPlaceholderText("搜索历史记录（支持搜索：模型、标签、LoRA、来源等，多关键词用空格分隔）...")
         self.search_edit.setFixedHeight(36)
         self.search_edit.setMinimumWidth(300)
         
@@ -128,8 +128,8 @@ class FluentHistoryWidget(CardWidget):
             }}
         """)
         
-        # 清除搜索按钮
-        self.clear_search_btn = PushButton("清除")
+        # 重置搜索按钮
+        self.clear_search_btn = PushButton("重置")
         self.clear_search_btn.setFixedHeight(36)
         self.clear_search_btn.setMinimumWidth(60)
         self.clear_search_btn.setEnabled(False)  # 初始禁用
@@ -936,11 +936,29 @@ class FluentHistoryWidget(CardWidget):
                 record.get('negative_prompt', ''),
                 record.get('sampler', ''),
                 record.get('notes', ''),
-                record.get('generation_source', ''),
+                record.get('generation_source', ''),  # 原始英文来源
                 str(record.get('steps', '')),
                 str(record.get('cfg_scale', '')),
                 str(record.get('seed', ''))
             ]
+            
+            # 添加中文来源支持
+            generation_source = record.get('generation_source', '')
+            if generation_source:
+                # 添加中文显示名称以便搜索
+                source_mapping = {
+                    'ComfyUI': 'ComfyUI',
+                    'Stable Diffusion WebUI': 'SD WebUI',
+                    'Unknown': '未知'
+                }
+                chinese_source = source_mapping.get(generation_source, generation_source)
+                search_fields.append(chinese_source)
+                
+                # 同时支持一些常见的搜索词
+                if generation_source == 'Stable Diffusion WebUI':
+                    search_fields.extend(['SD', 'WebUI', 'Stable Diffusion'])
+                elif generation_source == 'ComfyUI':
+                    search_fields.extend(['Comfy', 'UI'])
             
             # 搜索LoRA信息
             lora_info = record.get('lora_info', '')
@@ -984,7 +1002,7 @@ class FluentHistoryWidget(CardWidget):
         print(f"搜索结果: 找到 {len(self.filtered_records)} 条匹配关键词 [{keywords_display}] 的记录")
         
     def clear_search(self):
-        """清除搜索"""
+        """重置搜索"""
         self.search_edit.clear()
         self.current_search_text = ""
         self.search_btn.setEnabled(False)
