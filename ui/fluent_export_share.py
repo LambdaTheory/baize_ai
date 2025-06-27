@@ -170,7 +170,7 @@ class FluentExportShare(QObject):
                 export_data.update(image_info)
             
             # 生成HTML
-            html_content = self.parent.html_exporter.export_single_record(export_data)
+            html_content = self.parent.html_exporter.export_single_record(export_data, include_image=True)
             
             # 保存HTML文件
             with open(save_path, 'w', encoding='utf-8') as f:

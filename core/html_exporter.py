@@ -18,6 +18,67 @@ class HTMLExporter:
     def __init__(self):
         self.template = self._get_html_template()
     
+    def export_single_record(self, record_data: Dict[str, Any], include_image: bool = True) -> str:
+        """
+        导出单个记录为HTML内容字符串
+        
+        Args:
+            record_data: 图片记录数据
+            include_image: 是否在HTML中包含图片
+            
+        Returns:
+            str: HTML内容字符串
+        """
+        try:
+            # 准备数据
+            html_data = self._prepare_html_data(record_data, include_image)
+            
+            # 渲染HTML
+            html_content = self._render_html(html_data)
+            
+            return html_content
+            
+        except Exception as e:
+            print(f"生成HTML内容失败: {e}")
+            return f"<html><body><h1>生成失败</h1><p>错误: {str(e)}</p></body></html>"
+    
+    def export_multiple_records(self, records: list, config: dict = None) -> str:
+        """
+        导出多个记录为HTML内容字符串
+        
+        Args:
+            records: 记录列表
+            config: 导出配置
+            
+        Returns:
+            str: HTML内容字符串
+        """
+        try:
+            if not records:
+                return "<html><body><h1>无数据</h1><p>没有可导出的记录</p></body></html>"
+            
+            # 使用第一个记录的格式作为模板，后续可以扩展为多记录模板
+            first_record = records[0]
+            include_image = config.get('include_images', True) if config else True
+            
+            # 目前使用单记录模板，后续可以扩展
+            html_data = self._prepare_html_data(first_record, include_image)
+            html_content = self._render_html(html_data)
+            
+            # 如果有多个记录，可以在这里扩展生成多记录页面
+            if len(records) > 1:
+                # 简单处理：在标题中显示记录数量
+                html_content = html_content.replace(
+                    f'<title>{html_data["title"]}</title>',
+                    f'<title>批量导出 - {len(records)} 个记录</title>'
+                )
+            
+            return html_content
+            
+        except Exception as e:
+            print(f"生成批量HTML内容失败: {e}")
+            return f"<html><body><h1>生成失败</h1><p>错误: {str(e)}</p></body></html>"
+    
     def export_to_html(self, record_data: Dict[str, Any], output_path: str, 
                       include_image: bool = True) -> bool:
         """
