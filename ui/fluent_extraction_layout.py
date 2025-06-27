@@ -431,7 +431,4 @@ class FluentExtractionLayout:
         self.parent.history_card.setLayout(history_layout)
         column_layout.addWidget(self.parent.history_card, 60)  # 60% 高度
         
-        parent_layout.addWidget(third_column, 40)  # 40% 宽度
-        
-        parent_layout.addWidget(second_column, 60)  # 60% 宽度
         parent_layout.addWidget(third_column, 40)  # 40% 宽度 
