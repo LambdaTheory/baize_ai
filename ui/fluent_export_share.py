@@ -187,13 +187,13 @@ class FluentExportShare(QObject):
             )
             
             # 询问是否打开文件
-            reply = MessageBox(
-                "打开文件",
-                "是否要打开生成的HTML分享页面？",
-                self.parent
-            ).exec()
+            msgbox = MessageBox(
+                title="打开文件",
+                content="是否要打开生成的HTML分享页面？",
+                parent=self.parent
+            )
             
-            if reply == MessageBox.Yes:
+            if msgbox.exec_():
                 import webbrowser
                 webbrowser.open(f"file://{os.path.abspath(save_path)}")
                 
