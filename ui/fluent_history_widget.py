@@ -80,7 +80,7 @@ class FluentHistoryWidget(CardWidget):
         
         # 搜索框
         self.search_edit = SearchLineEdit()
-        self.search_edit.setPlaceholderText("搜索历史记录（支持搜索模型、标签、LoRA等）...")
+        self.search_edit.setPlaceholderText("搜索历史记录（支持多个关键词，用空格分隔）...")
         self.search_edit.setFixedHeight(36)
         self.search_edit.setMinimumWidth(300)
         
@@ -100,6 +100,34 @@ class FluentHistoryWidget(CardWidget):
             }}
         """)
         
+        # 搜索按钮
+        self.search_btn = PushButton("搜索")
+        self.search_btn.setFixedHeight(36)
+        self.search_btn.setMinimumWidth(60)
+        self.search_btn.setEnabled(False)  # 初始禁用
+        
+        # 设置搜索按钮样式
+        self.search_btn.setStyleSheet(f"""
+            PushButton {{
+                background-color: {FluentColors.get_color('primary')};
+                border: 1px solid {FluentColors.get_color('primary')};
+                color: white;
+            }}
+            PushButton:hover {{
+                background-color: #4f46e5;
+                border: 1px solid #4f46e5;
+            }}
+            PushButton:pressed {{
+                background-color: #3730a3;
+                border: 1px solid #3730a3;
+            }}
+            PushButton:disabled {{
+                background-color: {FluentColors.get_color('border_primary')};
+                border: 1px solid {FluentColors.get_color('border_primary')};
+                color: {FluentColors.get_color('text_tertiary')};
+            }}
+        """)
+        
         # 清除搜索按钮
         self.clear_search_btn = PushButton("清除")
         self.clear_search_btn.setFixedHeight(36)
@@ -107,6 +135,7 @@ class FluentHistoryWidget(CardWidget):
         self.clear_search_btn.setEnabled(False)  # 初始禁用
         
         search_layout.addWidget(self.search_edit)
+        search_layout.addWidget(self.search_btn)
         search_layout.addWidget(self.clear_search_btn)
         search_layout.addStretch()
         
@@ -321,7 +350,9 @@ class FluentHistoryWidget(CardWidget):
         self.batch_export_btn.clicked.connect(self.batch_export_selected)
         
         # 搜索相关
-        self.search_edit.textChanged.connect(self.on_search_text_changed)
+        self.search_edit.textChanged.connect(self.on_search_text_changed)  # 只用于启用/禁用按钮
+        self.search_edit.returnPressed.connect(self.perform_search)  # 回车搜索
+        self.search_btn.clicked.connect(self.perform_search)  # 点击搜索
         self.clear_search_btn.clicked.connect(self.clear_search)
         
     def create_thumbnail_widget(self, file_path):
@@ -419,7 +450,7 @@ class FluentHistoryWidget(CardWidget):
             records = self.data_manager.get_all_records()
             self.history_records = records  # 存储完整记录用于删除操作
             
-            # 如果有搜索文本，应用搜索过滤
+            # 如果当前有搜索条件，重新应用搜索过滤
             if self.current_search_text:
                 self.apply_search_filter()
             else:
@@ -858,11 +889,18 @@ class FluentHistoryWidget(CardWidget):
             return "LoRA信息解析错误"
     
     def on_search_text_changed(self, text):
-        """搜索文本改变事件"""
-        self.current_search_text = text.strip()
-        self.clear_search_btn.setEnabled(bool(self.current_search_text))
+        """搜索文本改变事件（仅用于控制按钮状态）"""
+        text = text.strip()
+        has_text = bool(text)
+        self.search_btn.setEnabled(has_text)
+        self.clear_search_btn.setEnabled(has_text or bool(self.current_search_text))
         
-        if self.current_search_text:
+    def perform_search(self):
+        """执行搜索"""
+        search_text = self.search_edit.text().strip()
+        self.current_search_text = search_text
+        
+        if search_text:
             self.apply_search_filter()
         else:
             # 如果搜索文本为空，显示所有记录
@@ -876,14 +914,20 @@ class FluentHistoryWidget(CardWidget):
             self.display_records(self.filtered_records)
             return
         
-        # 搜索关键词（不区分大小写）
-        search_lower = self.current_search_text.lower()
+        # 分割搜索关键词（支持空格、逗号、分号分隔）
+        import re
+        keywords = re.split(r'[,，;；\s]+', self.current_search_text.strip())
+        keywords = [kw.lower().strip() for kw in keywords if kw.strip()]
+        
+        if not keywords:
+            self.filtered_records = self.history_records.copy()
+            self.display_records(self.filtered_records)
+            return
+        
         self.filtered_records = []
         
         for record in self.history_records:
-            match = False
-            
-            # 在多个字段中搜索
+            # 收集所有搜索字段
             search_fields = [
                 record.get('file_name', ''),
                 record.get('model', ''),
@@ -919,25 +963,31 @@ class FluentHistoryWidget(CardWidget):
                     # 如果解析失败，直接添加原始字符串
                     search_fields.append(lora_info)
             
-            # 检查是否匹配
-            for field in search_fields:
-                if field and search_lower in str(field).lower():
-                    match = True
+            # 将所有字段合并为一个搜索文本（小写）
+            combined_text = ' '.join(str(field).lower() for field in search_fields if field)
+            
+            # 检查所有关键词是否都匹配（AND逻辑）
+            all_keywords_match = True
+            for keyword in keywords:
+                if keyword not in combined_text:
+                    all_keywords_match = False
                     break
             
-            if match:
+            if all_keywords_match:
                 self.filtered_records.append(record)
         
         # 显示过滤后的记录
         self.display_records(self.filtered_records)
         
         # 打印搜索结果信息
-        print(f"搜索结果: 找到 {len(self.filtered_records)} 条匹配 '{self.current_search_text}' 的记录")
+        keywords_display = ', '.join(keywords)
+        print(f"搜索结果: 找到 {len(self.filtered_records)} 条匹配关键词 [{keywords_display}] 的记录")
         
     def clear_search(self):
         """清除搜索"""
         self.search_edit.clear()
         self.current_search_text = ""
+        self.search_btn.setEnabled(False)
         self.clear_search_btn.setEnabled(False)
         self.filtered_records = self.history_records.copy()
         self.display_records(self.filtered_records)
