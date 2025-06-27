@@ -577,8 +577,8 @@ class FluentImageInfoWidget(SmoothScrollArea):
         # 预设标签流式布局
         self.preset_tags_widget = QWidget()
         self.preset_tags_layout = FlowLayout()
-        self.preset_tags_layout.setSpacing(8)
-        self.preset_tags_layout.setContentsMargins(4, 4, 4, 4)  # 增加内边距
+        self.preset_tags_layout.setSpacing(6)  # 与提示词标签保持一致的间距
+        self.preset_tags_layout.setContentsMargins(6, 6, 6, 6)  # 调整内边距
         self.preset_tags_widget.setLayout(self.preset_tags_layout)
         
         # 备注区域
@@ -645,25 +645,24 @@ class FluentImageInfoWidget(SmoothScrollArea):
         
         for tag in preset_tags:
             tag_btn = TransparentPushButton(tag)
-            tag_btn.setMinimumHeight(40)  # 与提示词标签保持一致的高度
-            tag_btn.setMinimumWidth(80)  # 增加最小宽度，更加现代化
-            tag_btn.setMaximumWidth(250)  # 限制最大宽度
+            tag_btn.setFixedHeight(32)  # 与提示词标签保持一致的高度
+            tag_btn.setMinimumWidth(60)  # 参考设计图片调整最小宽度
+            tag_btn.setMaximumWidth(200)  # 调整最大宽度
             tag_btn.setStyleSheet(f"""
                 TransparentPushButton {{
                     border: 1px solid {FluentColors.get_color('border_primary')};
-                    border-radius: 20px;
-                    padding: 8px 16px;
+                    border-radius: 16px;
+                    padding: 6px 12px;
                     background-color: {FluentColors.get_color('bg_secondary')};
                     color: {FluentColors.get_color('text_primary')};
-                    font-size: 14px;
+                    font-size: 13px;
                     font-weight: 500;
-                    line-height: 1.4;
                 }}
                 TransparentPushButton:hover {{
                     background-color: {FluentColors.get_color('primary')};
                     color: white;
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
                     transition: all 0.2s ease;
                 }}
                 TransparentPushButton:pressed {{

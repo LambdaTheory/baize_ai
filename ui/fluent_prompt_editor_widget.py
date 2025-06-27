@@ -54,8 +54,8 @@ class PromptTag(CardWidget):
     def init_ui(self):
         """初始化UI"""
         layout = QHBoxLayout()
-        layout.setContentsMargins(4, 4, 4, 4)  # 减少内边距，因为CSS中已设置padding
-        layout.setSpacing(6)
+        layout.setContentsMargins(8, 4, 8, 4)  # 参考设计调整内边距
+        layout.setSpacing(4)  # 减少间距，更紧凑
         
         # 显示文本处理
         if self.english_text and self.chinese_text:
@@ -110,27 +110,26 @@ class PromptTag(CardWidget):
         
         self.setLayout(layout)
         
-        # 设置标签的尺寸策略 - 基于现代标签设计最佳实践
-        self.setMinimumHeight(40)  # 增加最小高度到40px，符合现代设计标准
-        self.setMaximumWidth(300)  # 设置最大宽度，避免过长标签
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        # 设置标签的尺寸策略 - 参考现代设计
+        self.setMinimumHeight(32)  # 调整为32px，更紧凑
+        self.setMaximumHeight(32)  # 固定高度，保持一致性
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         
-        # 设置标签样式 - 基于现代设计系统的视觉规范
+        # 设置标签样式 - 参考用户提供的设计图片
         self.setStyleSheet(f"""
             CardWidget {{
                 background-color: {FluentColors.get_color('bg_secondary')};
                 border: 1px solid {FluentColors.get_color('border_primary')};
-                border-radius: 20px;
-                min-height: 40px;
-                padding: 8px 12px;
-                font-size: 14px;
-                line-height: 1.4;
+                border-radius: 16px;
+                height: 32px;
+                font-size: 13px;
+                font-weight: 500;
             }}
             CardWidget:hover {{
                 border-color: {FluentColors.get_color('accent')};
                 background-color: {FluentColors.get_color('bg_tertiary')};
                 transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
                 transition: all 0.2s ease;
             }}
         """)
@@ -492,12 +491,12 @@ class PromptEditorPanel(QWidget):
             }}
         """)
         
-        # 标签容器 - 基于8px网格系统优化
+        # 标签容器 - 参考设计图片的紧凑布局
         self.tags_widget = QWidget()
         self.tags_layout = FlowLayout(self.tags_widget)
-        self.tags_layout.setContentsMargins(16, 16, 16, 16)  # 使用16px边距，符合现代设计标准
-        self.tags_layout.setHorizontalSpacing(8)  # 8px水平间距
-        self.tags_layout.setVerticalSpacing(8)  # 8px垂直间距，保持一致性
+        self.tags_layout.setContentsMargins(12, 12, 12, 12)  # 适中的边距
+        self.tags_layout.setHorizontalSpacing(6)  # 6px水平间距，更紧凑
+        self.tags_layout.setVerticalSpacing(6)  # 6px垂直间距，保持一致性
         
         # 让标签容器充分利用可用宽度
         self.tags_widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
