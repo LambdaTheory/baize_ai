@@ -420,9 +420,25 @@ class FluentMainWindow(FluentWindow):
             print(f"开始处理编辑提示词请求: {scene_name}")
             print(f"提示词内容: {prompt_text}")
             
-            # 解析提示词（按逗号和句号分割）
+            # 解析提示词（智能分割）
             import re
-            prompts = [prompt.strip() for prompt in re.split(r'[,，.。]', prompt_text) if prompt.strip()]
+            
+            # 智能判断是否为完整描述文本
+            # 特征：长文本、包含完整句子（有句号）、逗号少且不是标签格式
+            comma_count = prompt_text.count(',') + prompt_text.count('，')
+            has_periods = '.' in prompt_text or '。' in prompt_text
+            # 标签格式特征：多个逗号+空格分隔且平均长度较短
+            comma_space_count = prompt_text.count(', ')
+            words_count = len(prompt_text.split())
+            avg_word_length = len(prompt_text.replace(' ', '')) / max(words_count, 1)
+            
+            # 如果文本长且包含句号，且逗号少于4个，且平均词长大于4，则认为是描述文本
+            if len(prompt_text) > 150 and has_periods and comma_count < 4 and avg_word_length > 4:
+                # 作为完整提示词处理，不分割
+                prompts = [prompt_text.strip()]
+            else:
+                # 对于短文本或标签列表格式，按逗号和句号分割
+                prompts = [prompt.strip() for prompt in re.split(r'[,，.。]', prompt_text) if prompt.strip()]
             print(f"解析后的提示词: {prompts}")
             
             # 切换到提示词编辑页面

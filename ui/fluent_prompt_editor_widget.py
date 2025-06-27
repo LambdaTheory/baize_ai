@@ -530,10 +530,26 @@ class PromptEditorPanel(QWidget):
             print(f"同步提示词时出错: {e}")
             
     def parse_prompts(self, text):
-        """解析提示词文本，按逗号和句号分割"""
+        """解析提示词文本，智能分割"""
         if not text:
             return []
         import re
+        
+        # 智能判断是否为完整描述文本
+        # 特征：长文本、包含完整句子（有句号）、逗号少且不是标签格式
+        comma_count = text.count(',') + text.count('，')
+        has_periods = '.' in text or '。' in text
+        # 标签格式特征：多个逗号+空格分隔且平均长度较短
+        comma_space_count = text.count(', ')
+        words_count = len(text.split())
+        avg_word_length = len(text.replace(' ', '')) / max(words_count, 1)
+        
+        # 如果文本长且包含句号，且逗号少于4个，且平均词长大于4，则认为是描述文本
+        if len(text) > 150 and has_periods and comma_count < 4 and avg_word_length > 4:
+            # 作为完整提示词处理，不分割
+            return [text.strip()]
+        
+        # 对于短文本或标签列表格式，按逗号和句号分割
         # 支持中文句号、中文逗号、英文句号、英文逗号分隔
         prompts = [prompt.strip() for prompt in re.split(r'[,，.。]', text) if prompt.strip()]
         return prompts
