@@ -34,7 +34,7 @@ class FluentInterfaceCreator(QObject):
         """创建图片画廊界面"""
         from .fluent_gallery_components import FluentGalleryWidget
         
-        self.parent.gallery_interface = FluentGalleryWidget(self.parent)
+        self.parent.gallery_interface = FluentGalleryWidget(self.parent.data_manager, self.parent)
         self.parent.gallery_interface.setObjectName("gallery")
         
         # 连接信号
