@@ -287,14 +287,20 @@ class PromptEditorPanel(QWidget):
         
     def init_ui(self):
         """初始化UI"""
-        layout = QVBoxLayout()
-        layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.MD, 
+        # 主布局改为水平布局
+        main_layout = QHBoxLayout()
+        main_layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.MD, 
                                 FluentSpacing.MD, FluentSpacing.MD)
-        layout.setSpacing(FluentSpacing.MD)
+        main_layout.setSpacing(FluentSpacing.MD)
         
-        # 输入框区域
+        # 左侧区域
+        left_container = QWidget()
+        left_layout = QVBoxLayout()
+        left_layout.setSpacing(FluentSpacing.SM)
+        
+        # 输入框区域（左侧上方）
         input_frame = QFrame()
-        input_layout = QHBoxLayout()
+        input_layout = QVBoxLayout()
         input_layout.setSpacing(FluentSpacing.MD)
         
         # 英文输入框
@@ -318,17 +324,27 @@ class PromptEditorPanel(QWidget):
         input_layout.addWidget(english_container['widget'])
         input_layout.addWidget(chinese_container['widget'])
         input_frame.setLayout(input_layout)
-        layout.addWidget(input_frame)
         
         # 功能按钮区域
         buttons_frame = self.create_buttons_frame()
-        layout.addWidget(buttons_frame)
         
-        # 标签区域
+        # 展示文本框（左侧下方）
+        display_frame = self.create_display_area()
+        
+        # 组装左侧布局
+        left_layout.addWidget(input_frame)
+        left_layout.addWidget(buttons_frame)
+        left_layout.addWidget(display_frame, 1)
+        left_container.setLayout(left_layout)
+        
+        # 右侧区域 - 标签区域
         tags_area = self.create_tags_area()
-        layout.addWidget(tags_area, 1)
         
-        self.setLayout(layout)
+        # 设置左右比例 (3:2)
+        main_layout.addWidget(left_container, 3)
+        main_layout.addWidget(tags_area, 2)
+        
+        self.setLayout(main_layout)
         
     def create_input_container(self, label_text, copy_icon, placeholder, sample_text, copy_callback):
         """创建输入框容器"""
@@ -456,6 +472,42 @@ class PromptEditorPanel(QWidget):
         buttons_frame.setLayout(buttons_layout)
         return buttons_frame
         
+    def create_display_area(self):
+        """创建展示区域"""
+        display_container = QWidget()
+        display_layout = QVBoxLayout()
+        display_layout.setSpacing(8)
+        
+        # 展示区域标题
+        display_title = QLabel("提示词预览:")
+        display_title.setStyleSheet(f"""
+            QLabel {{
+                font-size: 14px;
+                font-weight: 500;
+                color: {FluentColors.get_color('text_primary')};
+            }}
+        """)
+        
+        # 只读的展示文本框
+        self.display_text = PlainTextEdit()
+        self.display_text.setReadOnly(True)
+        self.display_text.setPlaceholderText("这里将显示格式化后的提示词...")
+        self.display_text.setStyleSheet(f"""
+            PlainTextEdit {{
+                border: 1px solid {FluentColors.get_color('border_primary')};
+                border-radius: 6px;
+                background-color: {FluentColors.get_color('bg_secondary')};
+                color: {FluentColors.get_color('text_secondary')};
+                padding: 8px;
+            }}
+        """)
+        
+        display_layout.addWidget(display_title)
+        display_layout.addWidget(self.display_text, 1)
+        display_container.setLayout(display_layout)
+        
+        return display_container
+        
     def create_tags_area(self):
         """创建标签区域"""
         tags_container = QWidget()
@@ -577,7 +629,41 @@ class PromptEditorPanel(QWidget):
                 tag.deleted.connect(self.on_tag_deleted)
                 self.tags_layout.addWidget(tag)
                 self.prompt_tags.append(tag)
+        
+        # 更新展示文本框内容
+        self.update_display_text()
                 
+    def update_display_text(self):
+        """更新展示文本框内容"""
+        if hasattr(self, 'display_text'):
+            display_lines = []
+            
+            if self.english_prompts:
+                display_lines.append("English Prompts:")
+                display_lines.append(", ".join(self.english_prompts))
+                display_lines.append("")
+            
+            if self.chinese_prompts:
+                display_lines.append("Chinese Prompts:")
+                display_lines.append(", ".join(self.chinese_prompts))
+                display_lines.append("")
+            
+            if self.english_prompts and self.chinese_prompts:
+                display_lines.append("Paired Prompts:")
+                max_count = max(len(self.english_prompts), len(self.chinese_prompts))
+                for i in range(max_count):
+                    english = self.english_prompts[i] if i < len(self.english_prompts) else ""
+                    chinese = self.chinese_prompts[i] if i < len(self.chinese_prompts) else ""
+                    if english and chinese:
+                        display_lines.append(f"{i+1}. {english} → {chinese}")
+                    elif english:
+                        display_lines.append(f"{i+1}. {english} → [无对应中文]")
+                    elif chinese:
+                        display_lines.append(f"{i+1}. [无对应英文] → {chinese}")
+            
+            display_text = "\n".join(display_lines) if display_lines else "暂无提示词内容"
+            self.display_text.setPlainText(display_text)
+        
     def on_tag_deleted(self, english_text, chinese_text):
         """处理标签删除"""
         try:
