@@ -449,25 +449,27 @@ class LoadingOverlay(QWidget):
         card_layout.setSpacing(FluentSpacing.LG)
         card_layout.setContentsMargins(30, 30, 30, 30)
         
-        # 加载环
-        self.progress_ring = ProgressRing()
-        self.progress_ring.setFixedSize(60, 60)
-        self.progress_ring.setStrokeWidth(4)
-        self.progress_ring.setStyleSheet(f"""
-            ProgressRing {{
-                background-color: transparent;
-                color: {FluentColors.get_color('primary')};
+        # 创建旋转loading图标
+        loading_container = QWidget()
+        loading_container.setFixedHeight(80)
+        loading_layout = QVBoxLayout(loading_container)
+        loading_layout.setAlignment(Qt.AlignCenter)
+        loading_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # 使用旋转的emoji图标作为loading效果
+        self.loading_icon = QLabel("🔄")
+        self.loading_icon.setAlignment(Qt.AlignCenter)
+        self.loading_icon.setFixedSize(60, 60)
+        self.loading_icon.setStyleSheet(f"""
+            QLabel {{
+                font-size: 36px;
+                background: transparent;
                 border: none;
+                color: {FluentColors.get_color('primary')};
             }}
         """)
         
-        # 加载环容器，确保居中
-        ring_container = QWidget()
-        ring_container.setFixedHeight(80)
-        ring_layout = QVBoxLayout(ring_container)
-        ring_layout.setAlignment(Qt.AlignCenter)
-        ring_layout.setContentsMargins(0, 0, 0, 0)
-        ring_layout.addWidget(self.progress_ring)
+        loading_layout.addWidget(self.loading_icon)
         
         # 主标题
         self.loading_label = QLabel("正在渲染布局")
@@ -502,7 +504,7 @@ class LoadingOverlay(QWidget):
         """)
         
         # 添加组件到卡片布局
-        card_layout.addWidget(ring_container)
+        card_layout.addWidget(loading_container)
         card_layout.addWidget(self.loading_label)
         card_layout.addWidget(self.subtitle_label)
         
@@ -514,10 +516,25 @@ class LoadingOverlay(QWidget):
         self.setLayout(layout)
         
     def setup_animation(self):
-        """设置平滑动画"""
+        """设置动画效果"""
+        # 淡入淡出动画
         self.fade_animation = QPropertyAnimation(self, b"windowOpacity")
         self.fade_animation.setDuration(250)
         self.fade_animation.setEasingCurve(QEasingCurve.OutCubic)
+        
+        # 使用QTimer创建loading图标切换动画
+        self.loading_timer = QTimer()
+        self.loading_timer.timeout.connect(self.update_loading_icon)
+        self.loading_timer.setInterval(500)  # 每500ms切换一次
+        
+        # loading图标序列
+        self.loading_icons = ["⏳", "⌛", "🔄", "⚡"]
+        self.current_icon_index = 0
+        
+    def update_loading_icon(self):
+        """更新loading图标"""
+        self.current_icon_index = (self.current_icon_index + 1) % len(self.loading_icons)
+        self.loading_icon.setText(self.loading_icons[self.current_icon_index])
         
     def show_loading(self, message="正在渲染布局", subtitle=""):
         """显示加载界面"""
@@ -553,6 +570,11 @@ class LoadingOverlay(QWidget):
         self.show()
         self.raise_()
         
+        # 启动loading图标动画
+        self.current_icon_index = 0
+        self.loading_icon.setText(self.loading_icons[0])
+        self.loading_timer.start()
+        
         # 平滑淡入
         self.fade_animation.setStartValue(0.0)
         self.fade_animation.setEndValue(1.0)
@@ -560,6 +582,10 @@ class LoadingOverlay(QWidget):
         
     def hide_loading(self):
         """隐藏加载界面"""
+        # 停止loading图标动画
+        self.loading_timer.stop()
+        
+        # 淡出动画
         self.fade_animation.setStartValue(1.0)
         self.fade_animation.setEndValue(0.0)
         self.fade_animation.finished.connect(self.hide)
