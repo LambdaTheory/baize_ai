@@ -645,23 +645,26 @@ class FluentImageInfoWidget(SmoothScrollArea):
         
         for tag in preset_tags:
             tag_btn = TransparentPushButton(tag)
-            tag_btn.setFixedHeight(32)  # 统一高度
-            tag_btn.setMinimumWidth(60)  # 设置最小宽度
+            tag_btn.setMinimumHeight(40)  # 与提示词标签保持一致的高度
+            tag_btn.setMinimumWidth(80)  # 增加最小宽度，更加现代化
+            tag_btn.setMaximumWidth(250)  # 限制最大宽度
             tag_btn.setStyleSheet(f"""
                 TransparentPushButton {{
                     border: 1px solid {FluentColors.get_color('border_primary')};
-                    border-radius: 16px;
-                    padding: 6px 14px;
+                    border-radius: 20px;
+                    padding: 8px 16px;
                     background-color: {FluentColors.get_color('bg_secondary')};
                     color: {FluentColors.get_color('text_primary')};
-                    font-size: 12px;
+                    font-size: 14px;
                     font-weight: 500;
+                    line-height: 1.4;
                 }}
                 TransparentPushButton:hover {{
                     background-color: {FluentColors.get_color('primary')};
                     color: white;
                     transform: translateY(-1px);
-                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    transition: all 0.2s ease;
                 }}
                 TransparentPushButton:pressed {{
                     transform: translateY(0px);

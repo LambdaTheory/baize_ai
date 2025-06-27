@@ -54,8 +54,8 @@ class PromptTag(CardWidget):
     def init_ui(self):
         """初始化UI"""
         layout = QHBoxLayout()
-        layout.setContentsMargins(12, 8, 12, 8)  # 增加内边距让标签看起来更饱满
-        layout.setSpacing(8)
+        layout.setContentsMargins(4, 4, 4, 4)  # 减少内边距，因为CSS中已设置padding
+        layout.setSpacing(6)
         
         # 显示文本处理
         if self.english_text and self.chinese_text:
@@ -110,23 +110,28 @@ class PromptTag(CardWidget):
         
         self.setLayout(layout)
         
-        # 设置标签统一的最小高度，允许内容自适应
-        self.setMinimumHeight(36)  # 统一最小高度
+        # 设置标签的尺寸策略 - 基于现代标签设计最佳实践
+        self.setMinimumHeight(40)  # 增加最小高度到40px，符合现代设计标准
+        self.setMaximumWidth(300)  # 设置最大宽度，避免过长标签
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         
-        # 设置标签样式 - 更加现代化和统一
+        # 设置标签样式 - 基于现代设计系统的视觉规范
         self.setStyleSheet(f"""
             CardWidget {{
                 background-color: {FluentColors.get_color('bg_secondary')};
                 border: 1px solid {FluentColors.get_color('border_primary')};
-                border-radius: 18px;
-                min-height: 36px;
+                border-radius: 20px;
+                min-height: 40px;
+                padding: 8px 12px;
+                font-size: 14px;
+                line-height: 1.4;
             }}
             CardWidget:hover {{
                 border-color: {FluentColors.get_color('accent')};
                 background-color: {FluentColors.get_color('bg_tertiary')};
                 transform: translateY(-1px);
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                transition: all 0.2s ease;
             }}
         """)
         
@@ -487,12 +492,12 @@ class PromptEditorPanel(QWidget):
             }}
         """)
         
-        # 标签容器
+        # 标签容器 - 基于8px网格系统优化
         self.tags_widget = QWidget()
         self.tags_layout = FlowLayout(self.tags_widget)
-        self.tags_layout.setContentsMargins(12, 12, 12, 12)  # 适当增加内边距
-        self.tags_layout.setHorizontalSpacing(8)  # 水平间距优化
-        self.tags_layout.setVerticalSpacing(8)  # 垂直间距优化
+        self.tags_layout.setContentsMargins(16, 16, 16, 16)  # 使用16px边距，符合现代设计标准
+        self.tags_layout.setHorizontalSpacing(8)  # 8px水平间距
+        self.tags_layout.setVerticalSpacing(8)  # 8px垂直间距，保持一致性
         
         # 让标签容器充分利用可用宽度
         self.tags_widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
