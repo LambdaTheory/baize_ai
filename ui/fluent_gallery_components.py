@@ -103,8 +103,8 @@ class FluentImageCard(CardWidget):
         from PyQt5.QtWidgets import QSizePolicy
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         
-        # 设置固定高度，但允许宽度变化
-        self.setFixedHeight(360)
+        # 增加卡片高度以容纳更多内容
+        self.setFixedHeight(420)  # 从360增加到420
         self.setMinimumWidth(180)  # 设置最小宽度而非固定宽度
         self.setMaximumWidth(320)  # 设置最大宽度
         self.setBorderRadius(20)
@@ -113,7 +113,7 @@ class FluentImageCard(CardWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.MD, 
                                  FluentSpacing.MD, FluentSpacing.MD)
-        layout.setSpacing(FluentSpacing.SM)
+        layout.setSpacing(FluentSpacing.XS)  # 减小间距，但保持清晰分隔
         
         # 图片预览
         self.image_label = QLabel()
@@ -133,64 +133,69 @@ class FluentImageCard(CardWidget):
         # 初始加载图片
         self.load_image()
         
-        # 文件名
+        # 文件名 - 设置固定高度
         file_name = self.record_data.get('custom_name') or self.record_data.get('file_name', '未知')
-        if len(file_name) > 28:
-            file_name = file_name[:25] + "..."
+        if len(file_name) > 25:  # 减少字符限制，避免过长
+            file_name = file_name[:22] + "..."
         name_label = QLabel(file_name)
+        name_label.setFixedHeight(24)  # 固定高度
         name_label.setStyleSheet(f"""
             QLabel {{
                 font-weight: 600;
-                font-size: 16px;
+                font-size: 15px;
                 color: {FluentColors.get_color('text_primary')};
                 border: none;
                 background: transparent;
-                padding: 8px 4px 4px 4px;
+                padding: 4px 4px 2px 4px;
             }}
         """)
-        name_label.setWordWrap(True)
+        name_label.setWordWrap(False)  # 禁止换行，使用省略号
         
-        # 模型信息
+        # 模型信息 - 设置固定高度
         model = self.record_data.get('model', '未知模型')
         if not model or model.strip() == '':
             model = '未知模型'
-        if len(model) > 35:
-            model = model[:32] + "..."
+        if len(model) > 30:  # 调整长度限制
+            model = model[:27] + "..."
         model_label = QLabel(f"🎨 {model}")
+        model_label.setFixedHeight(20)  # 固定高度
         model_label.setStyleSheet(f"""
             QLabel {{
-                font-size: 13px;
+                font-size: 12px;
                 color: {FluentColors.get_color('text_secondary')};
                 border: none;
                 background: transparent;
                 padding: 2px 4px;
             }}
         """)
+        model_label.setWordWrap(False)  # 禁止换行
         
-        # 标签信息
+        # 标签信息 - 设置固定高度，支持两行显示
         tags = self.record_data.get('tags', '').strip()
         if tags:
-            # 限制标签显示长度，避免卡片过高
-            if len(tags) > 30:
-                tags_display = tags[:27] + "..."
+            # 更合理的标签长度限制
+            if len(tags) > 35:
+                tags_display = tags[:32] + "..."
             else:
                 tags_display = tags
             tags_label = QLabel(f"🏷️ {tags_display}")
         else:
             tags_label = QLabel("🏷️ 暂无标签")
         
+        tags_label.setFixedHeight(40)  # 设置为两行高度
         tags_label.setStyleSheet(f"""
             QLabel {{
-                font-size: 12px;
+                font-size: 11px;
                 color: {FluentColors.get_color('text_tertiary')};
                 border: none;
                 background: transparent;
                 padding: 2px 4px;
+                line-height: 1.3;
             }}
         """)
-        tags_label.setWordWrap(True)
+        tags_label.setWordWrap(True)  # 允许换行，最多两行
         
-        # LoRA信息
+        # LoRA信息 - 设置固定高度，支持两行显示
         lora_info = self.record_data.get('lora_info', '')
         if lora_info:
             try:
@@ -224,9 +229,9 @@ class FluentImageCard(CardWidget):
                         lora_display = ", ".join(lora_items)
                 
                 if lora_display:
-                    # 限制LoRA显示长度
-                    if len(lora_display) > 25:
-                        lora_display = lora_display[:22] + "..."
+                    # 适当的LoRA显示长度
+                    if len(lora_display) > 30:
+                        lora_display = lora_display[:27] + "..."
                     lora_label = QLabel(f"🎯 {lora_display}")
                 else:
                     lora_label = QLabel("🎯 暂无LoRA")
@@ -235,18 +240,20 @@ class FluentImageCard(CardWidget):
         else:
             lora_label = QLabel("🎯 暂无LoRA")
         
+        lora_label.setFixedHeight(40)  # 设置为两行高度
         lora_label.setStyleSheet(f"""
             QLabel {{
-                font-size: 12px;
+                font-size: 11px;
                 color: {FluentColors.get_color('text_tertiary')};
                 border: none;
                 background: transparent;
                 padding: 2px 4px;
+                line-height: 1.3;
             }}
         """)
-        lora_label.setWordWrap(True)
+        lora_label.setWordWrap(True)  # 允许换行，最多两行
         
-        # 创建时间
+        # 创建时间 - 设置固定高度
         created_at = self.record_data.get('created_at', '')
         if created_at:
             try:
@@ -259,23 +266,26 @@ class FluentImageCard(CardWidget):
             time_str = '未知时间'
         
         time_label = QLabel(f"⏰ {time_str}")
+        time_label.setFixedHeight(20)  # 固定高度
         time_label.setStyleSheet(f"""
             QLabel {{
-                font-size: 12px;
+                font-size: 11px;
                 color: {FluentColors.get_color('text_tertiary')};
                 border: none;
                 background: transparent;
                 padding: 2px 4px;
             }}
         """)
+        time_label.setWordWrap(False)  # 禁止换行
         
+        # 添加组件到布局，控制每个组件的高度
         layout.addWidget(self.image_label)
         layout.addWidget(name_label)
         layout.addWidget(model_label)
         layout.addWidget(tags_label)
         layout.addWidget(lora_label)
         layout.addWidget(time_label)
-        layout.addStretch()
+        layout.addStretch()  # 底部添加弹性空间
         
         self.setLayout(layout)
         
