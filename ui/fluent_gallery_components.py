@@ -103,8 +103,8 @@ class FluentImageCard(CardWidget):
         from PyQt5.QtWidgets import QSizePolicy
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         
-        # 增加卡片高度以容纳更多内容
-        self.setFixedHeight(420)  # 从360增加到420
+        # 优化卡片高度，确保内容不重叠
+        self.setFixedHeight(380)  # 从420减少到380，更紧凑
         self.setMinimumWidth(180)  # 设置最小宽度而非固定宽度
         self.setMaximumWidth(320)  # 设置最大宽度
         self.setBorderRadius(20)
@@ -113,7 +113,7 @@ class FluentImageCard(CardWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(FluentSpacing.MD, FluentSpacing.MD, 
                                  FluentSpacing.MD, FluentSpacing.MD)
-        layout.setSpacing(FluentSpacing.XS)  # 减小间距，但保持清晰分隔
+        layout.setSpacing(FluentSpacing.SM)  # 适中的间距
         
         # 图片预览
         self.image_label = QLabel()
@@ -133,69 +133,70 @@ class FluentImageCard(CardWidget):
         # 初始加载图片
         self.load_image()
         
-        # 文件名 - 设置固定高度
+        # 文件名 - 增大字体，单行显示
         file_name = self.record_data.get('custom_name') or self.record_data.get('file_name', '未知')
-        if len(file_name) > 25:  # 减少字符限制，避免过长
-            file_name = file_name[:22] + "..."
+        if len(file_name) > 22:  # 调整长度限制
+            file_name = file_name[:19] + "..."
         name_label = QLabel(file_name)
-        name_label.setFixedHeight(24)  # 固定高度
+        name_label.setFixedHeight(28)  # 增加高度
         name_label.setStyleSheet(f"""
             QLabel {{
-                font-weight: 600;
-                font-size: 15px;
+                font-weight: 700;
+                font-size: 16px;
                 color: {FluentColors.get_color('text_primary')};
                 border: none;
                 background: transparent;
-                padding: 4px 4px 2px 4px;
+                padding: 6px 4px 4px 4px;
             }}
         """)
         name_label.setWordWrap(False)  # 禁止换行，使用省略号
         
-        # 模型信息 - 设置固定高度
+        # 模型信息 - 增大字体，单行显示
         model = self.record_data.get('model', '未知模型')
         if not model or model.strip() == '':
             model = '未知模型'
-        if len(model) > 30:  # 调整长度限制
-            model = model[:27] + "..."
+        if len(model) > 28:  # 调整长度限制
+            model = model[:25] + "..."
         model_label = QLabel(f"🎨 {model}")
-        model_label.setFixedHeight(20)  # 固定高度
+        model_label.setFixedHeight(24)  # 增加高度
         model_label.setStyleSheet(f"""
             QLabel {{
-                font-size: 12px;
+                font-size: 14px;
                 color: {FluentColors.get_color('text_secondary')};
                 border: none;
                 background: transparent;
-                padding: 2px 4px;
+                padding: 3px 4px;
+                font-weight: 500;
             }}
         """)
         model_label.setWordWrap(False)  # 禁止换行
         
-        # 标签信息 - 设置固定高度，支持两行显示
+        # 标签信息 - 单行显示，增大字体
         tags = self.record_data.get('tags', '').strip()
         if tags:
-            # 更合理的标签长度限制
-            if len(tags) > 35:
-                tags_display = tags[:32] + "..."
+            # 标签长度限制，确保单行显示
+            if len(tags) > 30:
+                tags_display = tags[:27] + "..."
             else:
                 tags_display = tags
             tags_label = QLabel(f"🏷️ {tags_display}")
         else:
             tags_label = QLabel("🏷️ 暂无标签")
         
-        tags_label.setFixedHeight(40)  # 设置为两行高度
+        tags_label.setFixedHeight(24)  # 单行高度
         tags_label.setStyleSheet(f"""
             QLabel {{
-                font-size: 11px;
+                font-size: 13px;
                 color: {FluentColors.get_color('text_tertiary')};
                 border: none;
                 background: transparent;
-                padding: 2px 4px;
-                line-height: 1.3;
+                padding: 3px 4px;
+                font-weight: 400;
             }}
         """)
-        tags_label.setWordWrap(True)  # 允许换行，最多两行
+        tags_label.setWordWrap(False)  # 禁止换行，确保单行显示
         
-        # LoRA信息 - 设置固定高度，支持两行显示
+        # LoRA信息 - 单行显示，增大字体
         lora_info = self.record_data.get('lora_info', '')
         if lora_info:
             try:
@@ -213,7 +214,7 @@ class FluentImageCard(CardWidget):
                                 lora_names.append(f"{name}({weight})")
                         
                         if lora_names:
-                            # 限制显示的LoRA数量，避免卡片过高
+                            # 限制显示的LoRA数量，确保单行显示
                             if len(lora_names) > 2:
                                 lora_display = ", ".join(lora_names[:2]) + f"等{len(lora_names)}个"
                             else:
@@ -229,9 +230,9 @@ class FluentImageCard(CardWidget):
                         lora_display = ", ".join(lora_items)
                 
                 if lora_display:
-                    # 适当的LoRA显示长度
-                    if len(lora_display) > 30:
-                        lora_display = lora_display[:27] + "..."
+                    # LoRA显示长度限制，确保单行显示
+                    if len(lora_display) > 28:
+                        lora_display = lora_display[:25] + "..."
                     lora_label = QLabel(f"🎯 {lora_display}")
                 else:
                     lora_label = QLabel("🎯 暂无LoRA")
@@ -240,20 +241,20 @@ class FluentImageCard(CardWidget):
         else:
             lora_label = QLabel("🎯 暂无LoRA")
         
-        lora_label.setFixedHeight(40)  # 设置为两行高度
+        lora_label.setFixedHeight(24)  # 单行高度
         lora_label.setStyleSheet(f"""
             QLabel {{
-                font-size: 11px;
+                font-size: 13px;
                 color: {FluentColors.get_color('text_tertiary')};
                 border: none;
                 background: transparent;
-                padding: 2px 4px;
-                line-height: 1.3;
+                padding: 3px 4px;
+                font-weight: 400;
             }}
         """)
-        lora_label.setWordWrap(True)  # 允许换行，最多两行
+        lora_label.setWordWrap(False)  # 禁止换行，确保单行显示
         
-        # 创建时间 - 设置固定高度
+        # 创建时间 - 增大字体，单行显示
         created_at = self.record_data.get('created_at', '')
         if created_at:
             try:
@@ -266,19 +267,20 @@ class FluentImageCard(CardWidget):
             time_str = '未知时间'
         
         time_label = QLabel(f"⏰ {time_str}")
-        time_label.setFixedHeight(20)  # 固定高度
+        time_label.setFixedHeight(22)  # 增加高度
         time_label.setStyleSheet(f"""
             QLabel {{
-                font-size: 11px;
+                font-size: 12px;
                 color: {FluentColors.get_color('text_tertiary')};
                 border: none;
                 background: transparent;
-                padding: 2px 4px;
+                padding: 3px 4px;
+                font-weight: 400;
             }}
         """)
         time_label.setWordWrap(False)  # 禁止换行
         
-        # 添加组件到布局，控制每个组件的高度
+        # 添加组件到布局，精确控制间距
         layout.addWidget(self.image_label)
         layout.addWidget(name_label)
         layout.addWidget(model_label)
@@ -404,7 +406,7 @@ class FluentImageCard(CardWidget):
 
 
 class LoadingOverlay(QWidget):
-    """加载覆盖层组件"""
+    """加载覆盖层组件 - 现代化设计"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -414,126 +416,150 @@ class LoadingOverlay(QWidget):
         self.hide()  # 初始隐藏
         
     def init_ui(self):
-        """初始化UI"""
-        # 设置背景为半透明
+        """初始化UI - 现代化设计"""
+        # 设置现代化背景样式
         self.setStyleSheet(f"""
             QWidget#LoadingOverlay {{
-                background-color: rgba(255, 255, 255, 0.95);
-                border-radius: 12px;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(79, 70, 229, 0.95),
+                    stop:0.5 rgba(99, 102, 241, 0.95),
+                    stop:1 rgba(139, 92, 246, 0.95));
+                border-radius: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
             }}
         """)
         
         # 主布局 - 完全居中
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
-        layout.setSpacing(FluentSpacing.LG)
-        layout.setContentsMargins(40, 40, 40, 40)  # 添加适当边距
+        layout.setSpacing(FluentSpacing.XL)
+        layout.setContentsMargins(60, 60, 60, 60)
         
-        # 加载环容器 - 确保居中
-        ring_container = QWidget()
-        ring_container.setFixedSize(120, 120)  # 给加载环更多空间
-        ring_layout = QVBoxLayout(ring_container)
-        ring_layout.setAlignment(Qt.AlignCenter)
-        ring_layout.setContentsMargins(0, 0, 0, 0)
+        # 加载动画容器
+        animation_container = QWidget()
+        animation_container.setFixedSize(140, 140)
+        animation_layout = QVBoxLayout(animation_container)
+        animation_layout.setAlignment(Qt.AlignCenter)
+        animation_layout.setContentsMargins(0, 0, 0, 0)
         
-        # 加载环
+        # 现代化加载环
         self.progress_ring = ProgressRing()
-        self.progress_ring.setFixedSize(80, 80)
-        self.progress_ring.setStrokeWidth(6)
-        # 设置进度环样式
+        self.progress_ring.setFixedSize(100, 100)
+        self.progress_ring.setStrokeWidth(8)
         self.progress_ring.setStyleSheet(f"""
             ProgressRing {{
                 background-color: transparent;
-                color: {FluentColors.get_color('primary')};
+                color: rgba(255, 255, 255, 0.9);
+                border: none;
             }}
         """)
         
-        ring_layout.addWidget(self.progress_ring)
+        animation_layout.addWidget(self.progress_ring)
         
-        # 文字容器 - 确保文字居中
+        # 文字区域
         text_container = QWidget()
+        text_container.setMaximumWidth(400)
         text_layout = QVBoxLayout(text_container)
         text_layout.setAlignment(Qt.AlignCenter)
-        text_layout.setSpacing(FluentSpacing.SM)
-        text_layout.setContentsMargins(20, 0, 20, 0)
+        text_layout.setSpacing(FluentSpacing.MD)
+        text_layout.setContentsMargins(0, 0, 0, 0)
         
-        # 加载文本
-        self.loading_label = BodyLabel("正在渲染布局...")
+        # 主标题 - 现代化样式
+        self.loading_label = QLabel("正在渲染布局")
         self.loading_label.setAlignment(Qt.AlignCenter)
-        self.loading_label.setWordWrap(True)  # 允许换行
+        self.loading_label.setWordWrap(True)
         self.loading_label.setStyleSheet(f"""
-            BodyLabel {{
-                color: {FluentColors.get_color('text_primary')};
-                font-size: 18px;
-                font-weight: 600;
+            QLabel {{
+                color: white;
+                font-size: 24px;
+                font-weight: 700;
                 background: transparent;
-                padding: 4px 8px;
+                padding: 8px 16px;
                 text-align: center;
+                letter-spacing: 1px;
             }}
         """)
         
-        # 子标题
-        self.subtitle_label = BodyLabel("请稍候，正在优化卡片布局...")
+        # 子标题 - 现代化样式
+        self.subtitle_label = QLabel("请稍候，正在优化卡片布局...")
         self.subtitle_label.setAlignment(Qt.AlignCenter)
-        self.subtitle_label.setWordWrap(True)  # 允许换行
+        self.subtitle_label.setWordWrap(True)
         self.subtitle_label.setStyleSheet(f"""
-            BodyLabel {{
-                color: {FluentColors.get_color('text_secondary')};
-                font-size: 14px;
+            QLabel {{
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 16px;
                 font-weight: 400;
                 background: transparent;
-                padding: 2px 8px;
+                padding: 4px 16px;
                 text-align: center;
-                line-height: 1.4;
+                line-height: 1.5;
+            }}
+        """)
+        
+        # 装饰性元素
+        decoration_label = QLabel("✨")
+        decoration_label.setAlignment(Qt.AlignCenter)
+        decoration_label.setStyleSheet(f"""
+            QLabel {{
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 20px;
+                background: transparent;
+                padding: 4px;
             }}
         """)
         
         text_layout.addWidget(self.loading_label)
         text_layout.addWidget(self.subtitle_label)
+        text_layout.addWidget(decoration_label)
         
         # 添加组件到主布局
-        layout.addStretch(1)  # 上方弹性空间
-        layout.addWidget(ring_container)
+        layout.addStretch(1)
+        layout.addWidget(animation_container)
         layout.addWidget(text_container)
-        layout.addStretch(1)  # 下方弹性空间
+        layout.addStretch(1)
         
         self.setLayout(layout)
         
     def setup_animation(self):
-        """设置淡入淡出动画"""
+        """设置平滑动画"""
         self.fade_animation = QPropertyAnimation(self, b"windowOpacity")
-        self.fade_animation.setDuration(200)
+        self.fade_animation.setDuration(300)  # 稍微延长动画时间
         self.fade_animation.setEasingCurve(QEasingCurve.OutCubic)
         
-    def show_loading(self, message="正在渲染布局...", subtitle=""):
+    def show_loading(self, message="正在渲染布局", subtitle=""):
         """显示加载界面"""
         self.loading_label.setText(message)
         
-        # 根据主消息自动设置合适的子标题
+        # 智能子标题匹配
         if not subtitle:
-            if "布局" in message or "调整" in message:
-                subtitle = "请稍候，正在优化卡片布局..."
-            elif "加载" in message or "记录" in message:
-                subtitle = "正在从数据库获取图片信息..."
-            elif "筛选" in message:
-                subtitle = "正在过滤符合条件的记录..."
-            elif "选项" in message or "更新" in message:
-                subtitle = "正在分析数据并更新选项..."
+            subtitle_map = {
+                "布局": "正在优化卡片布局，提升浏览体验...",
+                "调整": "正在调整界面尺寸，请稍候...",
+                "加载": "正在从数据库获取图片信息...",
+                "记录": "正在加载图片记录数据...",
+                "筛选": "正在过滤符合条件的记录...",
+                "选项": "正在分析数据并更新筛选选项...",
+                "更新": "正在更新界面数据..."
+            }
+            
+            for key, sub in subtitle_map.items():
+                if key in message:
+                    subtitle = sub
+                    break
             else:
                 subtitle = "请稍候，操作进行中..."
         
         self.subtitle_label.setText(subtitle)
         self.show()
-        self.raise_()  # 确保在最上层
+        self.raise_()
         
-        # 淡入动画
+        # 平滑淡入
         self.fade_animation.setStartValue(0.0)
         self.fade_animation.setEndValue(1.0)
         self.fade_animation.start()
         
     def hide_loading(self):
         """隐藏加载界面"""
-        # 淡出动画
         self.fade_animation.setStartValue(1.0)
         self.fade_animation.setEndValue(0.0)
         self.fade_animation.finished.connect(self.hide)
