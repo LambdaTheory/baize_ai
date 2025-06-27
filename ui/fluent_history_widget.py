@@ -596,17 +596,7 @@ class FluentHistoryWidget(CardWidget):
         """创建生成信息项，显示格式化的生成参数"""
         info_parts = []
         
-        # 1. 标签信息 - 提升优先级到第一位
-        tags = record.get('tags', '').strip()
-        if tags:
-            # 限制标签显示长度并美化
-            if len(tags) > 40:
-                tags_display = tags[:37] + '...'
-            else:
-                tags_display = tags
-            info_parts.append(f"🏷️ {tags_display}")
-        
-        # 2. 模型信息 - 简化显示
+        # 1. 模型信息 - 优先显示
         model = record.get('model', '').strip()
         if model:
             # 截取模型名称，避免过长
@@ -617,16 +607,22 @@ class FluentHistoryWidget(CardWidget):
             elif model_display.endswith('.ckpt'):
                 model_display = model_display[:-5]
             
-            if len(model_display) > 25:  # 进一步缩短显示长度
+            if len(model_display) > 25:
                 model_display = model_display[:22] + '...'
             info_parts.append(f"🤖 {model_display}")
         
-        # 3. 核心生成参数 - 合并显示
+        # 2. LoRA信息 - 重点显示
+        lora_info_str = record.get('lora_info', '')
+        if lora_info_str:
+            lora_display = self.format_lora_info(lora_info_str)
+            if lora_display:
+                info_parts.append(f"🎯 LoRA: {lora_display}")
+        
+        # 3. 核心生成参数
         param_parts = []
         sampler = record.get('sampler', '').strip()
         steps = record.get('steps')
         cfg_scale = record.get('cfg_scale')
-        seed = record.get('seed')
         
         if sampler:
             # 简化采样器名称显示
@@ -638,27 +634,31 @@ class FluentHistoryWidget(CardWidget):
             param_parts.append(f"{steps}步")
         if cfg_scale:
             param_parts.append(f"CFG{cfg_scale}")
-        if seed:
-            seed_display = str(seed)[-4:] if len(str(seed)) > 4 else str(seed)
-            param_parts.append(f"🎲{seed_display}")
         
         if param_parts:
             info_parts.append(f"⚙️ {' • '.join(param_parts)}")
         
-        # 4. LoRA信息 - 简化显示
-        lora_info_str = record.get('lora_info', '')
-        if lora_info_str and len(info_parts) < 4:  # 只在有空间时显示LoRA
-            lora_display = self.format_lora_info(lora_info_str)
-            if lora_display:
-                info_parts.append(f"🎯 {lora_display}")
+        # 4. 种子信息（如果有）
+        seed = record.get('seed')
+        if seed:
+            seed_display = str(seed)[-4:] if len(str(seed)) > 4 else str(seed)
+            info_parts.append(f"🎲 {seed_display}")
+        
+        # 5. 标签信息（恢复到第5位）
+        tags = record.get('tags', '').strip()
+        if tags:
+            # 限制标签显示长度并美化
+            if len(tags) > 40:
+                tags_display = tags[:37] + '...'
+            else:
+                tags_display = tags
+            info_parts.append(f"🏷️ {tags_display}")
         
         # 合并所有信息
         full_text = '\n'.join(info_parts) if info_parts else '暂无生成信息'
         
         # 创建完整的工具提示信息
         tooltip_parts = []
-        if tags:
-            tooltip_parts.append(f"标签: {tags}")
         if model:
             tooltip_parts.append(f"模型: {record.get('model', '')}")
         if lora_info_str:
@@ -671,6 +671,8 @@ class FluentHistoryWidget(CardWidget):
             tooltip_parts.append(f"CFG Scale: {cfg_scale}")
         if seed:
             tooltip_parts.append(f"种子: {seed}")
+        if tags:
+            tooltip_parts.append(f"标签: {tags}")
         
         full_tooltip = '\n'.join(tooltip_parts) if tooltip_parts else '暂无生成信息'
         
