@@ -301,8 +301,8 @@ class FluentBusinessLogic(QObject):
             return
         
         # 禁用按钮防止重复点击
-        self.parent.image_info_widget.auto_tag_btn.setEnabled(False)
-        self.parent.image_info_widget.auto_tag_btn.setText("🤖 分析中...")
+        self.parent.auto_tag_btn.setEnabled(False)
+        self.parent.auto_tag_btn.setText("🤖 分析中...")
         
         try:
             InfoBar.info(
@@ -348,14 +348,14 @@ class FluentBusinessLogic(QObject):
             traceback.print_exc()
             
             # 恢复按钮状态
-            self.parent.image_info_widget.auto_tag_btn.setEnabled(True)
-            self.parent.image_info_widget.auto_tag_btn.setText("🤖 AI自动打标签")
+            self.parent.auto_tag_btn.setEnabled(True)
+            self.parent.auto_tag_btn.setText("🤖 AI自动打标签")
             
     def handle_ai_tag_finished(self, success, result):
         """处理AI标签分析完成后的信号"""
         # 恢复按钮状态
-        self.parent.image_info_widget.auto_tag_btn.setEnabled(True)
-        self.parent.image_info_widget.auto_tag_btn.setText("🤖 AI自动打标签")
+        self.parent.auto_tag_btn.setEnabled(True)
+        self.parent.auto_tag_btn.setText("🤖 AI自动打标签")
         
         if success:
             # 获取生成的标签字符串
@@ -366,24 +366,18 @@ class FluentBusinessLogic(QObject):
             
             # 更新标签输入框
             if tags_string:
-                current_tags = self.parent.image_info_widget.tags_edit.text().strip()
+                current_tags = self.parent.user_tags_edit.toPlainText().strip()
                 if current_tags:
                     # 如果已有标签，追加新标签
                     new_tags = f"{current_tags}, {tags_string}"
                 else:
                     new_tags = tags_string
                 
-                self.parent.image_info_widget.tags_edit.setText(new_tags)
+                self.parent.user_tags_edit.setPlainText(new_tags)
                 
-                # 在备注中添加AI分析描述
+                # 在备注中添加AI分析描述（备注功能已移除，此部分保留日志）
                 if ai_description:
-                    current_notes = self.parent.image_info_widget.notes_text.toPlainText().strip()
-                    ai_note = f"AI分析: {ai_description}"
-                    if current_notes:
-                        new_notes = f"{current_notes}\n\n{ai_note}"
-                    else:
-                        new_notes = ai_note
-                    self.parent.image_info_widget.notes_text.setPlainText(new_notes)
+                    print(f"AI分析描述: {ai_description}")  # 仅记录到控制台
             
             # AI打标完成后自动保存
             print("[AI打标] 开始自动保存标签到数据库...")  

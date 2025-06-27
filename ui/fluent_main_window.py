@@ -316,6 +316,7 @@ class FluentMainWindow(FluentWindow):
         self.save_btn.clicked.connect(self.business_logic.save_record)
         self.copy_info_btn.clicked.connect(self.copy_info)  # 复制按钮在第二列AI信息标题右边
         self.export_btn.clicked.connect(self.share_as_html)  # 分享HTML按钮在第三列标签标题右边
+        self.auto_tag_btn.clicked.connect(self.business_logic.auto_tag_image)  # AI自动打标签按钮
         
         # 提示词相关按钮连接
         self.positive_translate_btn.clicked.connect(self.event_handlers.handle_positive_translate_clicked)

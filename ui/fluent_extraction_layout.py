@@ -162,24 +162,25 @@ class FluentExtractionLayout:
             margin-bottom: 8px;
         """)
         
-        # 复制信息按钮
+        # 复制信息按钮 - 去掉背景颜色
         self.parent.copy_info_btn = PushButton("📋")
         self.parent.copy_info_btn.setFixedSize(32, 32)
         self.parent.copy_info_btn.setToolTip("复制所有信息")
         self.parent.copy_info_btn.setStyleSheet(f"""
             PushButton {{
-                background-color: {FluentColors.get_color('primary')};
-                color: white;
-                border: none;
+                background-color: transparent;
+                color: {FluentColors.get_color('text_primary')};
+                border: 1px solid {FluentColors.get_color('border_primary')};
                 border-radius: 16px;
                 font-size: 14px;
                 font-weight: 600;
             }}
             PushButton:hover {{
-                background-color: rgba(0, 120, 215, 0.8);
+                background-color: {FluentColors.get_color('bg_secondary')};
+                border-color: {FluentColors.get_color('primary')};
             }}
             PushButton:pressed {{
-                background-color: rgba(0, 120, 215, 0.6);
+                background-color: {FluentColors.get_color('bg_tertiary')};
             }}
         """)
         
@@ -187,157 +188,72 @@ class FluentExtractionLayout:
         ai_title_layout.addStretch()
         ai_title_layout.addWidget(self.parent.copy_info_btn)
         
-        # AI信息滚动区域
-        ai_scroll = SmoothScrollArea()
-        ai_scroll.setWidgetResizable(True)
-        ai_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
-        
-        self.parent.ai_content = QWidget()
-        self.parent.ai_content_layout = QVBoxLayout()
-        self.parent.ai_content_layout.setSpacing(FluentSpacing.SM)
-        
-        # 正向提示词区域
-        positive_prompt_layout = QHBoxLayout()
-        self.parent.positive_prompt_label = BodyLabel("正向提示词:")
-        self.parent.positive_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
-        
-        # 正向提示词跳转翻译按钮
-        self.parent.positive_translate_btn = TransparentPushButton("跳转翻译")
-        self.parent.positive_translate_btn.setFixedHeight(24)
-        self.parent.positive_translate_btn.setFixedWidth(80)
-        self.parent.positive_translate_btn.setStyleSheet(f"""
-            TransparentPushButton {{
-                color: {FluentColors.get_color('accent')};
-                border: 1px solid {FluentColors.get_color('accent')};
-                border-radius: 4px;
-                padding: 2px 8px;
-                font-size: 11px;
-            }}
-            TransparentPushButton:hover {{
-                background-color: {FluentColors.get_color('accent')};
-                color: white;
-            }}
-        """)
-        
-        positive_prompt_layout.addWidget(self.parent.positive_prompt_label)
-        positive_prompt_layout.addStretch()
-        positive_prompt_layout.addWidget(self.parent.positive_translate_btn)
-        
+        # 正向提示词
+        prompt_label = BodyLabel("正向提示词:")
+        prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
         self.parent.positive_prompt_text = TextEdit()
-        self.parent.positive_prompt_text.setMaximumHeight(120)  # 从80增加到120
+        self.parent.positive_prompt_text.setMinimumHeight(100)
+        self.parent.positive_prompt_text.setMaximumHeight(150)
         self.parent.positive_prompt_text.setPlaceholderText("正向提示词...")
         
-        # 反向提示词区域
-        negative_prompt_layout = QHBoxLayout()
-        self.parent.negative_prompt_label = BodyLabel("反向提示词:")
-        self.parent.negative_prompt_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        # 翻译按钮布局
+        positive_btn_layout = QHBoxLayout()
+        self.parent.positive_translate_btn = PushButton("🌐 翻译")
+        self.parent.positive_translate_btn.setFixedSize(80, 28)
+        positive_btn_layout.addStretch()
+        positive_btn_layout.addWidget(self.parent.positive_translate_btn)
         
-        # 反向提示词跳转翻译按钮
-        self.parent.negative_translate_btn = TransparentPushButton("跳转翻译")
-        self.parent.negative_translate_btn.setFixedHeight(24)
-        self.parent.negative_translate_btn.setFixedWidth(80)
-        self.parent.negative_translate_btn.setStyleSheet(f"""
-            TransparentPushButton {{
-                color: {FluentColors.get_color('accent')};
-                border: 1px solid {FluentColors.get_color('accent')};
-                border-radius: 4px;
-                padding: 2px 8px;
-                font-size: 11px;
-            }}
-            TransparentPushButton:hover {{
-                background-color: {FluentColors.get_color('accent')};
-                color: white;
-            }}
-        """)
-        
-        negative_prompt_layout.addWidget(self.parent.negative_prompt_label)
-        negative_prompt_layout.addStretch()
-        negative_prompt_layout.addWidget(self.parent.negative_translate_btn)
-        
+        # 反向提示词
+        negative_label = BodyLabel("反向提示词:")
+        negative_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
         self.parent.negative_prompt_text = TextEdit()
-        self.parent.negative_prompt_text.setMaximumHeight(100)  # 从60增加到100
+        self.parent.negative_prompt_text.setMinimumHeight(80)
+        self.parent.negative_prompt_text.setMaximumHeight(120)
         self.parent.negative_prompt_text.setPlaceholderText("反向提示词...")
         
-        # 提示词操作按钮区域
-        prompt_buttons_layout = QHBoxLayout()
+        # 翻译按钮布局
+        negative_btn_layout = QHBoxLayout()
+        self.parent.negative_translate_btn = PushButton("🌐 翻译")
+        self.parent.negative_translate_btn.setFixedSize(80, 28)
+        negative_btn_layout.addStretch()
+        negative_btn_layout.addWidget(self.parent.negative_translate_btn)
+        
+        # 提示词操作按钮
+        prompt_actions_layout = QHBoxLayout()
         self.parent.save_prompts_btn = PushButton("💾 保存")
-        self.parent.save_prompts_btn.setFixedHeight(32)
-        self.parent.save_prompts_btn.setFixedWidth(80)
-        self.parent.save_prompts_btn.setStyleSheet(f"""
-            PushButton {{
-                background-color: {FluentColors.get_color('primary')};
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-weight: 500;
-                font-size: 12px;
-            }}
-            PushButton:hover {{
-                background-color: rgba(0, 120, 215, 0.8);
-            }}
-            PushButton:pressed {{
-                background-color: rgba(0, 120, 215, 0.9);
-            }}
-        """)
-        
         self.parent.reset_prompts_btn = PushButton("🔄 重置")
-        self.parent.reset_prompts_btn.setFixedHeight(32)
-        self.parent.reset_prompts_btn.setFixedWidth(80)
-        self.parent.reset_prompts_btn.setStyleSheet(f"""
-            PushButton {{
-                background-color: {FluentColors.get_color('bg_tertiary')};
-                color: {FluentColors.get_color('text_primary')};
-                border: 1px solid {FluentColors.get_color('border_primary')};
-                border-radius: 6px;
-                font-weight: 500;
-                font-size: 12px;
-            }}
-            PushButton:hover {{
-                background-color: {FluentColors.get_color('bg_secondary')};
-                border-color: {FluentColors.get_color('accent')};
-            }}
-        """)
+        self.parent.save_prompts_btn.setFixedSize(80, 32)
+        self.parent.reset_prompts_btn.setFixedSize(80, 32)
         
-        prompt_buttons_layout.addWidget(self.parent.save_prompts_btn)
-        prompt_buttons_layout.addWidget(self.parent.reset_prompts_btn)
-        prompt_buttons_layout.addStretch()
+        prompt_actions_layout.addWidget(self.parent.save_prompts_btn)
+        prompt_actions_layout.addWidget(self.parent.reset_prompts_btn)
+        prompt_actions_layout.addStretch()
         
-        # 生成方式 - 不在这里创建，将在image_display中创建卡片式显示
-        # 保留这些引用以维持兼容性
-        self.parent.generation_method_label = BodyLabel("生成方式:")
-        self.parent.generation_method_label.hide()  # 隐藏旧的标签
-        self.parent.generation_method_text = BodyLabel("-")
-        self.parent.generation_method_text.hide()  # 隐藏旧的显示
+        # 生成参数滚动区域
+        params_scroll = SmoothScrollArea()
+        params_scroll.setWidgetResizable(True)
+        params_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         
-        # 生成参数
-        self.parent.params_label = BodyLabel("生成参数:")
-        self.parent.params_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
-        self.parent.params_widget = QWidget()
+        params_content = QWidget()
         self.parent.params_layout = QVBoxLayout()
-        self.parent.params_widget.setLayout(self.parent.params_layout)
-        
-        self.parent.ai_content_layout.addLayout(positive_prompt_layout)
-        self.parent.ai_content_layout.addWidget(self.parent.positive_prompt_text)
-        self.parent.ai_content_layout.addLayout(negative_prompt_layout)
-        self.parent.ai_content_layout.addWidget(self.parent.negative_prompt_text)
-        self.parent.ai_content_layout.addLayout(prompt_buttons_layout)
-        self.parent.ai_content_layout.addWidget(self.parent.generation_method_label)
-        self.parent.ai_content_layout.addWidget(self.parent.generation_method_text)
-        self.parent.ai_content_layout.addWidget(self.parent.params_label)
-        self.parent.ai_content_layout.addWidget(self.parent.params_widget)
-        self.parent.ai_content_layout.addStretch()
-        
-        self.parent.ai_content.setLayout(self.parent.ai_content_layout)
-        ai_scroll.setWidget(self.parent.ai_content)
+        self.parent.params_layout.setSpacing(FluentSpacing.SM)
+        params_content.setLayout(self.parent.params_layout)
+        params_scroll.setWidget(params_content)
         
         ai_layout.addLayout(ai_title_layout)
-        ai_layout.addWidget(ai_scroll)
+        ai_layout.addWidget(prompt_label)
+        ai_layout.addWidget(self.parent.positive_prompt_text)
+        ai_layout.addLayout(positive_btn_layout)
+        ai_layout.addWidget(negative_label)
+        ai_layout.addWidget(self.parent.negative_prompt_text)
+        ai_layout.addLayout(negative_btn_layout)
+        ai_layout.addLayout(prompt_actions_layout)
+        ai_layout.addWidget(params_scroll)
+        
         self.parent.ai_info_card.setLayout(ai_layout)
+        column_layout.addWidget(self.parent.ai_info_card)
         
-        # AI信息卡片占满整个列
-        column_layout.addWidget(self.parent.ai_info_card, 1)
-        
-        parent_layout.addWidget(second_column, 3)  # 第二列占3份
+        parent_layout.addWidget(second_column, 60)  # 60% 宽度
     
     def create_third_column(self, parent_layout):
         """创建第三列：标签(40%) + 历史记录(60%)"""
@@ -362,24 +278,25 @@ class FluentExtractionLayout:
             margin-bottom: 8px;
         """)
         
-        # 分享HTML按钮
+        # 分享HTML按钮 - 去掉背景颜色
         self.parent.export_btn = PushButton("📤")
         self.parent.export_btn.setFixedSize(32, 32)
         self.parent.export_btn.setToolTip("分享HTML")
         self.parent.export_btn.setStyleSheet(f"""
             PushButton {{
-                background-color: #10B981;
-                color: white;
-                border: none;
+                background-color: transparent;
+                color: {FluentColors.get_color('text_primary')};
+                border: 1px solid {FluentColors.get_color('border_primary')};
                 border-radius: 16px;
                 font-size: 14px;
                 font-weight: 600;
             }}
             PushButton:hover {{
-                background-color: rgba(16, 185, 129, 0.8);
+                background-color: {FluentColors.get_color('bg_secondary')};
+                border-color: {FluentColors.get_color('primary')};
             }}
             PushButton:pressed {{
-                background-color: rgba(16, 185, 129, 0.6);
+                background-color: {FluentColors.get_color('bg_tertiary')};
             }}
         """)
         
@@ -396,9 +313,37 @@ class FluentExtractionLayout:
         tags_content_layout = QVBoxLayout()
         tags_content_layout.setSpacing(FluentSpacing.SM)
         
-        # 用户标签
+        # 用户标签标题和AI自动打标签按钮
+        user_tags_header_layout = QHBoxLayout()
         user_tags_label = BodyLabel("用户标签:")
         user_tags_label.setStyleSheet(f"color: {FluentColors.get_color('text_secondary')};")
+        
+        # AI自动打标签按钮
+        self.parent.auto_tag_btn = PushButton("🤖 AI自动打标签")
+        self.parent.auto_tag_btn.setFixedHeight(32)
+        self.parent.auto_tag_btn.setMinimumWidth(120)
+        self.parent.auto_tag_btn.setStyleSheet(f"""
+            PushButton {{
+                background-color: #10B981;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: 11px;
+            }}
+            PushButton:hover {{
+                background-color: rgba(16, 185, 129, 0.8);
+            }}
+            PushButton:pressed {{
+                background-color: rgba(16, 185, 129, 0.6);
+            }}
+        """)
+        
+        user_tags_header_layout.addWidget(user_tags_label)
+        user_tags_header_layout.addStretch()
+        user_tags_header_layout.addWidget(self.parent.auto_tag_btn)
+        
+        # 用户标签输入框
         self.parent.user_tags_edit = TextEdit()
         self.parent.user_tags_edit.setMaximumHeight(80)
         self.parent.user_tags_edit.setPlaceholderText("输入标签，用逗号分隔...")
@@ -428,7 +373,7 @@ class FluentExtractionLayout:
         button_layout.addWidget(self.parent.save_btn)
         button_layout.addStretch()
         
-        tags_content_layout.addWidget(user_tags_label)
+        tags_content_layout.addLayout(user_tags_header_layout)
         tags_content_layout.addWidget(self.parent.user_tags_edit)
         tags_content_layout.addLayout(button_layout)
         tags_content_layout.addStretch()
@@ -438,27 +383,55 @@ class FluentExtractionLayout:
         
         tags_layout.addLayout(tags_title_layout)
         tags_layout.addWidget(tags_scroll)
-        self.parent.tags_notes_card.setLayout(tags_layout)
         
-        # 历史记录卡片 (70%)
+        self.parent.tags_notes_card.setLayout(tags_layout)
+        column_layout.addWidget(self.parent.tags_notes_card, 40)  # 40% 高度
+        
+        # 历史记录卡片 (60%)
         self.parent.history_card = CardWidget()
         self.parent.history_card.setBorderRadius(16)
         history_layout = QVBoxLayout()
-        history_layout.setContentsMargins(FluentSpacing.SM, FluentSpacing.SM, 
-                                        FluentSpacing.SM, FluentSpacing.SM)
+        history_layout.setContentsMargins(FluentSpacing.LG, FluentSpacing.LG, 
+                                        FluentSpacing.LG, FluentSpacing.LG)
         
-        # 历史记录组件（直接添加，不需要额外标题）
+        # 历史记录标题和按钮
+        history_title_layout = QHBoxLayout()
+        history_title = SubtitleLabel("📚 历史记录")
+        history_title.setStyleSheet(f"""
+            color: {FluentColors.get_color('text_primary')};
+            font-weight: 600;
+            margin-bottom: 8px;
+        """)
+        
+        # 历史记录操作按钮
+        self.parent.refresh_btn = PushButton("刷新")
+        self.parent.batch_export_btn = PushButton("批量导出")
+        self.parent.clear_history_btn = PushButton("删除记录") 
+        self.parent.clear_all_btn = PushButton("清空全部")
+        
+        for btn in [self.parent.refresh_btn, self.parent.batch_export_btn, 
+                   self.parent.clear_history_btn, self.parent.clear_all_btn]:
+            btn.setFixedHeight(28)
+            btn.setMinimumWidth(60)
+        
+        history_title_layout.addWidget(history_title)
+        history_title_layout.addStretch()
+        history_title_layout.addWidget(self.parent.refresh_btn)
+        history_title_layout.addWidget(self.parent.batch_export_btn)
+        history_title_layout.addWidget(self.parent.clear_history_btn)
+        history_title_layout.addWidget(self.parent.clear_all_btn)
+        
+        # 历史记录列表
         from .fluent_history_widget import FluentHistoryWidget
-        self.parent.history_widget = FluentHistoryWidget(self.parent.data_manager)
+        self.parent.history_widget = FluentHistoryWidget(self.parent)
         
-        # 加载历史记录
-        self.parent.history_widget.load_history()
+        history_layout.addLayout(history_title_layout)
+        history_layout.addWidget(self.parent.history_widget)
         
-        history_layout.addWidget(self.parent.history_widget, 1)  # 添加拉伸因子，让历史记录组件占用全部空间
         self.parent.history_card.setLayout(history_layout)
+        column_layout.addWidget(self.parent.history_card, 60)  # 60% 高度
         
-        # 按30%和70%的比例添加到列布局
-        column_layout.addWidget(self.parent.tags_notes_card, 3)    # 30%
-        column_layout.addWidget(self.parent.history_card, 7)       # 70%
+        parent_layout.addWidget(third_column, 40)  # 40% 宽度
         
-        parent_layout.addWidget(third_column, 2)  # 第三列占2份 
+        parent_layout.addWidget(second_column, 60)  # 60% 宽度
+        parent_layout.addWidget(third_column, 40)  # 40% 宽度 
