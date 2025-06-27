@@ -187,12 +187,12 @@ class FluentHistoryWidget(CardWidget):
         self.history_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.history_table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
-        # 修改：增加行高以容纳更多内容，确保标签信息能够显示
-        self.history_table.verticalHeader().setDefaultSectionSize(120)  # 从80增加到120
-        self.history_table.verticalHeader().setMinimumSectionSize(100)  # 从80增加到100
+        # 保持增加的行高以容纳更多内容
+        self.history_table.verticalHeader().setDefaultSectionSize(120)
+        self.history_table.verticalHeader().setMinimumSectionSize(100)
         
-        # 修改：启用文字换行，让内容能够完整显示
-        self.history_table.setWordWrap(True)  # 从False改为True
+        # 禁用文字换行，每行信息单行显示，超出用省略号
+        self.history_table.setWordWrap(False)
         self.history_table.setShowGrid(True)
         
         # 启用右键菜单
@@ -596,39 +596,44 @@ class FluentHistoryWidget(CardWidget):
         """创建生成信息项，显示格式化的生成参数"""
         info_parts = []
         
-        # 1. 模型信息 - 优先显示
+        # 检查是否有标签，如果有标签则优先保证标签显示
+        tags = record.get('tags', '').strip()
+        has_tags = bool(tags)
+        
+        # 1. 模型信息 - 优先显示，单行显示
         model = record.get('model', '').strip()
         if model:
-            # 截取模型名称，避免过长
-            model_display = model.split('/')[-1] if '/' in model else model  # 取文件名部分
-            # 移除常见的文件扩展名
+            model_display = model.split('/')[-1] if '/' in model else model
             if model_display.endswith('.safetensors'):
                 model_display = model_display[:-12]
             elif model_display.endswith('.ckpt'):
                 model_display = model_display[:-5]
             
-            if len(model_display) > 25:
-                model_display = model_display[:22] + '...'
+            # 限制长度确保单行显示，超出用省略号
+            if len(model_display) > 30:
+                model_display = model_display[:27] + '...'
             info_parts.append(f"🤖 {model_display}")
         
-        # 2. LoRA信息 - 重点显示
+        # 2. LoRA信息 - 如果没有标签或空间足够则显示，单行显示
         lora_info_str = record.get('lora_info', '')
-        if lora_info_str:
+        if lora_info_str and (not has_tags or len(info_parts) < 3):
             lora_display = self.format_lora_info(lora_info_str)
             if lora_display:
+                # 限制长度确保单行显示
+                if len(lora_display) > 25:
+                    lora_display = lora_display[:22] + '...'
                 info_parts.append(f"🎯 LoRA: {lora_display}")
         
-        # 3. 核心生成参数
+        # 3. 核心生成参数 - 合并在一行显示
         param_parts = []
         sampler = record.get('sampler', '').strip()
         steps = record.get('steps')
         cfg_scale = record.get('cfg_scale')
         
         if sampler:
-            # 简化采样器名称显示
             sampler_short = sampler.replace('_', ' ').replace('DPM++', 'DPM++').title()
-            if len(sampler_short) > 10:
-                sampler_short = sampler_short[:7] + '...'
+            if len(sampler_short) > 12:
+                sampler_short = sampler_short[:9] + '...'
             param_parts.append(f"{sampler_short}")
         if steps:
             param_parts.append(f"{steps}步")
@@ -636,25 +641,28 @@ class FluentHistoryWidget(CardWidget):
             param_parts.append(f"CFG{cfg_scale}")
         
         if param_parts:
-            info_parts.append(f"⚙️ {' • '.join(param_parts)}")
+            param_line = f"⚙️ {' • '.join(param_parts)}"
+            # 限制参数行长度，确保单行显示
+            if len(param_line) > 35:
+                param_line = param_line[:32] + '...'
+            info_parts.append(param_line)
         
-        # 4. 种子信息（如果有）
+        # 4. 种子信息 - 如果没有标签或空间足够则显示，单行显示
         seed = record.get('seed')
-        if seed:
-            seed_display = str(seed)[-4:] if len(str(seed)) > 4 else str(seed)
+        if seed and (not has_tags or len(info_parts) < 4):
+            seed_display = str(seed)[-6:] if len(str(seed)) > 6 else str(seed)
             info_parts.append(f"🎲 {seed_display}")
         
-        # 5. 标签信息（恢复到第5位）
-        tags = record.get('tags', '').strip()
-        if tags:
-            # 限制标签显示长度并美化
-            if len(tags) > 40:
-                tags_display = tags[:37] + '...'
+        # 5. 标签信息 - 如果有标签必须显示，单行显示
+        if has_tags:
+            # 限制标签显示长度，确保单行显示，超出用省略号
+            if len(tags) > 35:
+                tags_display = tags[:32] + '...'
             else:
                 tags_display = tags
             info_parts.append(f"🏷️ {tags_display}")
         
-        # 合并所有信息
+        # 合并所有信息，每行一个，单行显示
         full_text = '\n'.join(info_parts) if info_parts else '暂无生成信息'
         
         # 创建完整的工具提示信息
