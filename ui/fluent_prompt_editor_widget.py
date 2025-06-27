@@ -70,8 +70,8 @@ class PromptTag(CardWidget):
         self.text_label = QLabel(display_text)
         self.text_label.setWordWrap(True)  # 允许自动换行显示完整内容
         self.text_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        # 设置固定的尺寸策略
-        self.text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        # 设置适应的尺寸策略，允许根据内容调整高度
+        self.text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.text_label.setStyleSheet(f"""
             QLabel {{
                 color: {FluentColors.get_color('text_primary')};
@@ -110,8 +110,9 @@ class PromptTag(CardWidget):
         
         self.setLayout(layout)
         
-        # 设置标签的尺寸策略 - 最小高度保证一致性，但允许内容撑开
+        # 设置标签的尺寸策略 - 最小高度保证一致性，合理的最大宽度
         self.setMinimumHeight(32)  # 最小高度32px，保证基本一致性
+        self.setMaximumWidth(400)  # 设置合理的最大宽度，过长标签会独占一行
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)  # 允许根据内容自适应高度
         
         # 设置标签样式 - 最小高度保证一致性，允许内容自适应
@@ -121,6 +122,7 @@ class PromptTag(CardWidget):
                 border: 1px solid {FluentColors.get_color('border_primary')};
                 border-radius: 16px;
                 min-height: 32px;
+                max-width: 400px;
                 font-size: 13px;
                 font-weight: 500;
             }}
