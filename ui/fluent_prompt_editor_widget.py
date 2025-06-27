@@ -275,7 +275,6 @@ class PromptEditorPanel(QWidget):
         super().__init__(parent)
         self.title = title
         self.english_prompts = []
-        self.chinese_prompts = []
         self.prompt_tags = []
         self.update_timer = QTimer()
         self.update_timer.setSingleShot(True)
@@ -298,42 +297,28 @@ class PromptEditorPanel(QWidget):
         left_layout = QVBoxLayout()
         left_layout.setSpacing(FluentSpacing.SM)
         
-        # 输入框区域（左侧上方）
+        # 输入框区域（左侧上方）- 只保留英文输入框
         input_frame = QFrame()
         input_layout = QVBoxLayout()
         input_layout.setSpacing(FluentSpacing.MD)
         
         # 英文输入框
         english_container = self.create_input_container(
-            "英文提示词:", "📋", "请输入英文提示词，用逗号分隔...",
+            "提示词:", "📋", "请输入提示词，用逗号分隔...",
             "masterpiece, best quality, ultra detailed", 
             self.copy_english_prompts
         )
         self.english_edit = english_container['edit']
         self.english_copy_btn = english_container['copy_btn']
         
-        # 中文输入框
-        chinese_container = self.create_input_container(
-            "中文提示词:", "📋", "请输入中文提示词，用逗号分隔...",
-            "杰作, 最高质量, 超详细",
-            self.copy_chinese_prompts
-        )
-        self.chinese_edit = chinese_container['edit']
-        self.chinese_copy_btn = chinese_container['copy_btn']
-        
         input_layout.addWidget(english_container['widget'])
-        input_layout.addWidget(chinese_container['widget'])
         input_frame.setLayout(input_layout)
-        
-        # 功能按钮区域
-        buttons_frame = self.create_buttons_frame()
         
         # 展示文本框（左侧下方）
         display_frame = self.create_display_area()
         
         # 组装左侧布局
         left_layout.addWidget(input_frame)
-        left_layout.addWidget(buttons_frame)
         left_layout.addWidget(display_frame, 1)
         left_container.setLayout(left_layout)
         
@@ -404,73 +389,6 @@ class PromptEditorPanel(QWidget):
             'edit': edit,
             'copy_btn': copy_btn
         }
-        
-    def create_buttons_frame(self):
-        """创建按钮框架"""
-        buttons_frame = QFrame()
-        buttons_layout = QHBoxLayout()
-        buttons_layout.setSpacing(FluentSpacing.SM)
-        
-        # 清空按钮
-        self.clear_btn = PushButton("清空")
-        self.clear_btn.setFixedHeight(32)
-        self.clear_btn.clicked.connect(self.clear_all_prompts)
-        
-        # 加载示例按钮
-        self.example_btn = PrimaryPushButton("示例")
-        self.example_btn.setFixedHeight(32)
-        self.example_btn.clicked.connect(self.load_example_prompts)
-        
-        # 英译中按钮
-        self.translate_en_to_zh_btn = PushButton("英→中")
-        self.translate_en_to_zh_btn.setFixedHeight(32)
-        self.translate_en_to_zh_btn.clicked.connect(self.translate_english_to_chinese)
-        self.translate_en_to_zh_btn.setStyleSheet(f"""
-            PushButton {{
-                background-color: {FluentColors.get_color('info')};
-                color: white;
-                border: none;
-                padding: 6px 12px;
-                border-radius: 6px;
-                font-weight: 500;
-            }}
-            PushButton:hover {{
-                background-color: rgba(59, 130, 246, 0.8);
-            }}
-            PushButton:pressed {{
-                background-color: rgba(59, 130, 246, 0.9);
-            }}
-        """)
-        
-        # 中译英按钮
-        self.translate_zh_to_en_btn = PushButton("中→英")
-        self.translate_zh_to_en_btn.setFixedHeight(32)
-        self.translate_zh_to_en_btn.clicked.connect(self.translate_chinese_to_english)
-        self.translate_zh_to_en_btn.setStyleSheet(f"""
-            PushButton {{
-                background-color: {FluentColors.get_color('success')};
-                color: white;
-                border: none;
-                padding: 6px 12px;
-                border-radius: 6px;
-                font-weight: 500;
-            }}
-            PushButton:hover {{
-                background-color: rgba(34, 197, 94, 0.8);
-            }}
-            PushButton:pressed {{
-                background-color: rgba(34, 197, 94, 0.9);
-            }}
-        """)
-        
-        buttons_layout.addWidget(self.clear_btn)
-        buttons_layout.addWidget(self.example_btn)
-        buttons_layout.addWidget(self.translate_en_to_zh_btn)
-        buttons_layout.addWidget(self.translate_zh_to_en_btn)
-        buttons_layout.addStretch()
-        
-        buttons_frame.setLayout(buttons_layout)
-        return buttons_frame
         
     def create_display_area(self):
         """创建展示区域"""
@@ -570,29 +488,20 @@ class PromptEditorPanel(QWidget):
     def setup_connections(self):
         """设置信号连接"""
         self.english_edit.textChanged.connect(self.on_english_text_changed)
-        self.chinese_edit.textChanged.connect(self.on_chinese_text_changed)
         
     def on_english_text_changed(self):
         """英文文本改变时的处理"""
         self.update_timer.stop()
         self.update_timer.start(500)
         
-    def on_chinese_text_changed(self):
-        """中文文本改变时的处理"""
-        self.update_timer.stop()
-        self.update_timer.start(500)
-        
     def sync_prompts(self):
-        """同步英文和中文提示词"""
+        """同步英文提示词"""
         try:
             english_text = self.english_edit.toPlainText().strip()
-            chinese_text = self.chinese_edit.toPlainText().strip()
             
             english_prompts = self.parse_prompts(english_text)
-            chinese_prompts = self.parse_prompts(chinese_text)
             
             self.english_prompts = english_prompts
-            self.chinese_prompts = chinese_prompts
             
             self.update_tags_display()
             
@@ -618,14 +527,10 @@ class PromptEditorPanel(QWidget):
             tag.deleteLater()
         self.prompt_tags.clear()
         
-        max_count = max(len(self.english_prompts), len(self.chinese_prompts)) if self.english_prompts or self.chinese_prompts else 0
-        
-        for i in range(max_count):
-            english = self.english_prompts[i] if i < len(self.english_prompts) else ""
-            chinese = self.chinese_prompts[i] if i < len(self.chinese_prompts) else ""
-            
-            if english or chinese:
-                tag = PromptTag(english, chinese)
+        # 只处理英文提示词
+        for english in self.english_prompts:
+            if english:
+                tag = PromptTag(english, None)  # 不传递中文文本
                 tag.deleted.connect(self.on_tag_deleted)
                 self.tags_layout.addWidget(tag)
                 self.prompt_tags.append(tag)
@@ -639,27 +544,12 @@ class PromptEditorPanel(QWidget):
             display_lines = []
             
             if self.english_prompts:
-                display_lines.append("English Prompts:")
+                display_lines.append("提示词列表:")
+                for i, prompt in enumerate(self.english_prompts, 1):
+                    display_lines.append(f"{i}. {prompt}")
+                display_lines.append("")
+                display_lines.append("完整提示词:")
                 display_lines.append(", ".join(self.english_prompts))
-                display_lines.append("")
-            
-            if self.chinese_prompts:
-                display_lines.append("Chinese Prompts:")
-                display_lines.append(", ".join(self.chinese_prompts))
-                display_lines.append("")
-            
-            if self.english_prompts and self.chinese_prompts:
-                display_lines.append("Paired Prompts:")
-                max_count = max(len(self.english_prompts), len(self.chinese_prompts))
-                for i in range(max_count):
-                    english = self.english_prompts[i] if i < len(self.english_prompts) else ""
-                    chinese = self.chinese_prompts[i] if i < len(self.chinese_prompts) else ""
-                    if english and chinese:
-                        display_lines.append(f"{i+1}. {english} → {chinese}")
-                    elif english:
-                        display_lines.append(f"{i+1}. {english} → [无对应中文]")
-                    elif chinese:
-                        display_lines.append(f"{i+1}. [无对应英文] → {chinese}")
             
             display_text = "\n".join(display_lines) if display_lines else "暂无提示词内容"
             self.display_text.setPlainText(display_text)
@@ -668,18 +558,7 @@ class PromptEditorPanel(QWidget):
         """处理标签删除"""
         try:
             if english_text in self.english_prompts:
-                index = self.english_prompts.index(english_text)
-                self.english_prompts.pop(index)
-                
-                if index < len(self.chinese_prompts):
-                    self.chinese_prompts.pop(index)
-                    
-            elif chinese_text in self.chinese_prompts:
-                index = self.chinese_prompts.index(chinese_text)
-                self.chinese_prompts.pop(index)
-                
-                if index < len(self.english_prompts):
-                    self.english_prompts.pop(index)
+                self.english_prompts.remove(english_text)
             
             self.update_input_texts()
             self.update_tags_display()
@@ -690,26 +569,18 @@ class PromptEditorPanel(QWidget):
     def update_input_texts(self):
         """更新输入框文本"""
         self.english_edit.textChanged.disconnect()
-        self.chinese_edit.textChanged.disconnect()
         
         try:
             english_text = ", ".join(self.english_prompts)
             self.english_edit.setPlainText(english_text)
             
-            chinese_text = ", ".join(self.chinese_prompts)
-            self.chinese_edit.setPlainText(chinese_text)
-            
         finally:
             self.english_edit.textChanged.connect(self.on_english_text_changed)
-            self.chinese_edit.textChanged.connect(self.on_chinese_text_changed)
             
     def set_prompts(self, english_prompts=None, chinese_prompts=None):
         """设置提示词内容"""
         if english_prompts is not None:
             self.english_prompts = english_prompts[:]
-            
-        if chinese_prompts is not None:
-            self.chinese_prompts = chinese_prompts[:]
             
         self.update_input_texts()
         self.update_tags_display()
@@ -717,37 +588,15 @@ class PromptEditorPanel(QWidget):
     def get_prompts(self):
         """获取当前提示词"""
         return {
-            'english': self.english_prompts[:],
-            'chinese': self.chinese_prompts[:]
+            'english': self.english_prompts[:]
         }
         
-    def clear_all_prompts(self):
-        """清空所有提示词"""
-        self.english_prompts.clear()
-        self.chinese_prompts.clear()
-        self.update_input_texts()
-        self.update_tags_display()
-        
-    def load_example_prompts(self):
-        """加载示例提示词"""
-        example_english = [
-            "masterpiece", "best quality", "ultra detailed",
-            "beautiful", "elegant", "soft lighting"
-        ]
-        
-        example_chinese = [
-            "杰作", "最高质量", "超详细",
-            "美丽", "优雅", "柔和光线"
-        ]
-        
-        self.set_prompts(example_english, example_chinese)
-        
     def copy_english_prompts(self):
-        """复制英文提示词到剪贴板"""
+        """复制提示词到剪贴板"""
         text = self.english_edit.toPlainText().strip()
         if not text:
             InfoBar.warning(
-                title="提示", content="英文输入框为空",
+                title="提示", content="输入框为空",
                 orient=Qt.Horizontal, isClosable=True,
                 position=InfoBarPosition.TOP, duration=1500, parent=self
             )
@@ -757,143 +606,9 @@ class PromptEditorPanel(QWidget):
         clipboard.setText(text)
         
         InfoBar.success(
-            title="复制成功", content="英文提示词已复制到剪贴板",
+            title="复制成功", content="提示词已复制到剪贴板",
             orient=Qt.Horizontal, isClosable=True,
             position=InfoBarPosition.TOP, duration=1500, parent=self
-        )
-        
-    def copy_chinese_prompts(self):
-        """复制中文提示词到剪贴板"""
-        text = self.chinese_edit.toPlainText().strip()
-        if not text:
-            InfoBar.warning(
-                title="提示", content="中文输入框为空",
-                orient=Qt.Horizontal, isClosable=True,
-                position=InfoBarPosition.TOP, duration=1500, parent=self
-            )
-            return
-            
-        clipboard = QApplication.clipboard()
-        clipboard.setText(text)
-        
-        InfoBar.success(
-            title="复制成功", content="中文提示词已复制到剪贴板",
-            orient=Qt.Horizontal, isClosable=True,
-            position=InfoBarPosition.TOP, duration=1500, parent=self
-        )
-        
-    def translate_english_to_chinese(self):
-        """翻译英文提示词为中文"""
-        if not self.english_prompts:
-            InfoBar.warning(
-                title="提示", content="请先输入英文提示词",
-                orient=Qt.Horizontal, isClosable=True,
-                position=InfoBarPosition.TOP, duration=2000, parent=self
-            )
-            return
-            
-        self.translate_en_to_zh_btn.setText("翻译中...")
-        self.translate_en_to_zh_btn.setEnabled(False)
-        self.translate_zh_to_en_btn.setEnabled(False)
-        
-        InfoBar.info(
-            title="翻译中", content="正在翻译提示词，请稍候...",
-            orient=Qt.Horizontal, isClosable=True,
-            position=InfoBarPosition.TOP, duration=3000, parent=self
-        )
-        
-        if self.translation_thread:
-            self.translation_thread.quit()
-            self.translation_thread.wait()
-            
-        self.translation_thread = TranslationThread(self.english_prompts, 'en', 'zh')
-        self.translation_thread.translation_finished.connect(self.on_en_to_zh_translation_finished)
-        self.translation_thread.translation_error.connect(self.on_en_to_zh_translation_error)
-        self.translation_thread.start()
-        
-    def translate_chinese_to_english(self):
-        """翻译中文提示词为英文"""
-        if not self.chinese_prompts:
-            InfoBar.warning(
-                title="提示", content="请先输入中文提示词",
-                orient=Qt.Horizontal, isClosable=True,
-                position=InfoBarPosition.TOP, duration=2000, parent=self
-            )
-            return
-            
-        self.translate_zh_to_en_btn.setText("翻译中...")
-        self.translate_zh_to_en_btn.setEnabled(False)
-        self.translate_en_to_zh_btn.setEnabled(False)
-        
-        InfoBar.info(
-            title="翻译中", content="正在翻译提示词，请稍候...",
-            orient=Qt.Horizontal, isClosable=True,
-            position=InfoBarPosition.TOP, duration=3000, parent=self
-        )
-        
-        if self.translation_thread:
-            self.translation_thread.quit()
-            self.translation_thread.wait()
-            
-        self.translation_thread = TranslationThread(self.chinese_prompts, 'zh', 'en')
-        self.translation_thread.translation_finished.connect(self.on_zh_to_en_translation_finished)
-        self.translation_thread.translation_error.connect(self.on_zh_to_en_translation_error)
-        self.translation_thread.start()
-        
-    def on_en_to_zh_translation_finished(self, translated_prompts):
-        """英译中完成处理"""
-        self.chinese_prompts = translated_prompts
-        self.update_input_texts()
-        self.update_tags_display()
-        
-        self.translate_en_to_zh_btn.setText("英→中")
-        self.translate_en_to_zh_btn.setEnabled(True)
-        self.translate_zh_to_en_btn.setEnabled(True)
-        
-        InfoBar.success(
-            title="英译中完成", content=f"成功翻译了 {len(translated_prompts)} 个提示词",
-            orient=Qt.Horizontal, isClosable=True,
-            position=InfoBarPosition.TOP, duration=2000, parent=self
-        )
-        
-    def on_en_to_zh_translation_error(self, error_message):
-        """英译中错误处理"""
-        self.translate_en_to_zh_btn.setText("英→中")
-        self.translate_en_to_zh_btn.setEnabled(True)
-        self.translate_zh_to_en_btn.setEnabled(True)
-        
-        InfoBar.error(
-            title="英译中失败", content=f"翻译出现错误: {error_message}",
-            orient=Qt.Horizontal, isClosable=True,
-            position=InfoBarPosition.TOP, duration=3000, parent=self
-        )
-        
-    def on_zh_to_en_translation_finished(self, translated_prompts):
-        """中译英完成处理"""
-        self.english_prompts = translated_prompts
-        self.update_input_texts()
-        self.update_tags_display()
-        
-        self.translate_zh_to_en_btn.setText("中→英")
-        self.translate_zh_to_en_btn.setEnabled(True)
-        self.translate_en_to_zh_btn.setEnabled(True)
-        
-        InfoBar.success(
-            title="中译英完成", content=f"成功翻译了 {len(translated_prompts)} 个提示词",
-            orient=Qt.Horizontal, isClosable=True,
-            position=InfoBarPosition.TOP, duration=2000, parent=self
-        )
-        
-    def on_zh_to_en_translation_error(self, error_message):
-        """中译英错误处理"""
-        self.translate_zh_to_en_btn.setText("中→英")
-        self.translate_zh_to_en_btn.setEnabled(True)
-        self.translate_en_to_zh_btn.setEnabled(True)
-        
-        InfoBar.error(
-            title="中译英失败", content=f"翻译出现错误: {error_message}",
-            orient=Qt.Horizontal, isClosable=True,
-            position=InfoBarPosition.TOP, duration=3000, parent=self
         )
 
 
