@@ -239,9 +239,15 @@ class FluentPromptEditorWidget(ScrollArea):
                 for scene in data['scenes']:
                     title = scene.get('title', '未命名场景')
                     english_prompts = scene.get('english_prompts', [])
+                    translation_map = scene.get('translation_map', {})  # 加载翻译映射
                     
                     editor_panel = self.create_editor_accordion(title)
-                    editor_panel.set_prompts(english_prompts)
+                    editor_panel.set_prompts(english_prompts, translation_map=translation_map)
+                    
+                    if translation_map:
+                        print(f"  场景 '{title}': {len(english_prompts)} 个提示词，{len(translation_map)} 个翻译映射")
+                    else:
+                        print(f"  场景 '{title}': {len(english_prompts)} 个提示词，无翻译映射")
                     
             else:
                 # 创建默认场景
@@ -271,7 +277,8 @@ class FluentPromptEditorWidget(ScrollArea):
                 
                 scene_data = {
                     'title': title,
-                    'english_prompts': prompts.get('english', [])
+                    'english_prompts': prompts.get('english', []),
+                    'translation_map': prompts.get('translation_map', {})  # 保存翻译映射
                 }
                 scenes_data.append(scene_data)
                 
@@ -279,7 +286,9 @@ class FluentPromptEditorWidget(ScrollArea):
             success = self.data_manager.save_prompt_data(data)
             
             if success:
-                print(f"保存成功: {len(scenes_data)} 个场景")
+                # 统计总的映射数量
+                total_mappings = sum(len(scene.get('translation_map', {})) for scene in scenes_data)
+                print(f"保存成功: {len(scenes_data)} 个场景，{total_mappings} 个翻译映射")
             else:
                 print("保存失败")
                 

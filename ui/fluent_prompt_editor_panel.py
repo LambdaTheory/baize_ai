@@ -308,10 +308,17 @@ class PromptEditorPanel(QWidget):
     def on_translation_finished(self, english_prompts, translation_map):
         """翻译完成"""
         self.english_prompts = english_prompts
-        self.translation_map = translation_map
+        
+        # 合并翻译映射，保留已有的映射关系
+        if self.translation_map:
+            # 保留现有映射，添加新的映射
+            for english, chinese in translation_map.items():
+                self.translation_map[english] = chinese
+        else:
+            self.translation_map = translation_map
         
         print(f"[面板] 翻译完成: {len(english_prompts)} 个英文提示词")
-        print(f"[面板] 映射关系: {len(translation_map)} 个")
+        print(f"[面板] 总映射关系: {len(self.translation_map)} 个")
         
         self.update_display()
         
@@ -390,7 +397,7 @@ class PromptEditorPanel(QWidget):
                 position=InfoBarPosition.TOP, duration=1500, parent=self
             )
             
-    def set_prompts(self, english_prompts=None, chinese_prompts=None):
+    def set_prompts(self, english_prompts=None, chinese_prompts=None, translation_map=None):
         """设置提示词（用于加载历史数据）"""
         if english_prompts:
             self.english_prompts = english_prompts[:]
@@ -398,8 +405,14 @@ class PromptEditorPanel(QWidget):
             input_text = ", ".join(english_prompts)
             self.input_edit.setPlainText(input_text)
             
-            # 为了正确显示标签，需要获取中文翻译
-            self.update_translation_map_for_english_prompts()
+            # 如果提供了翻译映射，直接使用
+            if translation_map:
+                self.translation_map = translation_map.copy()
+                print(f"[面板] 加载翻译映射: {len(self.translation_map)} 个")
+            else:
+                # 否则需要获取中文翻译
+                print(f"[面板] 未提供翻译映射，将异步获取")
+                self.update_translation_map_for_english_prompts()
             
         self.update_display()
     
@@ -423,10 +436,16 @@ class PromptEditorPanel(QWidget):
     
     def on_mapping_translation_finished(self, english_prompts, translation_map):
         """翻译映射获取完成（仅更新映射，不更新提示词）"""
-        # 只更新翻译映射，不改变现有的英文提示词
-        self.translation_map = translation_map
+        # 合并翻译映射，保留已有的映射关系
+        if self.translation_map:
+            # 保留现有映射，添加新的映射
+            for english, chinese in translation_map.items():
+                if english not in self.translation_map:  # 避免覆盖已有的映射
+                    self.translation_map[english] = chinese
+        else:
+            self.translation_map = translation_map
         
-        print(f"[面板] 翻译映射更新完成: {len(translation_map)} 个映射关系")
+        print(f"[面板] 翻译映射更新完成，总映射关系: {len(self.translation_map)} 个")
         
         # 只更新标签显示，不更新其他部分
         self.update_tags()
@@ -434,5 +453,6 @@ class PromptEditorPanel(QWidget):
     def get_prompts(self):
         """获取当前提示词"""
         return {
-            'english': self.english_prompts[:]
+            'english': self.english_prompts[:],
+            'translation_map': self.translation_map.copy()  # 保存翻译映射
         } 
