@@ -10,13 +10,14 @@ import re
 import time
 from typing import List, Optional, Dict, Tuple
 from openai import OpenAI
+from core.cache_manager import get_cache_manager
 
 
 class AIImagePromptTranslator:
     """AI图片生成提示词专用翻译器"""
     
     def __init__(self, api_key: str = None, model: str = "gpt-4o-mini"):
-        """初始化翻译器"""
+        """初始化翻译器和缓存"""
         self.api_key = api_key or os.getenv("OPENAI_API_KEY") or "sk-CnEoNNdwU8KeJfIoEg6rcNeLeO5XbF3HafEMckZkuZXvKSGS"
         self.model = model
         self.base_url = "https://api.ssopen.top/v1"
@@ -29,6 +30,8 @@ class AIImagePromptTranslator:
             base_url=self.base_url,
             timeout=60
         )
+        
+        self.cache_manager = get_cache_manager()
         
         # 预定义的AI绘画术语映射
         self.common_terms = {
@@ -161,50 +164,73 @@ class AIImagePromptTranslator:
 请直接返回中文翻译，用逗号分隔，不要解释。"""
     
     def translate_prompts_batch(self, prompts: List[str], to_english: bool = True) -> List[str]:
-        """批量翻译提示词"""
+        """
+        批量翻译提示词，并集成缓存机制。
+        """
         if not prompts:
             return []
         
-        # 过滤空值
         filtered_prompts = [p.strip() for p in prompts if p.strip()]
         if not filtered_prompts:
             return []
+
+        # 缓存键的前缀，区分翻译方向
+        cache_prefix = "en_to_zh" if not to_english else "zh_to_en"
         
-        try:
-            # 使用特殊分隔符组合多个提示词
-            combined_text = " |SEP| ".join(filtered_prompts)
+        # 1. 查找缓存
+        results = {}
+        prompts_to_translate = []
+        for i, prompt in enumerate(filtered_prompts):
+            cache_key = f"{cache_prefix}:{prompt}"
+            cached_result = self.cache_manager.get(cache_key)
+            if cached_result:
+                results[i] = cached_result
+            else:
+                prompts_to_translate.append((i, prompt))
+        
+        print(f"缓存命中: {len(results)}/{len(filtered_prompts)}")
+
+        # 2. 对未缓存的内容进行API调用
+        if prompts_to_translate:
+            original_indices = [item[0] for item in prompts_to_translate]
+            prompts_for_api = [item[1] for item in prompts_to_translate]
             
-            system_prompt = self.get_translation_prompt(to_english)
-            user_prompt = f"请翻译以下用 |SEP| 分隔的提示词：\n{combined_text}\n\n请保持相同的分隔符格式返回结果。"
-            
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.2,  # 低温度确保一致性
-                max_tokens=2000
-            )
-            
-            result = response.choices[0].message.content.strip()
-            
-            # 分解结果
-            translated_prompts = [p.strip() for p in result.split("|SEP|")]
-            
-            # 确保数量匹配
-            while len(translated_prompts) < len(filtered_prompts):
-                translated_prompts.append(filtered_prompts[len(translated_prompts)])
-            
-            result_list = translated_prompts[:len(filtered_prompts)]
-            
-            print(f"[批量翻译] 成功翻译 {len(filtered_prompts)} 个提示词")
-            return result_list
-            
-        except Exception as e:
-            print(f"批量翻译失败: {e}")
-            # 失败时逐个翻译
-            return self._translate_prompts_fallback(filtered_prompts, to_english)
+            try:
+                print(f"调用API翻译 {len(prompts_for_api)} 个新提示词...")
+                combined_text = " |SEP| ".join(prompts_for_api)
+                system_prompt = self.get_translation_prompt(to_english)
+                user_prompt = f"请翻译以下用 |SEP| 分隔的提示词：\n{combined_text}\n\n请保持相同的分隔符格式返回结果。"
+                
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.2, max_tokens=2000
+                )
+                
+                api_results_raw = response.choices[0].message.content.strip()
+                api_results = [p.strip() for p in api_results_raw.split("|SEP|")]
+                
+                # 3. 更新缓存和结果
+                for i, translated_prompt in enumerate(api_results):
+                    original_index = original_indices[i]
+                    original_prompt = prompts_for_api[i]
+                    
+                    results[original_index] = translated_prompt
+                    cache_key = f"{cache_prefix}:{original_prompt}"
+                    self.cache_manager.set(cache_key, translated_prompt)
+                
+            except Exception as e:
+                print(f"API批量翻译失败: {e}，将使用原文作为结果。")
+                for i, original_prompt in enumerate(prompts_for_api):
+                    original_index = original_indices[i]
+                    results[original_index] = original_prompt # 出错时返回原文
+        
+        # 4. 按原始顺序组装最终结果
+        final_results = [results[i] for i in range(len(filtered_prompts))]
+        return final_results
     
     def _translate_prompts_fallback(self, prompts: List[str], to_english: bool = True) -> List[str]:
         """翻译失败时的备用方案"""
@@ -243,43 +269,47 @@ class AIImagePromptTranslator:
     
     def smart_translate(self, text: str) -> Tuple[List[str], Dict[str, str]]:
         """
-        智能翻译：自动检测语言并翻译
-        返回: (英文提示词列表, 英文→中文映射字典)
+        智能翻译：自动检测语言并翻译。始终返回与输入提示词对应的完整英文列表和翻译映射。
         """
         if not text.strip():
             return [], {}
         
-        # 解析提示词
         prompts = self.parse_prompts(text)
         if not prompts:
             return [], {}
-        
-        # 检测语言
-        is_chinese_input = any(self.contains_chinese(prompt) for prompt in prompts)
-        
-        english_prompts = []
+
+        # 检查原始输入中是否存在中文和英文
+        is_chinese_present = any(self.contains_chinese(p) for p in prompts)
+        is_english_present = any(not self.contains_chinese(p) for p in prompts)
+
+        # 1. 统一翻译成英文（第一步API调用）
+        #    - 这一步确保我们有一个与用户输入语序一致的全英文基线
+        #    - "你好" -> "hello", "world" -> "world"
+        english_prompts = self.translate_prompts_batch(prompts, to_english=True)
         translation_map = {}
+
+        # 2. 如果原始输入包含英文，为它们获取中文翻译（第二步API调用）
+        if is_english_present:
+            original_english_prompts = [p for p in prompts if not self.contains_chinese(p) and p.strip()]
+            if original_english_prompts:
+                chinese_for_english = self.translate_prompts_batch(original_english_prompts, to_english=False)
+                english_to_chinese_map = {eng: chn for eng, chn in zip(original_english_prompts, chinese_for_english)}
+            else:
+                english_to_chinese_map = {}
         
-        if is_chinese_input:
-            # 中文输入，翻译成英文
-            print(f"检测到中文输入，开始翻译 {len(prompts)} 个提示词")
-            english_prompts = self.translate_prompts_batch(prompts, to_english=True)
+        # 3. 构建最终的完整映射
+        for i, original_prompt in enumerate(prompts):
+            final_english_prompt = english_prompts[i]
             
-            # 建立英文→中文映射
-            for i in range(min(len(english_prompts), len(prompts))):
-                if english_prompts[i] and prompts[i]:
-                    translation_map[english_prompts[i]] = prompts[i]
-        else:
-            # 英文输入，获取中文翻译用于显示
-            print(f"检测到英文输入，获取中文翻译用于显示")
-            english_prompts = prompts[:]
-            chinese_translations = self.translate_prompts_batch(prompts, to_english=False)
-            
-            # 建立英文→中文映射
-            for i in range(min(len(english_prompts), len(chinese_translations))):
-                if chinese_translations[i]:
-                    translation_map[english_prompts[i]] = chinese_translations[i]
-        
+            if self.contains_chinese(original_prompt):
+                # 如果原始词是中文: 最终英文 -> 原始中文
+                translation_map[final_english_prompt] = original_prompt
+            else:
+                # 如果原始词是英文: 最终英文 -> 查表得到的中文
+                # 使用 final_english_prompt 作为 key, 因为它可能被 GPT 轻微修正过
+                # 使用 original_prompt 去查找它的中文翻译
+                translation_map[final_english_prompt] = english_to_chinese_map.get(original_prompt, "")
+
         print(f"翻译完成: 英文提示词 {len(english_prompts)} 个，映射关系 {len(translation_map)} 个")
         return english_prompts, translation_map
 

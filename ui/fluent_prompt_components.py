@@ -6,111 +6,125 @@ Fluent Design 提示词基础组件
 """
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-                            QLabel, QSizePolicy)
+                            QLabel, QSizePolicy, QMenu)
 from PyQt5.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve
 from qfluentwidgets import CardWidget
 from .fluent_styles import FluentColors
 
 
-class PromptTag(CardWidget):
-    """提示词标签组件 - 始终显示"英文(中文)"格式"""
-    deleted = pyqtSignal(str, str)  # 删除信号，传递英文和中文
-    
-    def __init__(self, english_text, chinese_text="", parent=None):
+class PromptTag(QWidget):
+    """一个统一的、可切换状态的提示词标签"""
+    toggled = pyqtSignal(str, bool)  # 信号：(英文文本, 是否选中)
+    deleted = pyqtSignal(str, str)
+
+    def __init__(self, english_text: str, chinese_text: str = "", parent=None):
         super().__init__(parent)
         self.english_text = english_text
         self.chinese_text = chinese_text
-        self.init_ui()
-        
-    def init_ui(self):
+        self.is_selected = True  # 默认是选中状态
+        self._init_ui()
+
+    def _init_ui(self):
         """初始化UI"""
+        self.setAutoFillBackground(True)  # 强制父组件绘制背景，确保样式生效
         layout = QHBoxLayout()
-        layout.setContentsMargins(8, 4, 8, 4)
-        layout.setSpacing(4)
-        
-        # 显示文本 - 固定格式：英文(中文)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # 英文部分
+        self.english_label = QLabel(self.english_text)
+        self.english_label.setWordWrap(True)
+        self.english_label.setAlignment(Qt.AlignCenter)
+        self.english_label.setObjectName("english_label") # 设置对象名以供样式表选择
+
+        # 中文部分
+        self.chinese_label = QLabel(self.chinese_text)
+        self.chinese_label.setWordWrap(True)
+        self.chinese_label.setAlignment(Qt.AlignCenter)
+        self.chinese_label.setObjectName("chinese_label") # 设置对象名
+
+        layout.addWidget(self.english_label)
         if self.chinese_text and self.chinese_text.strip() and self.chinese_text.strip() != self.english_text.strip():
-            display_text = f"{self.english_text}({self.chinese_text})"
+            layout.addWidget(self.chinese_label)
         else:
-            display_text = self.english_text
-            
-        self.text_label = QLabel(display_text)
-        self.text_label.setWordWrap(True)
-        self.text_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.text_label.setStyleSheet(f"""
-            QLabel {{
-                color: {FluentColors.get_color('text_primary')};
-                font-size: 13px;
-                font-weight: 500;
-                border: none;
-                background: transparent;
-                padding: 0px;
-            }}
-        """)
-        
-        # 删除按钮
-        self.delete_btn = QPushButton("×")
-        self.delete_btn.setFixedSize(18, 18)
-        self.delete_btn.setStyleSheet(f"""
-            QPushButton {{
-                border: none;
-                border-radius: 9px;
-                background-color: {FluentColors.get_color('error')};
-                color: white;
-                font-size: 11px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: rgba(220, 38, 38, 0.8);
-            }}
-            QPushButton:pressed {{
-                background-color: rgba(220, 38, 38, 0.9);
-            }}
-        """)
-        self.delete_btn.clicked.connect(self.on_delete)
-        
-        layout.addWidget(self.text_label, 1)
-        layout.addWidget(self.delete_btn, 0)
+            self.chinese_label.hide()
         
         self.setLayout(layout)
-        
-        # 设置标签样式
-        self.setMinimumHeight(32)
-        self.setMaximumWidth(400)
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
-        
-        self.setStyleSheet(f"""
-            CardWidget {{
-                background-color: {FluentColors.get_color('bg_secondary')};
-                border: 1px solid {FluentColors.get_color('border_primary')};
-                border-radius: 16px;
-                min-height: 32px;
-                max-width: 400px;
-                font-size: 13px;
-                font-weight: 500;
-            }}
-            CardWidget:hover {{
-                border-color: {FluentColors.get_color('accent')};
-                background-color: {FluentColors.get_color('bg_tertiary')};
-            }}
-        """)
-        
-    def on_delete(self):
-        """删除标签"""
-        self.deleted.emit(self.english_text, self.chinese_text)
-        
-    def update_text(self, english_text, chinese_text=""):
-        """更新标签文本"""
-        self.english_text = english_text
-        self.chinese_text = chinese_text
-        
-        if chinese_text and chinese_text.strip() and chinese_text.strip() != english_text.strip():
-            display_text = f"{english_text}({chinese_text})"
+        self.setObjectName("prompt_tag") # 为父组件也设置对象名
+        self._update_style()
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+
+    def mousePressEvent(self, event):
+        """处理点击事件"""
+        if event.button() == Qt.LeftButton:
+            self.toggle_selection()
+        elif event.button() == Qt.RightButton:
+            self.show_delete_menu(event.pos())
+        super().mousePressEvent(event)
+    
+    def toggle_selection(self):
+        """切换选中状态"""
+        self.is_selected = not self.is_selected
+        self._update_style()
+        self.toggled.emit(self.english_text, self.is_selected)
+
+    def show_delete_menu(self, pos):
+        """显示右键删除菜单"""
+        menu = QMenu(self)
+        delete_action = menu.addAction("删除该标签")
+        action = menu.exec_(self.mapToGlobal(pos))
+        if action == delete_action:
+            self.deleted.emit(self.english_text, self.chinese_text)
+
+    def _update_style(self):
+        """根据状态更新样式，使用统一的样式表"""
+        if self.is_selected:
+            # 选中状态: 强制使用黑色背景，确保高对比度
+            # 使用 'QWidget#prompt_tag' 和 'QLabel#...' 来提高选择器特异性，避免被全局样式覆盖
+            self.setStyleSheet("""
+                QWidget#prompt_tag {
+                    background-color: black; /* 直接使用黑色背景 */
+                    border: 1px solid #333;
+                    border-radius: 6px;
+                }
+                QLabel#english_label {
+                    color: white;
+                    background-color: black; /* 透明，透出父级的黑色 */
+                    padding: 6px 10px;
+                    border-top-left-radius: 5px;
+                    border-bottom-left-radius: 5px;
+                }
+                QLabel#chinese_label {
+                    background-color: #009688; /* 青色 */
+                    color: white;
+                    padding: 6px 10px;
+                    border-top-right-radius: 5px;
+                    border-bottom-right-radius: 5px;
+                }
+            """)
         else:
-            display_text = english_text
-            
-        self.text_label.setText(display_text)
+            # 未选中状态: 浅色背景，深色文字，确保清晰
+            self.setStyleSheet("""
+                QWidget#prompt_tag {
+                    background-color: #ECEFF1;
+                    border: 1px solid #CFD8DC;
+                    border-radius: 6px;
+                }
+                QLabel#english_label {
+                    color: #37474F;
+                    background-color:  #ECEFF1;
+                    border-top-left-radius: 5px;
+                    border-bottom-left-radius: 5px;image.png
+                    padding: 6px 10px;
+                }
+                QLabel#chinese_label {
+                    background-color: #B2DFDB;
+                    color: #37474F;
+                    padding: 6px 10px;
+                    border-top-right-radius: 5px;
+                    border-bottom-right-radius: 5px;
+                }
+            """)
 
 
 class AccordionCard(CardWidget):

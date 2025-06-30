@@ -219,32 +219,41 @@ class PromptEditorPanel(QWidget):
         scroll_area.setStyleSheet(f"""
             QScrollArea {{
                 border: 1px solid {FluentColors.get_color('border_primary')};
-                border-radius: 6px;
+                border-radius: 8px; /* 圆角与整体风格匹配 */
                 background-color: {FluentColors.get_color('bg_primary')};
             }}
             QScrollBar:vertical {{
+                border: none;
                 background-color: {FluentColors.get_color('bg_secondary')};
-                width: 8px;
-                border-radius: 4px;
+                width: 10px;
+                margin: 0px 0px 0px 0px;
+                border-radius: 5px;
             }}
             QScrollBar::handle:vertical {{
-                background-color: {FluentColors.get_color('accent')};
-                border-radius: 4px;
-                min-height: 20px;
+                background-color: {FluentColors.get_color('accent_dark')};
+                min-height: 25px;
+                border-radius: 5px;
             }}
             QScrollBar::handle:vertical:hover {{
-                background-color: {FluentColors.get_color('text_secondary')};
+                background-color: {FluentColors.get_color('accent')};
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+            QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical {{
+                background: none;
             }}
         """)
         
         # 标签容器
         self.tags_widget = QWidget()
         self.tags_layout = FlowLayout(self.tags_widget)
-        self.tags_layout.setContentsMargins(12, 12, 12, 12)
-        self.tags_layout.setHorizontalSpacing(6)
-        self.tags_layout.setVerticalSpacing(6)
+        # 增加边距和间距
+        self.tags_layout.setContentsMargins(12, 12, 12, 12) 
+        self.tags_layout.setHorizontalSpacing(10)
+        self.tags_layout.setVerticalSpacing(10)
         
-        self.tags_widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.tags_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         scroll_area.setWidget(self.tags_widget)
         
         layout.addWidget(title_label)
@@ -306,19 +315,11 @@ class PromptEditorPanel(QWidget):
         self.translation_worker.start()
         
     def on_translation_finished(self, english_prompts, translation_map):
-        """翻译完成"""
+        """翻译完成，用最新结果完全更新状态"""
         self.english_prompts = english_prompts
+        self.translation_map = translation_map  # 直接覆盖，不再合并
         
-        # 合并翻译映射，保留已有的映射关系
-        if self.translation_map:
-            # 保留现有映射，添加新的映射
-            for english, chinese in translation_map.items():
-                self.translation_map[english] = chinese
-        else:
-            self.translation_map = translation_map
-        
-        print(f"[面板] 翻译完成: {len(english_prompts)} 个英文提示词")
-        print(f"[面板] 总映射关系: {len(self.translation_map)} 个")
+        print(f"[面板] 状态更新: {len(self.english_prompts)} 个英文提示词, {len(self.translation_map)} 个映射")
         
         self.update_display()
         
@@ -357,17 +358,44 @@ class PromptEditorPanel(QWidget):
         for english in self.english_prompts:
             chinese = self.translation_map.get(english, "")
             
-            # 确保中文翻译有效且与英文不同
-            if chinese and chinese.strip() and chinese.strip() != english.strip():
-                tag = PromptTag(english, chinese)
-            else:
-                tag = PromptTag(english, "")  # 没有有效中文翻译时只显示英文
-                
+            tag = PromptTag(english, chinese)
+            tag.toggled.connect(self.on_tag_toggled) # 连接点击信号
             tag.deleted.connect(self.on_tag_deleted)
             
             self.tags_layout.addWidget(tag)
             self.prompt_tags.append(tag)
             
+    def on_tag_toggled(self, english_text: str, is_selected: bool):
+        """处理标签点击事件，更新预览框"""
+        current_prompts = self.preview_edit.toPlainText().split(',')
+        current_prompts = [p.strip() for p in current_prompts if p.strip()]
+        
+        if is_selected:
+            # 如果标签被选中，添加提示词
+            if english_text not in current_prompts:
+                # 找到原始位置并插入，以维持大致顺序
+                try:
+                    original_index = self.english_prompts.index(english_text)
+                    # 寻找一个合适的位置插入
+                    inserted = False
+                    for i in range(original_index -1, -1, -1):
+                        prev_prompt = self.english_prompts[i]
+                        if prev_prompt in current_prompts:
+                            insert_pos = current_prompts.index(prev_prompt) + 1
+                            current_prompts.insert(insert_pos, english_text)
+                            inserted = True
+                            break
+                    if not inserted:
+                         current_prompts.insert(0, english_text) # 找不到就放最前面
+                except ValueError:
+                    current_prompts.append(english_text) # 极端情况
+        else:
+            # 如果标签被取消选中，移除提示词
+            if english_text in current_prompts:
+                current_prompts.remove(english_text)
+                
+        self.preview_edit.setPlainText(", ".join(current_prompts))
+
     def on_tag_deleted(self, english_text, chinese_text):
         """处理标签删除"""
         if english_text in self.english_prompts:
@@ -435,17 +463,11 @@ class PromptEditorPanel(QWidget):
         self.mapping_worker.start()
     
     def on_mapping_translation_finished(self, english_prompts, translation_map):
-        """翻译映射获取完成（仅更新映射，不更新提示词）"""
-        # 合并翻译映射，保留已有的映射关系
-        if self.translation_map:
-            # 保留现有映射，添加新的映射
-            for english, chinese in translation_map.items():
-                if english not in self.translation_map:  # 避免覆盖已有的映射
-                    self.translation_map[english] = chinese
-        else:
-            self.translation_map = translation_map
+        """历史数据翻译映射获取完成，同样直接覆盖"""
+        # 这个回调主要用于加载历史数据时补全翻译
+        self.translation_map = translation_map # 直接覆盖
         
-        print(f"[面板] 翻译映射更新完成，总映射关系: {len(self.translation_map)} 个")
+        print(f"[面板] 历史数据映射更新完成，总映射关系: {len(self.translation_map)} 个")
         
         # 只更新标签显示，不更新其他部分
         self.update_tags()
