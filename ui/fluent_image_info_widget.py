@@ -646,8 +646,7 @@ class FluentImageInfoWidget(SmoothScrollArea):
         for tag in preset_tags:
             tag_btn = TransparentPushButton(tag)
             tag_btn.setMinimumHeight(32)  # 最小高度与提示词标签保持一致
-            tag_btn.setMinimumWidth(60)  # 参考设计图片调整最小宽度
-            tag_btn.setMaximumWidth(200)  # 调整最大宽度
+            tag_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  # 强制扩展到容器最大宽度
             tag_btn.setStyleSheet(f"""
                 TransparentPushButton {{
                     border: 1px solid {FluentColors.get_color('border_primary')};

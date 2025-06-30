@@ -1,26 +1,6 @@
 {
   "scenes": [
     {
-      "title": "通用提示词",
-      "english_prompts": [
-        "A pink SUV is driving on the sea surface amidst raindrops the size of beans. The splashes of water on the sea surface include small splashes from raindrops and large splashes from tires. The picture is dim and the atmosphere is oppressive",
-        "with a deep sense of impending wind and rain. Only the body of the car appears relatively bright in the entire picture",
-        "making the vehicle very eye-catching in comparison"
-      ],
-      "chinese_prompts": []
-    },
-    {
-      "title": "browser_download_567a02779e00476793fefaf51a7a20d4_反向",
-      "english_prompts": [
-        "ng_deepnegative_v1_75t",
-        "(badhandv4:1.2)",
-        "EasyNegative",
-        "(worst quality:2)",
-        "nsfw"
-      ],
-      "chinese_prompts": []
-    },
-    {
       "title": "browser_download_567a02779e00476793fefaf51a7a20d4_正向",
       "english_prompts": [
         "This is a high-resolution photograph of a young Asian woman with fair skin and black",
@@ -37,7 +17,35 @@
         "enhancing the calm and contemplative mood of the scene."
       ],
       "chinese_prompts": []
+    },
+    {
+      "title": "browser_download_c1ddc07c841e4c60972085b68384548e_正向",
+      "english_prompts": [
+        "aidmafluxpro1",
+        "1",
+        "high-resolution photograph of a young Asian woman",
+        "fair skin",
+        "black short hair",
+        "casual slightly messy hairstyle",
+        "sleeveless backless burnt-orange dress",
+        "accentuates slim figure",
+        "thin straps",
+        "plunging neckline",
+        "right arm tattoo in foreign script",
+        "minimalist background",
+        "gradient blue sky",
+        "serene ethereal quality",
+        "natural soft diffused lighting",
+        "overcast sky",
+        "calm contemplative mood",
+        "highly consistent",
+        "smile",
+        "highly consistent",
+        "magical",
+        "big smile"
+      ],
+      "chinese_prompts": []
     }
   ],
-  "last_updated": "2025-06-27 17:41:29"
+  "last_updated": "2025-06-30 11:23:21"
 }

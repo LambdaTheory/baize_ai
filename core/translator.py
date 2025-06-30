@@ -1,325 +1,303 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-翻译器模块
-使用百度翻译API进行文本翻译
+AI图片生成提示词翻译器
+使用OpenAI GPT-4o进行专业的AI图片生成提示词翻译
 """
 
-import hashlib
-import random
+import os
+import re
 import time
-import requests
-import json
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
+from openai import OpenAI
 
 
-class BaiduTranslator:
-    """百度翻译器"""
+class AIImagePromptTranslator:
+    """AI图片生成提示词专用翻译器"""
     
-    def __init__(self, app_id: str = None, secret_key: str = None):
-        # 如果没有提供API密钥，使用免费的在线翻译接口（有限制）
-        self.app_id = app_id
-        self.secret_key = secret_key
-        self.use_free_api = not (app_id and secret_key)
+    def __init__(self, api_key: str = None, model: str = "gpt-4o-mini"):
+        """初始化翻译器"""
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY") or "sk-CnEoNNdwU8KeJfIoEg6rcNeLeO5XbF3HafEMckZkuZXvKSGS"
+        self.model = model
+        self.base_url = "https://api.ssopen.top/v1"
         
-        if self.use_free_api:
-            print("使用免费翻译接口（有频率限制）")
-        else:
-            print("使用百度翻译API")
-    
-    def translate_text(self, text: str, from_lang: str = 'en', to_lang: str = 'zh') -> Optional[str]:
-        """翻译文本"""
-        if not text.strip():
-            return ""
-            
-        try:
-            if self.use_free_api:
-                return self._translate_free(text, from_lang, to_lang)
-            else:
-                return self._translate_baidu_api(text, from_lang, to_lang)
-        except Exception as e:
-            print(f"翻译失败: {e}")
-            return None
-    
-    def translate_prompts(self, prompts: List[str], from_lang: str = 'en', to_lang: str = 'zh') -> List[str]:
-        """翻译提示词列表"""
-        translated = []
+        if not self.api_key:
+            raise ValueError("请设置OpenAI API密钥")
         
-        for prompt in prompts:
-            prompt = prompt.strip()
-            if not prompt:
-                translated.append("")
-                continue
-                
-            # 为了避免API频率限制，添加小延迟
-            if len(translated) > 0:
-                time.sleep(0.1)
-                
-            result = self.translate_text(prompt, from_lang, to_lang)
-            if result:
-                translated.append(result)
-            else:
-                # 翻译失败时保持原文
-                translated.append(prompt)
-                
-        return translated
-    
-    def _translate_free(self, text: str, from_lang: str, to_lang: str) -> Optional[str]:
-        """使用免费翻译接口"""
-        try:
-            # 使用一个简单的免费翻译接口
-            url = "https://translate.googleapis.com/translate_a/single"
-            params = {
-                'client': 'gtx',
-                'sl': from_lang,
-                'tl': to_lang,
-                'dt': 't',
-                'q': text
-            }
+        self.client = OpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            timeout=60
+        )
+        
+        # 预定义的AI绘画术语映射
+        self.common_terms = {
+            # 质量相关
+            "杰作": "masterpiece",
+            "最高质量": "best quality",
+            "高质量": "high quality",
+            "超详细": "ultra detailed",
+            "极详细": "extremely detailed",
+            "精细": "detailed",
+            "高分辨率": "high resolution",
+            "4K": "4K",
+            "8K": "8K",
             
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
+            # 风格相关
+            "真实": "realistic",
+            "逼真": "photorealistic",
+            "动漫": "anime",
+            "卡通": "cartoon",
+            "油画": "oil painting",
+            "水彩": "watercolor",
+            "素描": "sketch",
+            "赛博朋克": "cyberpunk",
             
-            response = requests.get(url, params=params, headers=headers, timeout=10)
+            # 人物相关
+            "美丽": "beautiful",
+            "可爱": "cute",
+            "女孩": "girl",
+            "男孩": "boy",
+            "女人": "woman",
+            "男人": "man",
+            "长发": "long hair",
+            "短发": "short hair",
+            "微笑": "smile",
             
-            if response.status_code == 200:
-                result = response.json()
-                if result and len(result) > 0 and len(result[0]) > 0:
-                    return result[0][0][0]
+            # 场景相关
+            "城市": "city",
+            "夜晚": "night",
+            "白天": "day",
+            "森林": "forest",
+            "海洋": "ocean",
+            "山": "mountain",
+            "天空": "sky",
+            "云": "clouds",
             
-            return None
-            
-        except Exception as e:
-            print(f"免费翻译接口调用失败: {e}")
-            # 如果免费接口失败，使用本地词典作为备用
-            return self._translate_local_dict(text)
-    
-    def _translate_baidu_api(self, text: str, from_lang: str, to_lang: str) -> Optional[str]:
-        """使用百度翻译API"""
-        try:
-            salt = str(random.randint(32768, 65536))
-            sign_str = f"{self.app_id}{text}{salt}{self.secret_key}"
-            sign = hashlib.md5(sign_str.encode('utf-8')).hexdigest()
-            
-            url = "https://fanyi-api.baidu.com/api/trans/vip/translate"
-            params = {
-                'q': text,
-                'from': from_lang,
-                'to': to_lang,
-                'appid': self.app_id,
-                'salt': salt,
-                'sign': sign
-            }
-            
-            response = requests.get(url, params=params, timeout=10)
-            result = response.json()
-            
-            if 'trans_result' in result and len(result['trans_result']) > 0:
-                return result['trans_result'][0]['dst']
-            else:
-                print(f"百度翻译API返回错误: {result}")
-                return None
-                
-        except Exception as e:
-            print(f"百度翻译API调用失败: {e}")
-            return None
-    
-    def _translate_local_dict(self, text: str) -> str:
-        """本地词典翻译（备用）"""
-        # 常见的AI绘画提示词翻译词典（英文到中文）
-        en_to_zh_translations = {
-            'masterpiece': '杰作',
-            'best quality': '最高质量',
-            'ultra detailed': '超详细',
-            'detailed': '详细',
-            'high quality': '高质量',
-            'beautiful': '美丽',
-            'girl': '女孩',
-            'boy': '男孩',
-            'woman': '女人',
-            'man': '男人',
-            'face': '脸',
-            'eyes': '眼睛',
-            'hair': '头发',
-            'long hair': '长发',
-            'short hair': '短发',
-            'dress': '裙子',
-            'clothing': '衣服',
-            'elegant': '优雅',
-            'cute': '可爱',
-            'pretty': '漂亮',
-            'smile': '微笑',
-            'portrait': '肖像',
-            'landscape': '风景',
-            'background': '背景',
-            'lighting': '光线',
-            'soft lighting': '柔和光线',
-            'natural lighting': '自然光线',
-            'sunset': '日落',
-            'sunrise': '日出',
-            'night': '夜晚',
-            'day': '白天',
-            'outdoors': '户外',
-            'indoors': '室内',
-            'nature': '自然',
-            'forest': '森林',
-            'beach': '海滩',
-            'mountain': '山',
-            'sky': '天空',
-            'cloud': '云',
-            'flower': '花',
-            'tree': '树',
-            'anime': '动漫',
-            'realistic': '写实',
-            'digital art': '数字艺术',
-            'painting': '绘画',
-            'illustration': '插画',
-            'concept art': '概念艺术',
-            'fantasy': '幻想',
-            'sci-fi': '科幻',
-            'futuristic': '未来主义',
-            'retro': '复古',
-            'vintage': 'vintage',
-            'modern': '现代',
-            'traditional': '传统',
-            'japanese': '日式',
-            'chinese': '中式',
-            'western': '西式',
-            'colorful': '多彩',
-            'monochrome': '单色',
-            'black and white': '黑白',
-            'vibrant': '鲜艳',
-            'pastel': '粉彩',
-            'dark': '黑暗',
-            'bright': '明亮',
-            'warm': '温暖',
-            'cool': '冷色',
-            'artistic': '艺术性',
-            'creative': '创意',
-            'unique': '独特',
-            'amazing': '惊人',
-            'stunning': '令人惊叹',
-            'gorgeous': '华丽',
-            'perfect': '完美',
-            'excellent': '优秀',
-            'professional': '专业',
-            'studio': '工作室',
-            'photography': '摄影',
-            'render': '渲染',
-            '3d': '3D',
-            '2d': '2D',
-            'texture': '纹理',
-            'material': '材质',
-            'shading': '阴影',
-            'reflection': '反射',
-            'transparent': '透明',
-            'glossy': '光泽',
-            'matte': '哑光',
-            'metallic': '金属',
-            'wooden': '木质',
-            'fabric': '布料',
-            'leather': '皮革',
-            'glass': '玻璃',
-            'crystal': '水晶',
-            'jewelry': '珠宝',
-            'accessories': '配饰',
-            'weapon': '武器',
-            'armor': '盔甲',
-            'magic': '魔法',
-            'spell': '法术',
-            'dragon': '龙',
-            'fairy': '仙女',
-            'angel': '天使',
-            'demon': '恶魔',
-            'castle': '城堡',
-            'palace': '宫殿',
-            'temple': '神庙',
-            'church': '教堂',
-            'city': '城市',
-            'village': '村庄',
-            'room': '房间',
-            'bedroom': '卧室',
-            'kitchen': '厨房',
-            'garden': '花园',
-            'park': '公园',
-            'street': '街道',
-            'bridge': '桥',
-            'river': '河流',
-            'lake': '湖',
-            'ocean': '海洋',
-            'island': '岛屿',
-            'desert': '沙漠',
-            'snow': '雪',
-            'rain': '雨',
-            'storm': '暴风雨',
-            'rainbow': '彩虹',
-            'star': '星星',
-            'moon': '月亮',
-            'sun': '太阳',
-            'planet': '行星',
-            'space': '太空',
-            'galaxy': '银河',
-            'universe': '宇宙'
+            # 光照相关
+            "柔和光照": "soft lighting",
+            "戏剧性光照": "dramatic lighting",
+            "自然光": "natural light",
+            "暖色调": "warm colors",
+            "冷色调": "cool colors"
         }
         
-        # 创建中文到英文的反向词典
-        zh_to_en_translations = {v: k for k, v in en_to_zh_translations.items()}
-        
-        # 根据文本内容判断是中译英还是英译中
-        if self._is_chinese_text(text):
-            # 中译英
-            # 首先尝试完全匹配
-            if text in zh_to_en_translations:
-                return zh_to_en_translations[text]
-            
-            # 如果没有完全匹配，尝试部分匹配
-            for zh, en in zh_to_en_translations.items():
-                if zh in text:
-                    return text.replace(zh, en)
-            
-            # 如果都没有匹配，返回原文并标记
-            return f"{text}(untranslated)"
-        else:
-            # 英译中
-            # 首先尝试完全匹配
-            text_lower = text.lower()
-            if text_lower in en_to_zh_translations:
-                return en_to_zh_translations[text_lower]
-            
-            # 如果没有完全匹配，尝试部分匹配
-            for en, zh in en_to_zh_translations.items():
-                if en in text_lower:
-                    return text.replace(en, zh)
-            
-            # 如果都没有匹配，返回原文并标记
-            return f"{text}(未翻译)"
+        print(f"AI图片生成提示词翻译器初始化完成 - 模型: {self.model}")
     
-    def _is_chinese_text(self, text: str) -> bool:
-        """判断文本是否主要包含中文字符"""
-        chinese_char_count = 0
-        total_char_count = len(text.strip())
+    def contains_chinese(self, text: str) -> bool:
+        """检查文本是否包含中文"""
+        return bool(re.search(r'[\u4e00-\u9fff]', text))
+    
+    def parse_prompts(self, text: str) -> List[str]:
+        """智能解析提示词文本"""
+        if not text.strip():
+            return []
         
-        if total_char_count == 0:
-            return False
+        # 使用逗号、分号、换行符分割
+        prompts = []
+        for delimiter in [',', '，', ';', '；', '\n']:
+            if delimiter in text:
+                parts = text.split(delimiter)
+                prompts = [p.strip() for p in parts if p.strip()]
+                break
+        
+        # 如果没有分隔符，按空格分割（但保留短语完整性）
+        if not prompts:
+            # 检查是否是长描述文本
+            if len(text) > 100 and ('.' in text or '。' in text):
+                prompts = [text.strip()]  # 作为整体处理
+            else:
+                # 按空格分割，但尝试保持短语完整
+                words = text.split()
+                prompts = []
+                current_phrase = []
+                
+                for word in words:
+                    current_phrase.append(word)
+                    # 如果遇到常见的完整词组，结束当前短语
+                    phrase = ' '.join(current_phrase)
+                    if any(term in phrase.lower() for term in ['best quality', 'high quality', 'ultra detailed']):
+                        prompts.append(phrase)
+                        current_phrase = []
+                
+                # 添加剩余的词
+                if current_phrase:
+                    prompts.append(' '.join(current_phrase))
+        
+        return [p.strip() for p in prompts if p.strip()]
+    
+    def get_translation_prompt(self, is_chinese_to_english: bool) -> str:
+        """获取翻译提示词"""
+        if is_chinese_to_english:
+            return """你是专业的AI图片生成提示词翻译专家。请将中文描述翻译成标准的英文AI图片生成提示词。
+
+翻译规则：
+1. 使用AI绘画社区的标准英文术语
+2. 保持简洁的标签格式，避免完整句子
+3. 优先使用通用关键词（如：masterpiece, best quality, detailed等）
+4. 人物描述要准确（beautiful girl, long hair, smile等）
+5. 场景和风格描述要专业（cyberpunk, realistic, anime style等）
+6. 技术术语保持英文（4K, UHD, high resolution等）
+
+示例：
+中文：杰作，最高质量，美丽的女孩，长发，微笑，动漫风格
+英文：masterpiece, best quality, beautiful girl, long hair, smile, anime style
+
+请直接返回英文翻译，用逗号分隔，不要解释。"""
+        else:
+            return """你是专业的AI图片生成提示词翻译专家。请将英文AI图片生成提示词翻译成简洁的中文。
+
+翻译规则：
+1. 使用最常见的中文词汇
+2. 保持标签的简洁性
+3. 专业术语准确翻译（masterpiece→杰作，best quality→最高质量）
+4. 技术术语可保持英文（4K, HDR等）
+5. 用逗号分隔
+
+示例：
+英文：masterpiece, best quality, beautiful girl, long hair, smile, anime style
+中文：杰作，最高质量，美丽女孩，长发，微笑，动漫风格
+
+请直接返回中文翻译，用逗号分隔，不要解释。"""
+    
+    def translate_prompts_batch(self, prompts: List[str], to_english: bool = True) -> List[str]:
+        """批量翻译提示词"""
+        if not prompts:
+            return []
+        
+        # 过滤空值
+        filtered_prompts = [p.strip() for p in prompts if p.strip()]
+        if not filtered_prompts:
+            return []
+        
+        try:
+            # 使用特殊分隔符组合多个提示词
+            combined_text = " |SEP| ".join(filtered_prompts)
             
-        for char in text:
-            if '\u4e00' <= char <= '\u9fff':  # 中文字符范围
-                chinese_char_count += 1
+            system_prompt = self.get_translation_prompt(to_english)
+            user_prompt = f"请翻译以下用 |SEP| 分隔的提示词：\n{combined_text}\n\n请保持相同的分隔符格式返回结果。"
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.2,  # 低温度确保一致性
+                max_tokens=2000
+            )
+            
+            result = response.choices[0].message.content.strip()
+            
+            # 分解结果
+            translated_prompts = [p.strip() for p in result.split("|SEP|")]
+            
+            # 确保数量匹配
+            while len(translated_prompts) < len(filtered_prompts):
+                translated_prompts.append(filtered_prompts[len(translated_prompts)])
+            
+            result_list = translated_prompts[:len(filtered_prompts)]
+            
+            print(f"[批量翻译] 成功翻译 {len(filtered_prompts)} 个提示词")
+            return result_list
+            
+        except Exception as e:
+            print(f"批量翻译失败: {e}")
+            # 失败时逐个翻译
+            return self._translate_prompts_fallback(filtered_prompts, to_english)
+    
+    def _translate_prompts_fallback(self, prompts: List[str], to_english: bool = True) -> List[str]:
+        """翻译失败时的备用方案"""
+        results = []
+        system_prompt = self.get_translation_prompt(to_english)
         
-        # 如果中文字符超过50%，认为是中文文本
-        return chinese_char_count / total_char_count > 0.5
+        for i, prompt in enumerate(prompts):
+            if not prompt.strip():
+                results.append("")
+                continue
+            
+            try:
+                # 添加延迟避免请求过快
+                if i > 0:
+                    time.sleep(0.3)
+                
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.2,
+                    max_tokens=500
+                )
+                
+                result = response.choices[0].message.content.strip()
+                results.append(result)
+                print(f"[单独翻译] '{prompt}' → '{result}'")
+                
+            except Exception as e:
+                print(f"翻译失败 '{prompt}': {e}")
+                results.append(prompt)  # 保持原文
+        
+        return results
+    
+    def smart_translate(self, text: str) -> Tuple[List[str], Dict[str, str]]:
+        """
+        智能翻译：自动检测语言并翻译
+        返回: (英文提示词列表, 英文→中文映射字典)
+        """
+        if not text.strip():
+            return [], {}
+        
+        # 解析提示词
+        prompts = self.parse_prompts(text)
+        if not prompts:
+            return [], {}
+        
+        # 检测语言
+        is_chinese_input = any(self.contains_chinese(prompt) for prompt in prompts)
+        
+        english_prompts = []
+        translation_map = {}
+        
+        if is_chinese_input:
+            # 中文输入，翻译成英文
+            print(f"检测到中文输入，开始翻译 {len(prompts)} 个提示词")
+            english_prompts = self.translate_prompts_batch(prompts, to_english=True)
+            
+            # 建立英文→中文映射
+            for i in range(min(len(english_prompts), len(prompts))):
+                if english_prompts[i] and prompts[i]:
+                    translation_map[english_prompts[i]] = prompts[i]
+        else:
+            # 英文输入，获取中文翻译用于显示
+            print(f"检测到英文输入，获取中文翻译用于显示")
+            english_prompts = prompts[:]
+            chinese_translations = self.translate_prompts_batch(prompts, to_english=False)
+            
+            # 建立英文→中文映射
+            for i in range(min(len(english_prompts), len(chinese_translations))):
+                if chinese_translations[i]:
+                    translation_map[english_prompts[i]] = chinese_translations[i]
+        
+        print(f"翻译完成: 英文提示词 {len(english_prompts)} 个，映射关系 {len(translation_map)} 个")
+        return english_prompts, translation_map
 
 
-# 创建全局翻译器实例
-translator = BaiduTranslator()
+# 全局翻译器实例
+_translator_instance = None
 
+def get_translator() -> AIImagePromptTranslator:
+    """获取全局翻译器实例"""
+    global _translator_instance
+    if _translator_instance is None:
+        _translator_instance = AIImagePromptTranslator()
+    return _translator_instance
 
-def translate_prompts(prompts: List[str], from_lang: str = 'en', to_lang: str = 'zh') -> List[str]:
-    """翻译提示词列表的便捷函数"""
-    return translator.translate_prompts(prompts, from_lang, to_lang)
-
-
-def translate_text(text: str, from_lang: str = 'en', to_lang: str = 'zh') -> Optional[str]:
-    """翻译文本的便捷函数"""
-    return translator.translate_text(text, from_lang, to_lang) 
+def translate_ai_prompts(text: str) -> Tuple[List[str], Dict[str, str]]:
+    """
+    翻译AI图片生成提示词的便捷函数
+    返回: (英文提示词列表, 英文→中文映射字典)
+    """
+    translator = get_translator()
+    return translator.smart_translate(text) 
