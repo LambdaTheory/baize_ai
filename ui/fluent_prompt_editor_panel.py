@@ -56,6 +56,7 @@ class PromptEditorPanel(QWidget):
         self.input_timer.timeout.connect(self.start_translation)
         
         self.translation_worker = None
+        self.mapping_worker = None
         self.parent_widget = None
         
         self.init_ui()
@@ -348,7 +349,13 @@ class PromptEditorPanel(QWidget):
         # 创建新标签
         for english in self.english_prompts:
             chinese = self.translation_map.get(english, "")
-            tag = PromptTag(english, chinese)
+            
+            # 确保中文翻译有效且与英文不同
+            if chinese and chinese.strip() and chinese.strip() != english.strip():
+                tag = PromptTag(english, chinese)
+            else:
+                tag = PromptTag(english, "")  # 没有有效中文翻译时只显示英文
+                
             tag.deleted.connect(self.on_tag_deleted)
             
             self.tags_layout.addWidget(tag)
@@ -391,7 +398,38 @@ class PromptEditorPanel(QWidget):
             input_text = ", ".join(english_prompts)
             self.input_edit.setPlainText(input_text)
             
+            # 为了正确显示标签，需要获取中文翻译
+            self.update_translation_map_for_english_prompts()
+            
         self.update_display()
+    
+    def update_translation_map_for_english_prompts(self):
+        """为英文提示词更新翻译映射"""
+        if not self.english_prompts:
+            return
+            
+        # 启动翻译来获取中文映射，但不改变英文提示词
+        input_text = ", ".join(self.english_prompts)
+        
+        # 创建专门的翻译线程来获取中文翻译
+        if hasattr(self, 'mapping_worker') and self.mapping_worker and self.mapping_worker.isRunning():
+            self.mapping_worker.quit()
+            self.mapping_worker.wait()
+        
+        self.mapping_worker = TranslationWorker(input_text)
+        self.mapping_worker.finished.connect(self.on_mapping_translation_finished)
+        self.mapping_worker.error.connect(lambda error: print(f"获取翻译映射失败: {error}"))
+        self.mapping_worker.start()
+    
+    def on_mapping_translation_finished(self, english_prompts, translation_map):
+        """翻译映射获取完成（仅更新映射，不更新提示词）"""
+        # 只更新翻译映射，不改变现有的英文提示词
+        self.translation_map = translation_map
+        
+        print(f"[面板] 翻译映射更新完成: {len(translation_map)} 个映射关系")
+        
+        # 只更新标签显示，不更新其他部分
+        self.update_tags()
         
     def get_prompts(self):
         """获取当前提示词"""

@@ -15,8 +15,7 @@
         "and diffused",
         "likely from an overcast sky",
         "enhancing the calm and contemplative mood of the scene."
-      ],
-      "chinese_prompts": []
+      ]
     },
     {
       "title": "browser_download_c1ddc07c841e4c60972085b68384548e_正向",
@@ -42,10 +41,10 @@
         "smile",
         "highly consistent",
         "magical",
-        "big smile"
-      ],
-      "chinese_prompts": []
+        "big smile",
+        "sad"
+      ]
     }
   ],
-  "last_updated": "2025-06-30 11:23:21"
+  "last_updated": "2025-06-30 11:38:54"
 }

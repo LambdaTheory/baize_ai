@@ -29,7 +29,7 @@ class PromptTag(CardWidget):
         layout.setSpacing(4)
         
         # 显示文本 - 固定格式：英文(中文)
-        if self.chinese_text:
+        if self.chinese_text and self.chinese_text.strip() and self.chinese_text.strip() != self.english_text.strip():
             display_text = f"{self.english_text}({self.chinese_text})"
         else:
             display_text = self.english_text
@@ -105,7 +105,7 @@ class PromptTag(CardWidget):
         self.english_text = english_text
         self.chinese_text = chinese_text
         
-        if chinese_text:
+        if chinese_text and chinese_text.strip() and chinese_text.strip() != english_text.strip():
             display_text = f"{english_text}({chinese_text})"
         else:
             display_text = english_text
