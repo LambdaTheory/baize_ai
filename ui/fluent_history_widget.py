@@ -541,8 +541,9 @@ class FluentHistoryWidget(CardWidget):
             
             # 为了保持兼容性，将记录ID存储在生成信息项中
             generation_info_item.setData(Qt.UserRole, record.get('id'))
-            
-
+        
+        # 更新按钮状态，确保全部选中按钮显示正确的文本
+        self.on_selection_changed()
         
     def on_item_clicked(self, item):
         """表格项点击事件"""
@@ -560,9 +561,21 @@ class FluentHistoryWidget(CardWidget):
         """选择改变事件"""
         selected_rows = self.history_table.selectionModel().selectedRows()
         selected_count = len(selected_rows)
+        total_rows = self.history_table.rowCount()
         
         self.delete_record_btn.setEnabled(selected_count > 0)
         self.batch_export_btn.setEnabled(selected_count > 0)  # 启用/禁用批量导出按钮
+        
+        # 更新全部选中按钮文本
+        if total_rows == 0:
+            self.select_all_btn.setText("全部选中")
+            self.select_all_btn.setEnabled(False)
+        elif selected_count == total_rows:
+            self.select_all_btn.setText("取消选中")
+            self.select_all_btn.setEnabled(True)
+        else:
+            self.select_all_btn.setText("全部选中")
+            self.select_all_btn.setEnabled(True)
         
 
         
@@ -1035,23 +1048,31 @@ class FluentHistoryWidget(CardWidget):
         self.display_records(self.filtered_records)
     
     def select_all_records(self):
-        """全部选中记录"""
+        """全部选中/取消选中记录（切换状态）"""
         try:
             # 检查是否有记录
             if self.history_table.rowCount() == 0:
                 print("没有记录可以选择")
                 return
             
-            # 选择所有行
-            self.history_table.selectAll()
+            # 检查当前选择状态
+            selected_rows = self.history_table.selectionModel().selectedRows()
+            total_rows = self.history_table.rowCount()
+            
+            if len(selected_rows) == total_rows:
+                # 当前全部选中，执行取消选中操作
+                self.history_table.clearSelection()
+                print("已取消选中所有记录")
+            else:
+                # 当前未全部选中，执行全选操作
+                self.history_table.selectAll()
+                print(f"已选中所有 {total_rows} 条记录")
             
             # 触发选择改变事件以更新相关按钮状态
             self.on_selection_changed()
             
-            print(f"已选中所有 {self.history_table.rowCount()} 条记录")
-            
         except Exception as e:
-            print(f"全选记录时出错: {e}")
+            print(f"切换选择状态时出错: {e}")
             import traceback
             traceback.print_exc()
  
