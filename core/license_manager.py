@@ -12,6 +12,7 @@ import hashlib
 import platform
 import subprocess
 import uuid
+import sys
 from typing import Tuple, Optional, Dict, Any
 from pathlib import Path
 from cryptography.hazmat.primitives import hashes, serialization
@@ -28,8 +29,20 @@ class LicenseManager:
         self.version = "3.0.0"
         self.license_file = self._get_license_file_path()
         self.public_key = self._get_public_key()
-        self.trial_days = 7  # 试用期天数
+        self.trial_days = 30  # 试用期天数
         
+    def _is_no_activation_build(self) -> bool:
+        """检查是否为免激活构建版本"""
+        # 检查打包环境中的根目录
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            base_path = sys._MEIPASS
+        else:
+            # 检查开发环境中的项目根目录
+            base_path = os.path.abspath(".")
+        
+        flag_file = os.path.join(base_path, 'no_activation.flag')
+        return os.path.exists(flag_file)
+
     def _get_license_file_path(self) -> str:
         """获取许可证文件路径"""
         # 多个存储位置提高安全性
@@ -273,7 +286,20 @@ B8cD5kF6gJ7pL9rS0tU3vX4yZ5aB1dE2fG3hI4jK5lM6nO7pQ8rS9tU0vW1xY2zA
             return None
     
     def check_license_validity(self) -> Tuple[bool, str, Dict[str, Any]]:
-        """检查许可证有效性"""
+        """
+        检查许可证有效性
+        返回: (is_valid, message, license_info)
+        """
+        # 检查是否为免激活版本
+        if self._is_no_activation_build():
+            return (True, "免激活版本", {
+                "status": "activated",
+                "type": "no_activation",
+                "hardware_fingerprint": "N/A",
+                "activated_at": "N/A"
+            })
+
+        # 尝试加载和验证现有的许可证
         license_data = self._load_license_data()
         
         if not license_data:
