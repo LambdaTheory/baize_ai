@@ -416,8 +416,8 @@ class FluentMainWindow(FluentWindow):
                 # 作为完整提示词处理，不分割
                 prompts = [prompt_text.strip()]
             else:
-                # 对于短文本或标签列表格式，按逗号和句号分割
-                prompts = [prompt.strip() for prompt in re.split(r'[,，.。]', prompt_text) if prompt.strip()]
+                # 对于短文本或标签列表格式，智能分割（保护括号内的内容）
+                prompts = self.smart_split_prompts(prompt_text)
             print(f"解析后的提示词: {prompts}")
             
             # 切换到提示词编辑页面
@@ -509,6 +509,56 @@ class FluentMainWindow(FluentWindow):
         save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
         save_shortcut.activated.connect(self.business_logic.save_record)
         print("设置Ctrl+S快捷键")
+    
+    def smart_split_prompts(self, text):
+        """智能分割提示词，保护括号内的内容"""
+        import re
+        
+        # 如果文本很短或没有特殊字符，直接返回
+        if len(text.strip()) < 10 or not re.search(r'[,，.。]', text):
+            return [text.strip()]
+        
+        prompts = []
+        current_prompt = ""
+        bracket_stack = []  # 用于跟踪括号嵌套
+        i = 0
+        
+        # 定义括号对
+        open_brackets = {'(': ')', '[': ']', '{': '}', '（': '）', '【': '】', '〈': '〉'}
+        close_brackets = {v: k for k, v in open_brackets.items()}
+        
+        while i < len(text):
+            char = text[i]
+            
+            # 检查是否是开括号
+            if char in open_brackets:
+                bracket_stack.append(char)
+                current_prompt += char
+            # 检查是否是闭括号
+            elif char in close_brackets:
+                if bracket_stack and bracket_stack[-1] == close_brackets[char]:
+                    bracket_stack.pop()
+                current_prompt += char
+            # 检查是否是分隔符
+            elif char in ',，.。' and not bracket_stack:
+                # 只有在括号外才分割
+                if current_prompt.strip():
+                    prompts.append(current_prompt.strip())
+                current_prompt = ""
+            else:
+                current_prompt += char
+            
+            i += 1
+        
+        # 添加最后一个提示词
+        if current_prompt.strip():
+            prompts.append(current_prompt.strip())
+        
+        # 如果分割结果为空或只有一个很长的项，回退到简单分割
+        if not prompts or (len(prompts) == 1 and len(prompts[0]) > 200):
+            return [prompt.strip() for prompt in re.split(r'[,，.。]', text) if prompt.strip()]
+        
+        return prompts
         
     def on_user_input_changed(self):
         """用户输入变化时的处理"""

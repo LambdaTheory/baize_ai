@@ -159,7 +159,47 @@
         "intelligent": "聪明",
         "wearing glasses": "戴眼镜"
       }
+    },
+    {
+      "title": "browser_download_ee79b4343fcb466ab59b081721d5fb62_正向",
+      "english_prompts": [
+        "8K",
+        "best quality",
+        "masterpiece",
+        "ultra high res",
+        "(photorealistic:1",
+        "4)",
+        "raw photo",
+        "(authentic skin texture:1",
+        "3)",
+        "(film grain:1",
+        "3)",
+        "(selfie angle)",
+        "1 girl",
+        "beautiful detailed eyes and face",
+        "masterpiece",
+        "best quality",
+        "close-up",
+        "upper body"
+      ],
+      "translation_map": {
+        "8K": "8K",
+        "best quality": "最高质量",
+        "masterpiece": "杰作",
+        "ultra high res": "超高分辨率",
+        "(photorealistic:1": "(摄影写实:1",
+        "4)": "4)",
+        "raw photo": "原始照片",
+        "(authentic skin texture:1": "(真实皮肤纹理:1",
+        "3)": "3)",
+        "(film grain:1": "(胶卷颗粒:1",
+        "(selfie angle)": "(自拍角度)",
+        "1 girl": "1女孩",
+        "beautiful detailed eyes and face": "美丽细致的眼睛和脸",
+        "close-up": "特写",
+        "upper body": "上半身"
+      }
     }
   ],
-  "last_updated": "2025-07-01 11:05:29"
+  "last_updated": "2025-07-01 11:10:19"
 }
