@@ -146,27 +146,6 @@ class FluentMainWindow(FluentWindow):
         # 显示默认页面
         self.stackedWidget.setCurrentWidget(self.extraction_interface)
         
-
-        
-    def create_extraction_interface(self):
-        """创建信息提取界面 - 使用新的布局管理器"""
-        # 创建信息提取布局管理器
-        self.extraction_layout = FluentExtractionLayout(self)
-        self.extraction_interface = self.extraction_layout.create_extraction_interface()
-        
-        # 设置对象名称已在create_extraction_interface方法中完成
-        
-        # 组件引用已经在FluentExtractionLayout中直接设置到self上了
-        # 不需要额外的引用设置，因为FluentExtractionLayout直接操作self.parent（即self）
-        
-        # 创建拖拽蒙层
-        self.drag_overlay = DragOverlay(self.extraction_interface)
-        
-        # 重写拖拽事件
-        self.extraction_interface.dragEnterEvent = self.event_handlers.handle_drag_enter_event
-        self.extraction_interface.dragLeaveEvent = self.event_handlers.handle_drag_leave_event
-        self.extraction_interface.dropEvent = self.event_handlers.handle_drop_event
-        
     def on_prompt_text_changed(self):
         """提示词文本变化时的处理（不自动保存，仅用于标记状态）"""
         # 这里可以添加一些UI状态更新，比如标记提示词已修改

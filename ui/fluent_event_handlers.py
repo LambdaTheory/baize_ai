@@ -7,12 +7,62 @@ Fluent Design 事件处理器
 
 import os
 from PyQt5.QtWidgets import QApplication, QMessageBox, QFileDialog
-from PyQt5.QtCore import Qt, QObject, pyqtSignal
+from PyQt5.QtCore import Qt, QObject, pyqtSignal, QThread
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QImage
 from qfluentwidgets import InfoBar, InfoBarPosition
 import tempfile
 import uuid
 import requests
+import base64
+
+
+class BrowserImageDownloader(QObject):
+    """下载并保存浏览器拖拽的图片工作线程"""
+    finished = pyqtSignal(str, str)        # 信号 (download_id, file_path)
+    error = pyqtSignal(str, str)           # 信号 (download_id, error_message)
+    progress_updated = pyqtSignal(str, int)  # 信号 (download_id, percentage)
+
+    def __init__(self, url_string, download_id, parent=None):
+        super().__init__(parent)
+        self.url_string = url_string
+        self.download_id = download_id
+
+    def run(self):
+        """执行下载任务"""
+        try:
+            temp_dir = tempfile.gettempdir()
+            temp_filename = f"browser_download_{uuid.uuid4().hex}.png"
+            temp_path = os.path.join(temp_dir, temp_filename)
+
+            if self.url_string.startswith('data:image/'):
+                self.progress_updated.emit(self.download_id, 20)
+                header, data = self.url_string.split(',', 1)
+                image_data = base64.b64decode(data)
+                self.progress_updated.emit(self.download_id, 60)
+                with open(temp_path, 'wb') as f:
+                    f.write(image_data)
+                self.progress_updated.emit(self.download_id, 100)
+                self.finished.emit(self.download_id, temp_path)
+            else:
+                response = requests.get(self.url_string, timeout=20, stream=True)
+                response.raise_for_status()
+                
+                total_size = int(response.headers.get('content-length', 0))
+                downloaded_size = 0
+                
+                with open(temp_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded_size += len(chunk)
+                            if total_size > 0:
+                                percentage = int((downloaded_size / total_size) * 100)
+                                self.progress_updated.emit(self.download_id, percentage)
+                
+                self.finished.emit(self.download_id, temp_path)
+        except Exception as e:
+            error_msg = f"下载图片失败: {e}"
+            self.error.emit(self.download_id, error_msg)
 
 
 class FluentEventHandlers(QObject):
@@ -26,6 +76,8 @@ class FluentEventHandlers(QObject):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
+        self.download_threads = [] # 用于保持线程引用
+        self.download_info_bars = {} # 用于管理进度条
         
     def handle_positive_translate_clicked(self):
         """处理正向提示词跳转翻译按钮点击"""
@@ -209,49 +261,41 @@ class FluentEventHandlers(QObject):
                 elif file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
                     files.append(file_path)
             else:
-                # 处理从浏览器拖拽的网络图片URL
+                # 异步处理从浏览器拖拽的网络图片URL
                 url_string = url.toString()
-                try:
-                    # 检查是否是支持的图片URL
-                    if (url_string.lower().endswith(('.png', '.jpg', '.jpeg')) or 
-                        'data:image/' in url_string.lower() or
-                        any(service in url_string.lower() for service in ['blob:', 'localhost:', '127.0.0.1:', 'webui', 'comfyui'])):
-                        
-                        # 下载图片到临时文件
-                        temp_dir = tempfile.gettempdir()
-                        temp_filename = f"browser_download_{uuid.uuid4().hex}.png"
-                        temp_path = os.path.join(temp_dir, temp_filename)
-                        
-                        # 处理不同类型的URL
-                        if url_string.startswith('data:image/'):
-                            # Base64编码的图片数据
-                            import base64
-                            header, data = url_string.split(',', 1)
-                            image_data = base64.b64decode(data)
-                            with open(temp_path, 'wb') as f:
-                                f.write(image_data)
-                            files.append(temp_path)
-                        else:
-                            # HTTP/HTTPS URL或本地服务器URL
-                            response = requests.get(url_string, timeout=10)
-                            response.raise_for_status()
-                            
-                            with open(temp_path, 'wb') as f:
-                                f.write(response.content)
-                            files.append(temp_path)
-                            
-                except Exception as e:
-                    print(f"下载图片失败: {url_string}, 错误: {e}")
-                    InfoBar.warning(
-                        title="图片下载失败",
-                        content=f"无法从浏览器下载图片: {str(e)[:50]}...",
-                        orient=Qt.Horizontal,
-                        isClosable=True,
-                        position=InfoBarPosition.TOP,
-                        duration=3000,
-                        parent=self.parent
-                    )
-                    continue
+                download_id = str(uuid.uuid4())
+                
+                # 创建并显示进度条
+                info_bar = InfoBar.info(
+                    title="准备下载",
+                    content="正在从浏览器下载图片... 0%",
+                    orient=Qt.Horizontal,
+                    isClosable=False, # 进度条不可手动关闭
+                    position=InfoBarPosition.TOP,
+                    duration=-1, # -1表示不自动关闭
+                    parent=self.parent
+                )
+                self.download_info_bars[download_id] = info_bar
+                
+                thread = QThread()
+                worker = BrowserImageDownloader(url_string, download_id)
+                worker.moveToThread(thread)
+
+                # 连接信号和槽
+                worker.progress_updated.connect(self._on_download_progress)
+                worker.finished.connect(self._on_download_finished)
+                worker.error.connect(self._on_download_error)
+                thread.started.connect(worker.run)
+
+                # 线程结束后自动清理
+                worker.finished.connect(thread.quit)
+                worker.finished.connect(worker.deleteLater)
+                thread.finished.connect(thread.deleteLater)
+
+                thread.start()
+                
+                # 保存线程引用，防止被垃圾回收
+                self.download_threads.append((thread, worker))
         
         # 优先处理文件夹（批量处理）
         if folders:
@@ -259,18 +303,48 @@ class FluentEventHandlers(QObject):
             self.handle_folder_dropped(folders[0])
         elif files:
             self.handle_files_dropped(files)
-            if any('browser_' in f for f in files):
-                InfoBar.success(
-                    title="浏览器图片处理成功",
-                    content="从浏览器拖拽的图片已成功加载",
-                    orient=Qt.Horizontal,
-                    isClosable=True,
-                    position=InfoBarPosition.TOP,
-                    duration=3000,
-                    parent=self.parent
-                )
         
         event.accept()
+
+    def _on_download_progress(self, download_id, percentage):
+        """更新下载进度条"""
+        if download_id in self.download_info_bars:
+            info_bar = self.download_info_bars[download_id]
+            if hasattr(info_bar, 'contentLabel'):
+                info_bar.contentLabel.setText(f"正在从浏览器下载图片... {percentage}%")
+
+    def _on_download_finished(self, download_id, file_path):
+        """浏览器图片下载成功后的处理"""
+        # 移除并关闭进度条
+        if download_id in self.download_info_bars:
+            self.download_info_bars.pop(download_id).close()
+
+        InfoBar.success(
+            title="下载成功",
+            content="浏览器图片已成功加载！",
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=3000,
+            parent=self.parent
+        )
+        self.handle_files_dropped([file_path])
+
+    def _on_download_error(self, download_id, error_message):
+        """浏览器图片下载失败后的处理"""
+        # 移除并关闭进度条
+        if download_id in self.download_info_bars:
+            self.download_info_bars.pop(download_id).close()
+
+        InfoBar.error(
+            title="下载失败",
+            content=error_message,
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=5000,
+            parent=self.parent
+        )
     
     def handle_gallery_record_selected(self, record_data):
         """画廊记录选中事件"""

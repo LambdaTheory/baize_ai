@@ -233,7 +233,30 @@ class FluentHistoryWidget(CardWidget):
             }}
         """)
         
+        # 全部选中按钮
+        self.select_all_btn = PushButton("全部选中")
+        self.select_all_btn.setFixedHeight(36)
+        self.select_all_btn.setMinimumWidth(100)
+        
+        # 设置全部选中按钮样式
+        self.select_all_btn.setStyleSheet(f"""
+            PushButton {{
+                background-color: {FluentColors.get_color('accent')};
+                border: 1px solid {FluentColors.get_color('accent')};
+                color: white;
+            }}
+            PushButton:hover {{
+                background-color: #059669;
+                border: 1px solid #059669;
+            }}
+            PushButton:pressed {{
+                background-color: #047857;
+                border: 1px solid #047857;
+            }}
+        """)
+        
         button_layout.addWidget(self.refresh_btn)
+        button_layout.addWidget(self.select_all_btn)
         button_layout.addWidget(self.batch_export_btn)
         button_layout.addWidget(self.delete_record_btn)
         button_layout.addWidget(self.delete_all_btn)
@@ -348,6 +371,7 @@ class FluentHistoryWidget(CardWidget):
         self.delete_all_btn.clicked.connect(self.delete_all_records)
         self.refresh_btn.clicked.connect(self.load_history)
         self.batch_export_btn.clicked.connect(self.batch_export_selected)
+        self.select_all_btn.clicked.connect(self.select_all_records)
         
         # 搜索相关
         self.search_edit.textChanged.connect(self.on_search_text_changed)  # 只用于启用/禁用按钮
@@ -1009,4 +1033,25 @@ class FluentHistoryWidget(CardWidget):
         self.clear_search_btn.setEnabled(False)
         self.filtered_records = self.history_records.copy()
         self.display_records(self.filtered_records)
+    
+    def select_all_records(self):
+        """全部选中记录"""
+        try:
+            # 检查是否有记录
+            if self.history_table.rowCount() == 0:
+                print("没有记录可以选择")
+                return
+            
+            # 选择所有行
+            self.history_table.selectAll()
+            
+            # 触发选择改变事件以更新相关按钮状态
+            self.on_selection_changed()
+            
+            print(f"已选中所有 {self.history_table.rowCount()} 条记录")
+            
+        except Exception as e:
+            print(f"全选记录时出错: {e}")
+            import traceback
+            traceback.print_exc()
  

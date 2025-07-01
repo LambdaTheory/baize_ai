@@ -10,6 +10,7 @@ import sys
 import shutil
 import subprocess
 from pathlib import Path
+import argparse
 
 def clean_build_dirs():
     """清理构建目录"""
@@ -50,17 +51,23 @@ def clean_temp_files():
                 os.remove(os.path.join(root, file))
                 print(f"已删除缓存文件: {os.path.join(root, file)}")
 
-def build_exe():
+def build_exe(no_activation: bool = False):
     """构建exe文件"""
     print("开始构建exe文件...")
-    
+
+    if no_activation:
+        print("构建免激活版本...")
+        flag_file = Path("no_activation.flag")
+        flag_file.touch()
+        print("已创建免激活标记文件: no_activation.flag")
+
     # PyInstaller 命令参数
     cmd = [
         'pyinstaller',
         '--onefile',                    # 打包成单个exe文件
         '--windowed',                   # 隐藏控制台窗口
         '--name=白泽',      # 指定exe文件名
-        '--icon=assets/app_icon_pyinstaller.ico',  # 白泽AI应用图标（PyInstaller兼容ICO）
+        '--icon=assets/icons/baize_app_icon_generated.ico',  # 使用新生成的高质量ICO
         '--add-data=assets;assets',     # 只包含assets目录
         '--hidden-import=PyQt5.sip',    # 确保PyQt5正确导入
         '--hidden-import=PIL._tkinter_finder',  # Pillow依赖
@@ -81,19 +88,22 @@ def build_exe():
         '--exclude-module=test_*',
         'main.py'                       # 主文件
     ]
+
+    if no_activation:
+        cmd.append('--add-data=no_activation.flag;.')
     
     # 检查图标文件是否存在
-    if not os.path.exists('assets/app_icon_pyinstaller.ico'):
-        print("警告: 图标文件 assets/app_icon_pyinstaller.ico 不存在，将使用默认图标")
+    if not os.path.exists('assets/icons/baize_app_icon_generated.ico'):
+        print("警告: 图标文件 assets/icons/baize_app_icon_generated.ico 不存在，将使用默认图标")
         cmd = [c for c in cmd if not c.startswith('--icon')]
     
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
         print("构建成功！")
-        print("exe文件位置: dist/白泽AI.exe")
+        print("exe文件位置: dist/白泽.exe")
         
         # 显示文件大小
-        exe_path = "dist/白泽AI.exe"
+        exe_path = "dist/白泽.exe"
         if os.path.exists(exe_path):
             file_size = os.path.getsize(exe_path) / (1024 * 1024)  # MB
             print(f"文件大小: {file_size:.1f} MB")
@@ -103,9 +113,17 @@ def build_exe():
         print(f"构建失败: {e}")
         print(f"错误输出: {e.stderr}")
         return False
+    finally:
+        if no_activation and 'flag_file' in locals() and flag_file.exists():
+            flag_file.unlink()
+            print("已清理免激活标记文件。")
 
 def main():
     """主函数"""
+    parser = argparse.ArgumentParser(description="白泽AI - exe打包程序")
+    parser.add_argument('--no-activation', action='store_true', help='构建一个不需要激活的版本')
+    args = parser.parse_args()
+
     print("=== 白泽AI - exe打包程序 ===")
     
     # 检查pyinstaller是否安装
@@ -123,7 +141,7 @@ def main():
     clean_build_dirs()
     
     # 开始构建
-    success = build_exe()
+    success = build_exe(no_activation=args.no_activation)
     
     if success:
         print("\n构建完成！您可以在 dist/ 目录中找到生成的exe文件。")

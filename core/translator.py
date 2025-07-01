@@ -9,9 +9,10 @@ import os
 import re
 import time
 from typing import List, Optional, Dict, Tuple
-from openai import OpenAI
+from openai import OpenAI, APIConnectionError
 from core.cache_manager import get_cache_manager
 
+PROMPT_SEPARATOR = "[/-_PROMPT_SEPARATOR_-/]"
 
 class AIImagePromptTranslator:
     """AI图片生成提示词专用翻译器"""
@@ -132,7 +133,7 @@ class AIImagePromptTranslator:
     def get_translation_prompt(self, is_chinese_to_english: bool) -> str:
         """获取翻译提示词"""
         if is_chinese_to_english:
-            return """你是专业的AI图片生成提示词翻译专家。请将中文描述翻译成标准的英文AI图片生成提示词。
+            return f"""你是专业的AI图片生成提示词翻译专家。请将中文描述翻译成标准的英文AI图片生成提示词。
 
 翻译规则：
 1. 使用AI绘画社区的标准英文术语
@@ -146,26 +147,27 @@ class AIImagePromptTranslator:
 中文：杰作，最高质量，美丽的女孩，长发，微笑，动漫风格
 英文：masterpiece, best quality, beautiful girl, long hair, smile, anime style
 
-请直接返回英文翻译，用逗号分隔，不要解释。"""
+请直接返回英文翻译，并使用 `{PROMPT_SEPARATOR}` 分隔，不要解释。"""
         else:
-            return """你是专业的AI图片生成提示词翻译专家。请将英文AI图片生成提示词翻译成简洁的中文。
+            return f"""你是专业的AI图片生成提示词翻译专家。请将英文AI图片生成提示词翻译成简洁的中文。
 
 翻译规则：
 1. 使用最常见的中文词汇
 2. 保持标签的简洁性
 3. 专业术语准确翻译（masterpiece→杰作，best quality→最高质量）
 4. 技术术语可保持英文（4K, HDR等）
-5. 用逗号分隔
+5. 使用 `{PROMPT_SEPARATOR}` 分隔
 
 示例：
 英文：masterpiece, best quality, beautiful girl, long hair, smile, anime style
 中文：杰作，最高质量，美丽女孩，长发，微笑，动漫风格
 
-请直接返回中文翻译，用逗号分隔，不要解释。"""
+请直接返回中文翻译，并使用 `{PROMPT_SEPARATOR}` 分隔，不要解释。"""
     
     def translate_prompts_batch(self, prompts: List[str], to_english: bool = True) -> List[str]:
         """
         批量翻译提示词，并集成缓存机制。
+        如果批量失败，则自动降级为逐个翻译。
         """
         if not prompts:
             return []
@@ -195,75 +197,122 @@ class AIImagePromptTranslator:
             original_indices = [item[0] for item in prompts_to_translate]
             prompts_for_api = [item[1] for item in prompts_to_translate]
             
-            try:
-                print(f"调用API翻译 {len(prompts_for_api)} 个新提示词...")
-                combined_text = " |SEP| ".join(prompts_for_api)
-                system_prompt = self.get_translation_prompt(to_english)
-                user_prompt = f"请翻译以下用 |SEP| 分隔的提示词：\n{combined_text}\n\n请保持相同的分隔符格式返回结果。"
+            batch_failed = False
+            max_retries = 3
+            last_exception = None
+
+            for attempt in range(max_retries):
+                try:
+                    print(f"调用API批量翻译 (第 {attempt + 1}/{max_retries} 次)...")
+                    combined_text = f" {PROMPT_SEPARATOR} ".join(prompts_for_api)
+                    system_prompt = self.get_translation_prompt(to_english)
+                    user_prompt = f"请翻译以下用 `{PROMPT_SEPARATOR}` 分隔的提示词：\n{combined_text}\n\n请保持相同的分隔符格式返回结果。"
+                    
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.2, max_tokens=2000
+                    )
+                    
+                    api_results_raw = response.choices[0].message.content.strip()
+                    api_results = [p.strip().strip('`') for p in api_results_raw.split(PROMPT_SEPARATOR)]
+
+                    if len(api_results) != len(prompts_for_api):
+                        raise ValueError(f"翻译结果数量({len(api_results)})与输入({len(prompts_for_api)})不匹配")
+                    
+                    # 3. 更新缓存和结果
+                    for i, translated_prompt in enumerate(api_results):
+                        original_index = original_indices[i]
+                        original_prompt = prompts_for_api[i]
+                        
+                        results[original_index] = translated_prompt
+                        cache_key = f"{cache_prefix}:{original_prompt}"
+                        self.cache_manager.set(cache_key, translated_prompt)
+                    
+                    last_exception = None
+                    break
+
+                except (APIConnectionError, ValueError) as e:
+                    last_exception = e
+                    print(f"批量翻译失败 (第 {attempt + 1} 次): {e}")
+                    if attempt < max_retries - 1:
+                        time.sleep(1)
+                    else:
+                        print("批量翻译达到最大重试次数。")
+                        batch_failed = True
                 
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    temperature=0.2, max_tokens=2000
-                )
-                
-                api_results_raw = response.choices[0].message.content.strip()
-                api_results = [p.strip() for p in api_results_raw.split("|SEP|")]
-                
-                # 3. 更新缓存和结果
-                for i, translated_prompt in enumerate(api_results):
+                except Exception as e:
+                    last_exception = e
+                    print(f"批量翻译遇到未知错误 (第 {attempt + 1} 次): {e}")
+                    if attempt < max_retries - 1:
+                        time.sleep(1)
+                    else:
+                        print("批量翻译达到最大重试次数。")
+                        batch_failed = True
+
+            if batch_failed:
+                print("批量翻译失败，降级为逐个翻译...")
+                fallback_results = self._translate_prompts_fallback(prompts_for_api, to_english)
+                for i, translated_prompt in enumerate(fallback_results):
                     original_index = original_indices[i]
                     original_prompt = prompts_for_api[i]
                     
                     results[original_index] = translated_prompt
-                    cache_key = f"{cache_prefix}:{original_prompt}"
-                    self.cache_manager.set(cache_key, translated_prompt)
-                
-            except Exception as e:
-                print(f"API批量翻译失败: {e}，将使用原文作为结果。")
-                for i, original_prompt in enumerate(prompts_for_api):
-                    original_index = original_indices[i]
-                    results[original_index] = original_prompt # 出错时返回原文
-        
+                    # 只有成功翻译的才缓存
+                    if translated_prompt != original_prompt:
+                         cache_key = f"{cache_prefix}:{original_prompt}"
+                         self.cache_manager.set(cache_key, translated_prompt)
+
         # 4. 按原始顺序组装最终结果
         final_results = [results[i] for i in range(len(filtered_prompts))]
         return final_results
     
     def _translate_prompts_fallback(self, prompts: List[str], to_english: bool = True) -> List[str]:
-        """翻译失败时的备用方案"""
+        """翻译失败时的备用方案，带重试机制"""
         results = []
-        system_prompt = self.get_translation_prompt(to_english)
+        system_prompt = self.get_translation_prompt(to_english).replace(PROMPT_SEPARATOR, "") # 单个翻译不需要分隔符
         
         for i, prompt in enumerate(prompts):
             if not prompt.strip():
                 results.append("")
                 continue
             
-            try:
-                # 添加延迟避免请求过快
-                if i > 0:
-                    time.sleep(0.3)
-                
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.2,
-                    max_tokens=500
-                )
-                
-                result = response.choices[0].message.content.strip()
-                results.append(result)
-                print(f"[单独翻译] '{prompt}' → '{result}'")
-                
-            except Exception as e:
-                print(f"翻译失败 '{prompt}': {e}")
-                results.append(prompt)  # 保持原文
+            max_retries = 3
+            last_exception = None
+            
+            for attempt in range(max_retries):
+                try:
+                    if i > 0 and attempt == 0: # 仅在第一次尝试时延迟
+                        time.sleep(0.3)
+
+                    response = self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": prompt}
+                        ],
+                        temperature=0.2,
+                        max_tokens=500
+                    )
+                    
+                    result = response.choices[0].message.content.strip().strip('`')
+                    results.append(result)
+                    print(f"[单独翻译成功] '{prompt}' → '{result}'")
+                    last_exception = None
+                    break
+                    
+                except Exception as e:
+                    last_exception = e
+                    print(f"单独翻译 '{prompt}' 失败 (第 {attempt + 1} 次): {e}")
+                    if attempt < max_retries - 1:
+                        time.sleep(1)
+
+            if last_exception:
+                print(f"单独翻译 '{prompt}' 达到最大重试次数，保持原文。")
+                results.append(prompt)
         
         return results
     

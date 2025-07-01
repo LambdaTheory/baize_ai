@@ -330,7 +330,18 @@ class PromptEditorPanel(QWidget):
     def on_translation_error(self, error_msg):
         """翻译错误"""
         print(f"[面板] 翻译错误: {error_msg}")
-        self.preview_edit.setPlainText(f"翻译失败: {error_msg}")
+        # 恢复预览框为之前的状态
+        self.update_preview()
+
+        InfoBar.error(
+            title="翻译失败",
+            content=f"翻译服务遇到问题，请稍后重试。错误: {error_msg}",
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=5000,
+            parent=self
+        )
         
     def update_display(self):
         """更新显示"""

@@ -117,7 +117,13 @@
         "happy",
         "sad",
         "confused",
-        "crying"
+        "crying",
+        "sexy",
+        "glass-like",
+        "beautiful",
+        "gentle",
+        "intelligent",
+        "wearing glasses"
       ],
       "translation_map": {
         "aidmafluxpro1": "aidmafluxpro1",
@@ -145,9 +151,15 @@
         "humorous": "幽默",
         "happy": "快乐",
         "confused": "困惑",
-        "crying": "哭泣"
+        "crying": "哭泣",
+        "sexy": "性感",
+        "glass-like": "玻璃般",
+        "beautiful": "美丽",
+        "gentle": "温柔",
+        "intelligent": "聪明",
+        "wearing glasses": "戴眼镜"
       }
     }
   ],
-  "last_updated": "2025-06-30 14:46:56"
+  "last_updated": "2025-07-01 10:56:35"
 }

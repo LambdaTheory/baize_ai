@@ -229,6 +229,8 @@ class FluentPromptReverserWidget(QWidget):
         self.worker = None
         self.api_test_worker = None  # 添加API测试工作线程
         self.settings = QSettings("PicTool", "PromptReverser")
+        self.api_key = ""
+        self.base_url = ""
         self.init_ui()
         self.load_settings()
         
@@ -286,38 +288,6 @@ class FluentPromptReverserWidget(QWidget):
         
         self.image_info_card.setLayout(info_layout)
         layout.addWidget(self.image_info_card)
-        
-        # API设置
-        api_card = FluentSettingsCard("API设置")
-        api_card.setFixedHeight(160)  # 增加高度以容纳更多内容
-        
-        # 创建垂直布局用于多行设置
-        api_content_layout = QVBoxLayout()
-        api_content_layout.setSpacing(FluentSpacing.SM)
-        
-        # API Key输入
-        api_key_layout = QHBoxLayout()
-        api_key_layout.addWidget(QLabel("API Key:"))
-        self.api_key_edit = LineEdit()
-        self.api_key_edit.setPlaceholderText("请输入API Key")
-        self.api_key_edit.setEchoMode(LineEdit.Password)
-        self.api_key_edit.setText("sk-CnEoNNdwU8KeJfIoEg6rcNeLeO5XbF3HafEMckZkuZXvKSGS")  # 设置默认值
-        api_key_layout.addWidget(self.api_key_edit)
-        api_content_layout.addLayout(api_key_layout)
-        
-        # Base URL输入
-        base_url_layout = QHBoxLayout()
-        base_url_layout.addWidget(QLabel("Base URL:"))
-        self.base_url_edit = LineEdit()
-        self.base_url_edit.setPlaceholderText("API基础URL")
-        self.base_url_edit.setText("https://api.ssopen.top/v1")  # 设置默认值
-        base_url_layout.addWidget(self.base_url_edit)
-        api_content_layout.addLayout(base_url_layout)
-        
-        # 将垂直布局添加到卡片的内容布局中
-        api_card.content_layout.addLayout(api_content_layout)
-        
-        layout.addWidget(api_card)
         
         # 模型设置
         model_card = FluentSettingsCard("模型设置")
@@ -458,25 +428,25 @@ class FluentPromptReverserWidget(QWidget):
             self.show_error("请先选择图片")
             return
             
-        api_key = self.api_key_edit.text().strip()
+        api_key = self.api_key
         if not api_key:
-            self.show_error("请输入API Key")
-            return
-            
-        base_url = self.base_url_edit.text().strip()
-        if not base_url:
-            self.show_error("请输入Base URL")
+            self.show_error("API Key未配置")
             return
             
         model = self.model_combo.currentText()
+        if not model:
+            self.show_error("请输入自定义模型名称")
+            return
         
-        # 保存设置
-        self.save_settings()
+        base_url = self.base_url
         
-        # 开始分析
+        # 禁用按钮，显示进度条
         self.analyze_btn.setEnabled(False)
         self.progress_bar.setVisible(True)
         self.progress_bar.setRange(0, 0)  # 不确定进度
+        
+        # 开始分析
+        self.status_label.setText(f"正在分析图片 (模型: {model})...")
         
         # 创建工作线程
         self.worker = PromptReverseWorker(self.current_image_path, api_key, model, base_url)
@@ -669,26 +639,31 @@ Style Category: {style_data.get('en', 'Not specified')}"""
             
     def save_settings(self):
         """保存设置"""
-        self.settings.setValue("api_key", self.api_key_edit.text())
-        self.settings.setValue("base_url", self.base_url_edit.text())
-        self.settings.setValue("model", self.model_combo.currentText())
-        
+        current_model = self.model_combo.currentText()
+        self.settings.setValue("model", current_model)
+        if current_model == "custom":
+            self.settings.setValue("custom_model", self.custom_model_edit.text())
+
     def load_settings(self):
         """加载设置"""
-        api_key = self.settings.value("api_key", "sk-CnEoNNdwU8KeJfIoEg6rcNeLeO5XbF3HafEMckZkuZXvKSGS")
-        base_url = self.settings.value("base_url", "https://api.ssopen.top/v1")
+        self.api_key = self.settings.value("api_key", "")
+        self.base_url = self.settings.value("base_url", "https://api.ssopen.top/v1")
         model = self.settings.value("model", "gpt-4o-mini")
-        
-        self.api_key_edit.setText(api_key)
-        self.base_url_edit.setText(base_url)
+        custom_model = self.settings.value("custom_model", "")
         
         # 设置模型选择
         index = self.model_combo.findText(model)
-        if index >= 0:
+        if index != -1:
             self.model_combo.setCurrentIndex(index)
-            
+        else:
+            self.model_combo.setCurrentText("custom")
+            self.custom_model_edit.setText(model)
+
+        # 触发一次检查，以确保自定义输入框正确显示
+        self.on_model_changed()
+
     def show_success(self, message):
-        """显示成功消息"""
+        """显示成功信息"""
         InfoBar.success(
             title="成功",
             content=message,
@@ -700,7 +675,7 @@ Style Category: {style_data.get('en', 'Not specified')}"""
         )
         
     def show_error(self, message):
-        """显示错误消息"""
+        """显示错误信息"""
         InfoBar.error(
             title="错误",
             content=message,
@@ -729,28 +704,23 @@ Style Category: {style_data.get('en', 'Not specified')}"""
         """测试API连接"""
         print(f"[UI] 开始API连接测试...")
         
-        api_key = self.api_key_edit.text().strip()
+        api_key = self.api_key
         if not api_key:
             print(f"[UI] API Key为空")
-            self.show_error("请先输入API Key")
-            return
-            
-        base_url = self.base_url_edit.text().strip()
-        if not base_url:
-            print(f"[UI] Base URL为空")
-            self.show_error("请先输入Base URL")
+            self.show_error("请先配置API Key")
             return
             
         model = self.model_combo.currentText()
-        print(f"[UI] 测试参数 - 模型: {model}, Base URL: {base_url}")
+        if not model:
+            print(f"[UI] 自定义模型名称为空")
+            self.show_error("请输入自定义模型名称")
+            return
+
+        base_url = self.base_url
+        if not base_url:
+            base_url = None # 使用默认值
         
-        # 停止之前的测试线程（如果存在）
-        if self.api_test_worker and self.api_test_worker.isRunning():
-            print(f"[UI] 停止之前的测试线程...")
-            self.api_test_worker.terminate()
-            self.api_test_worker.wait()
-        
-        # 禁用测试按钮防止重复点击
+        # 禁用按钮
         self.test_api_btn.setEnabled(False)
         self.test_api_btn.setText("测试中...")
         self.status_label.setText(f"正在测试API连接 (模型: {model})...")

@@ -19,12 +19,21 @@ class FluentInterfaceCreator(QObject):
     def create_extraction_interface(self):
         """创建信息提取界面"""
         from .fluent_extraction_layout import FluentExtractionLayout
+        from .fluent_drag_components import DragOverlay
         
         # 创建布局管理器
         self.parent.extraction_layout = FluentExtractionLayout(self.parent)
         
         # 创建界面 - FluentExtractionLayout会自动将组件设置到parent上
         self.parent.extraction_interface = self.parent.extraction_layout.create_extraction_interface()
+        
+        # 创建拖拽蒙层
+        self.parent.drag_overlay = DragOverlay(self.parent.extraction_interface)
+        
+        # 重写拖拽事件
+        self.parent.extraction_interface.dragEnterEvent = self.parent.event_handlers.handle_drag_enter_event
+        self.parent.extraction_interface.dragLeaveEvent = self.parent.event_handlers.handle_drag_leave_event
+        self.parent.extraction_interface.dropEvent = self.parent.event_handlers.handle_drop_event
         
         # 加载历史记录（如果历史组件存在）
         if hasattr(self.parent, 'history_widget') and self.parent.history_widget:
@@ -102,18 +111,19 @@ class FluentInterfaceCreator(QObject):
         trial_title.setStyleSheet("font-weight: bold; color: #e67e22;")
         trial_layout.addWidget(trial_title)
         
-        trial_features = [
-            "✓ 基础图片信息提取",
-            "✓ 提示词查看和编辑",
-            "✓ 历史记录查看",
-            "✓ 单个文件导出",
-            "✗ 批量处理功能",
-            "✗ AI智能标签",
-            "✗ 高级导出功能"
-        ]
+        trial_features = {
+            "✓ 基础图片信息提取": "自动读取并展示PNG图片内包含的基础创作信息。",
+            "✓ 提示词查看和编辑": "查看和修改图片的正面及负面提示词。",
+            "✓ 历史记录查看": "浏览和管理最近处理过的图片记录。",
+            "✓ 单个文件导出": "将当前图片的信息以多种格式（如HTML、Excel）导出。",
+            "✗ 批量处理功能": "【付费解锁】一次性处理整个文件夹的图片，自动提取并保存信息。",
+            "✗ AI智能标签": "【付费解锁】使用先进的AI模型分析图片内容，自动生成描述性标签。",
+            "✗ 高级导出功能": "【付费解锁】批量导出数据到Excel或生成可分享的HTML画廊页面。"
+        }
         
-        for feature in trial_features:
+        for feature, tooltip in trial_features.items():
             feature_label = BodyLabel(feature)
+            feature_label.setToolTip(tooltip)
             if feature.startswith("✗"):
                 feature_label.setStyleSheet("color: #95a5a6;")
             trial_layout.addWidget(feature_label)
@@ -129,18 +139,19 @@ class FluentInterfaceCreator(QObject):
         full_title.setStyleSheet("font-weight: bold; color: #27ae60;")
         full_layout.addWidget(full_title)
         
-        full_features = [
-            "✓ 全部基础功能",
-            "✓ 批量处理功能",
-            "✓ AI智能标签",
-            "✓ 高级导出功能",
-            "✓ ComfyUI集成",
-            "✓ 云端同步",
-            "✓ 优先技术支持"
-        ]
+        full_features = {
+            "✓ 全部基础功能": "包含所有试用版功能，且无任何使用限制。",
+            "✓ 批量处理功能": "支持一次性处理整个文件夹的图片，极大提升效率。",
+            "✓ AI智能标签": "借助AI自动为图片生成精准的描述标签，免去手动输入的麻烦。",
+            "✓ 高级导出功能": "轻松将大量图片数据整理成Excel表格或一键生成精美的HTML分享页面。",
+            "✓ ComfyUI集成": "与ComfyUI无缝集成，支持直接将图片信息和工作流发送至ComfyUI。",
+            "✓ 云端同步": "【规划中】未来将支持在多设备间同步您的数据和设置。",
+            "✓ 优先技术支持": "享受专属客服通道，您的问题将得到优先处理。"
+        }
         
-        for feature in full_features:
+        for feature, tooltip in full_features.items():
             feature_label = BodyLabel(feature)
+            feature_label.setToolTip(tooltip)
             feature_label.setStyleSheet("color: #27ae60;")
             full_layout.addWidget(feature_label)
         
