@@ -33,6 +33,13 @@ class FluentBusinessLogic(QObject):
         try:
             self.parent.current_file_path = file_path
             
+            # 埋点：追踪图片处理功能使用
+            if hasattr(self.parent, 'track_feature_usage'):
+                self.parent.track_feature_usage("图片处理", {
+                    "file_extension": os.path.splitext(file_path)[1].lower(),
+                    "file_size": os.path.getsize(file_path) if os.path.exists(file_path) else 0
+                })
+            
             # 读取图片信息
             image_info = self.parent.image_reader.extract_info(file_path)
             
@@ -125,6 +132,14 @@ class FluentBusinessLogic(QObject):
             record_id = self.parent.data_manager.save_record(record_data)
             
             if record_id:
+                # 埋点：追踪保存记录功能使用
+                if hasattr(self.parent, 'track_feature_usage'):
+                    self.parent.track_feature_usage("保存记录", {
+                        "has_custom_name": bool(custom_name),
+                        "has_tags": bool(tags),
+                        "record_id": record_id
+                    })
+                
                 InfoBar.success(
                     title="保存成功",
                     content="记录保存成功！",
@@ -300,6 +315,13 @@ class FluentBusinessLogic(QObject):
             )
             return
         
+        # 埋点：追踪AI自动标签功能使用
+        if hasattr(self.parent, 'track_feature_usage'):
+            self.parent.track_feature_usage("AI自动标签", {
+                "file_path": self.parent.current_file_path,
+                "file_extension": os.path.splitext(self.parent.current_file_path)[1].lower()
+            })
+        
         # 禁用按钮防止重复点击
         self.parent.auto_tag_btn.setEnabled(False)
         self.parent.auto_tag_btn.setText("🤖 分析中...")
@@ -364,6 +386,14 @@ class FluentBusinessLogic(QObject):
             ai_description = result.get('ai_analysis', {}).get('description', '')
             matching_result = result.get('matching_result', {})
             
+            # 埋点：追踪AI标签分析成功
+            if hasattr(self.parent, 'track_feature_usage'):
+                self.parent.track_feature_usage("AI标签分析成功", {
+                    "tags_count": len(tags_list),
+                    "matched_tags": len(matching_result.get('matched_tags', [])),
+                    "new_tags": len(matching_result.get('new_tags', []))
+                })
+            
             # 更新标签输入框
             if tags_string:
                 current_tags = self.parent.user_tags_edit.toPlainText().strip()
@@ -407,6 +437,13 @@ class FluentBusinessLogic(QObject):
             
         else:
             error_msg = result.get('error', '未知错误')
+            
+            # 埋点：追踪AI标签分析失败
+            if hasattr(self.parent, 'track_feature_usage'):
+                self.parent.track_feature_usage("AI标签分析失败", {
+                    "error_message": error_msg
+                })
+            
             InfoBar.error(
                 title="分析失败",
                 content=f"AI分析失败: {error_msg}",

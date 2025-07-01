@@ -19,7 +19,7 @@ class FluentExportShare(QObject):
         self.parent = parent
     
     def copy_info(self):
-        """复制图片信息到剪贴板"""
+        """复制图片信息到剪贴板 - SD WebUI标准格式"""
         if not self.parent.current_file_path:
             InfoBar.warning(
                 title="提示",
@@ -33,75 +33,101 @@ class FluentExportShare(QObject):
             return
         
         try:
-            # 获取当前显示的信息
-            info_parts = []
+            # 获取图片信息
+            image_info = self.parent.image_reader.extract_info(self.parent.current_file_path)
             
-            # 基础信息
-            info_parts.append("=== 图片信息 ===")
-            info_parts.append(f"文件名: {os.path.basename(self.parent.current_file_path)}")
-            info_parts.append(f"文件路径: {self.parent.current_file_path}")
-            info_parts.append(f"文件大小: {self.parent.file_size_label.text()}")
-            info_parts.append(f"图片尺寸: {self.parent.image_size_label.text()}")
-            info_parts.append(f"生成方式: {self.parent.generation_method_text.text()}")
-            
-            # 提示词信息
+            # 获取当前界面显示的提示词
             positive_prompt = self.parent.positive_prompt_text.toPlainText().strip()
             negative_prompt = self.parent.negative_prompt_text.toPlainText().strip()
             
+            # 如果界面没有提示词，尝试从图片信息中获取
+            if not positive_prompt and image_info:
+                positive_prompt = image_info.get('prompt', '')
+            if not negative_prompt and image_info:
+                negative_prompt = image_info.get('negative_prompt', '')
+            
+            # 构建SD WebUI标准格式
+            sd_format_parts = []
+            
+            # 正向提示词（必须在第一行）
             if positive_prompt:
-                info_parts.append("\n=== 正向提示词 ===")
-                info_parts.append(positive_prompt)
+                sd_format_parts.append(positive_prompt)
+            else:
+                sd_format_parts.append("")  # 即使没有也要有空行
             
+            # 负向提示词
             if negative_prompt:
-                info_parts.append("\n=== 负向提示词 ===")
-                info_parts.append(negative_prompt)
+                sd_format_parts.append(f"Negative prompt: {negative_prompt}")
             
-            # 用户标签和备注
-            user_tags = self.parent.user_tags_edit.toPlainText().strip()
+            # 生成参数行
+            if image_info:
+                param_parts = []
+                
+                # Steps
+                steps = image_info.get('steps', '')
+                if steps:
+                    param_parts.append(f"Steps: {steps}")
+                
+                # Sampler
+                sampler = image_info.get('sampler', image_info.get('sampler_name', ''))
+                if sampler:
+                    param_parts.append(f"Sampler: {sampler}")
+                
+                # CFG scale
+                cfg_scale = image_info.get('cfg_scale', '')
+                if cfg_scale:
+                    param_parts.append(f"CFG scale: {cfg_scale}")
+                
+                # Seed
+                seed = image_info.get('seed', '')
+                if seed:
+                    param_parts.append(f"Seed: {seed}")
+                
+                # Size (尺寸)
+                width = image_info.get('width', '')
+                height = image_info.get('height', '')
+                if width and height:
+                    param_parts.append(f"Size: {width}x{height}")
+                elif hasattr(self.parent, 'image_size_label'):
+                    # 从界面标签获取尺寸信息
+                    size_text = self.parent.image_size_label.text()
+                    if size_text and size_text != "-":
+                        # 转换 "宽 × 高" 格式为 "宽x高"
+                        size_formatted = size_text.replace(' × ', 'x').replace('×', 'x')
+                        param_parts.append(f"Size: {size_formatted}")
+                
+                # Model
+                model = image_info.get('model', image_info.get('model_name', ''))
+                if model:
+                    param_parts.append(f"Model: {model}")
+                
+                # Model hash (如果有的话)
+                model_hash = image_info.get('model_hash', '')
+                if model_hash:
+                    param_parts.append(f"Model hash: {model_hash}")
+                
+                # 将参数用逗号和空格连接
+                if param_parts:
+                    sd_format_parts.append(", ".join(param_parts))
             
-            if user_tags:
-                info_parts.append("\n=== 用户标签 ===")
-                info_parts.append(user_tags)
-            
-            # 生成参数（从当前显示的参数中提取）
-            try:
-                image_info = self.parent.image_reader.extract_info(self.parent.current_file_path)
-                if image_info and isinstance(image_info, dict):
-                    param_info = []
-                    param_mapping = {
-                        'steps': '采样步数',
-                        'sampler_name': '采样器',
-                        'cfg_scale': 'CFG Scale',
-                        'seed': '随机种子',
-                        'size': '尺寸',
-                        'model_name': '模型',
-                        'model_hash': '模型哈希',
-                        'denoising_strength': '去噪强度',
-                        'clip_skip': 'Clip Skip',
-                        'ensd': 'ENSD'
-                    }
-                    
-                    for key, label in param_mapping.items():
-                        value = image_info.get(key, '')
-                        if value:
-                            param_info.append(f"{label}: {value}")
-                    
-                    if param_info:
-                        info_parts.append("\n=== 生成参数 ===")
-                        info_parts.extend(param_info)
-            except Exception as e:
-                print(f"获取生成参数时出错: {e}")
-            
-            # 合并所有信息
-            full_info = "\n".join(info_parts)
+            # 合并所有部分
+            sd_format_text = "\n".join(sd_format_parts)
             
             # 复制到剪贴板
             clipboard = QApplication.clipboard()
-            clipboard.setText(full_info)
+            clipboard.setText(sd_format_text)
+            
+            # 埋点：追踪复制信息功能使用
+            if hasattr(self.parent, 'track_feature_usage'):
+                self.parent.track_feature_usage("复制信息", {
+                    "has_prompts": bool(positive_prompt or negative_prompt),
+                    "format": "sd_webui_standard",
+                    "content_length": len(sd_format_text)
+                })
             
             InfoBar.success(
                 title="复制成功",
-                content="图片信息已复制到剪贴板",
+                content="SD标准格式信息已复制到剪贴板",
                 orient=Qt.Horizontal,
                 isClosable=True,
                 position=InfoBarPosition.TOP,
@@ -119,6 +145,9 @@ class FluentExportShare(QObject):
                 duration=3000,
                 parent=self.parent
             )
+            print(f"复制信息异常: {e}")
+            import traceback
+            traceback.print_exc()
     
     def share_as_html(self):
         """生成HTML分享页面"""
@@ -175,6 +204,15 @@ class FluentExportShare(QObject):
             # 保存HTML文件
             with open(save_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)
+            
+            # 埋点：追踪HTML分享功能使用
+            if hasattr(self.parent, 'track_feature_usage'):
+                self.parent.track_feature_usage("HTML分享", {
+                    "has_prompts": bool(positive_prompt or negative_prompt),
+                    "has_tags": bool(tags),
+                    "has_custom_name": bool(custom_name),
+                    "file_size": len(html_content)
+                })
             
             InfoBar.success(
                 title="分享成功",

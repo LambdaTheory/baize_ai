@@ -86,6 +86,15 @@ class FluentMainWindow(FluentWindow):
         self.auto_save_timer.setSingleShot(False)  # 重复触发
         self.auto_save_enabled = False  # 默认关闭自动保存
         
+        # 初始化埋点管理器
+        try:
+            from core.analytics import init_analytics
+            self.analytics = init_analytics()
+            print("[埋点] 分析管理器初始化成功")
+        except Exception as e:
+            print(f"[警告] 埋点管理器初始化失败: {e}")
+            self.analytics = None
+        
         # 初始化主题
         FluentTheme.init_theme()
         
@@ -145,6 +154,10 @@ class FluentMainWindow(FluentWindow):
         
         # 显示默认页面
         self.stackedWidget.setCurrentWidget(self.extraction_interface)
+        
+        # 埋点：追踪应用启动和首页浏览
+        if self.analytics:
+            self.analytics.track_page_view("信息提取")
         
     def on_prompt_text_changed(self):
         """提示词文本变化时的处理（不自动保存，仅用于标记状态）"""
@@ -324,6 +337,15 @@ class FluentMainWindow(FluentWindow):
         # 连接业务逻辑信号
         self.business_logic.record_saved.connect(lambda record_id: print(f"记录已保存: {record_id}"))
         
+        # 连接页面切换埋点
+        if self.analytics:
+            try:
+                # 连接导航切换信号（FluentWindow的stackedWidget信号）
+                self.stackedWidget.currentChanged.connect(self._track_page_change)
+                print("[埋点] 页面切换追踪已连接")
+            except Exception as e:
+                print(f"[警告] 页面切换追踪连接失败: {e}")
+        
 
             
 
@@ -485,9 +507,53 @@ class FluentMainWindow(FluentWindow):
 
 
         
+    def _track_page_change(self, index):
+        """追踪页面切换"""
+        if not self.analytics:
+            return
+            
+        try:
+            # 获取当前显示的界面
+            current_widget = self.stackedWidget.widget(index)
+            if current_widget:
+                # 获取页面名称
+                page_name = current_widget.objectName() or "unknown"
+                
+                # 页面名称映射
+                page_names = {
+                    "extraction": "信息提取",
+                    "gallery": "图片画廊", 
+                    "prompt_editor": "提示词修改",
+                    "prompt_reverser": "提示词反推",
+                    "settings": "设置",
+                    "activation": "软件激活"
+                }
+                
+                display_name = page_names.get(page_name, page_name)
+                
+                # 追踪页面浏览
+                self.analytics.track_page_view(display_name, self.analytics.current_page)
+                print(f"[埋点] 页面切换: {display_name}")
+                
+        except Exception as e:
+            print(f"[警告] 页面切换埋点失败: {e}")
+    
+    def track_feature_usage(self, feature_name, details=None):
+        """追踪功能使用"""
+        if self.analytics:
+            self.analytics.track_feature_usage(feature_name, details or {})
+    
     def closeEvent(self, event):
         """窗口关闭事件"""
         try:
+            # 结束埋点会话
+            if self.analytics:
+                try:
+                    self.analytics.end_session()
+                    print("[埋点] 会话已结束")
+                except Exception as e:
+                    print(f"[警告] 结束埋点会话失败: {e}")
+            
             # 清理AI工作线程
             self.business_logic.cleanup_ai_threads()
             

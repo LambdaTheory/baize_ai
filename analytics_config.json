@@ -1,0 +1,25 @@
+{
+  "mixpanel": {
+    "project_token": "faedaaad76a717e542512b92665bc05c",
+    "enabled": true
+  },
+  "events": {
+    "use_time": {
+      "name": "UseTime",
+      "properties": ["duration", "duration_minutes", "session_duration"]
+    },
+    "page_view": {
+      "name": "PageView", 
+      "properties": ["page_name", "referrer_url_path", "previous_page", "navigation_type"]
+    },
+    "feature_usage": {
+      "name": "FeatureUsage",
+      "properties": ["feature_name", "current_page"]
+    }
+  },
+  "privacy": {
+    "collect_system_info": true,
+    "collect_file_paths": false,
+    "anonymize_user_id": true
+  }
+} 
