@@ -436,7 +436,7 @@ class FluentMainWindow(FluentWindow):
             
             # 在提示词编辑器中添加新场景
             print(f"正在添加新场景: {scene_name}")
-            editor_panel = self.prompt_editor_interface.add_editor(scene_name)
+            editor_panel = self.prompt_editor_interface.create_editor_accordion(scene_name)
             
             # 设置英文提示词
             editor_panel.set_prompts(english_prompts=prompts)
