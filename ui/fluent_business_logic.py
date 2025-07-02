@@ -43,8 +43,11 @@ class FluentBusinessLogic(QObject):
             # 读取图片信息
             image_info = self.parent.image_reader.extract_info(file_path)
             
+            # 更新主窗口的复制/导出按钮状态
+            self.parent.update_copy_export_button(image_info)
+            
             # 显示图片信息
-            self.parent.image_display.display_image_info(file_path, image_info)
+            self.parent.image_info_widget.display_image_info(file_path, image_info)
             
             # 自动保存记录
             self.auto_save_record(file_path, image_info)
@@ -72,6 +75,19 @@ class FluentBusinessLogic(QObject):
                 parent=self.parent
             )
             
+        # 清空当前文件路径和信息
+        self.parent.current_file_path = None
+        self.parent.current_image_info = {}
+        
+        # 清空UI显示
+        self.parent.image_info_widget.clear_info()
+        
+        # 更新按钮状态
+        self.parent.update_copy_export_button(None)
+        self.parent.save_btn.setVisible(False)
+        self.parent.export_btn.setVisible(False)
+        self.parent.auto_tag_btn.setVisible(False)
+    
     def auto_save_record(self, file_path, image_info):
         """自动保存记录"""
         try:

@@ -162,27 +162,10 @@ class FluentExtractionLayout:
             margin-bottom: 8px;
         """)
         
-        # 复制信息按钮 - 去掉背景颜色
-        self.parent.copy_info_btn = PushButton("📋")
-        self.parent.copy_info_btn.setFixedSize(32, 32)
-        self.parent.copy_info_btn.setToolTip("复制所有信息")
-        self.parent.copy_info_btn.setStyleSheet(f"""
-            PushButton {{
-                background-color: transparent;
-                color: {FluentColors.get_color('text_primary')};
-                border: 1px solid {FluentColors.get_color('border_primary')};
-                border-radius: 16px;
-                font-size: 14px;
-                font-weight: 600;
-            }}
-            PushButton:hover {{
-                background-color: {FluentColors.get_color('bg_secondary')};
-                border-color: {FluentColors.get_color('primary')};
-            }}
-            PushButton:pressed {{
-                background-color: {FluentColors.get_color('bg_tertiary')};
-            }}
-        """)
+        # 复制/导出按钮 - 动态变化
+        self.parent.copy_info_btn = PushButton("📋 复制信息")
+        self.parent.copy_info_btn.setFixedSize(130, 32)
+        self.parent.copy_info_btn.setToolTip("复制生成信息")
         
         ai_title_layout.addWidget(ai_title)
         ai_title_layout.addStretch()
@@ -209,7 +192,8 @@ class FluentExtractionLayout:
         self.parent.negative_prompt_text = TextEdit()
         self.parent.negative_prompt_text.setMinimumHeight(80)
         self.parent.negative_prompt_text.setMaximumHeight(120)
-        self.parent.negative_prompt_text.setPlaceholderText("反向提示词...")
+        self.parent.negative_prompt_text.setPlaceholderText("反向提示词将显示在这里...")
+        self.parent.negative_prompt_text.setReadOnly(True)
         
         # 翻译按钮布局
         negative_btn_layout = QHBoxLayout()
@@ -255,9 +239,9 @@ class FluentExtractionLayout:
         self.parent.generation_method_text.hide()
         
         self.parent.ai_info_card.setLayout(ai_layout)
-        column_layout.addWidget(self.parent.ai_info_card)
+        column_layout.addWidget(self.parent.ai_info_card, 1)
         
-        parent_layout.addWidget(second_column, 3)  # 第二列占3份
+        parent_layout.addWidget(second_column, 5)  # 第二列占5份
     
     def create_third_column(self, parent_layout):
         """创建第三列：标签(40%) + 历史记录(60%)"""

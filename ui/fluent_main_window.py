@@ -362,11 +362,30 @@ class FluentMainWindow(FluentWindow):
         """导出数据 - 委托给导出分享组件"""
         self.export_share.export_data()
     
+    def update_copy_export_button(self, image_info: dict):
+        """根据图片信息更新复制/导出按钮的文本和提示"""
+        if not image_info:
+            self.copy_info_btn.setText("📋 复制信息")
+            self.copy_info_btn.setToolTip("以SD WebUI格式复制生成信息")
+            self.copy_info_btn.setVisible(False)
+            return
 
+        is_comfyui = image_info.get('generation_source') == 'ComfyUI'
+        has_workflow = bool(image_info.get('workflow_data'))
 
-    
+        self.copy_info_btn.setVisible(True)
 
+        if is_comfyui and has_workflow:
+            self.copy_info_btn.setText("📋 导出工作流")
+            self.copy_info_btn.setToolTip("将ComfyUI工作流导出为JSON文件")
+        else:
+            self.copy_info_btn.setText("📋 复制信息")
+            self.copy_info_btn.setToolTip("以SD WebUI格式复制生成信息")
             
+    def clear_all_info(self, clear_history=False):
+        """清空所有信息"""
+        self.business_logic.clear_current_info()
+        
     def load_from_history_record(self, record):
         """从历史记录加载"""
         try:

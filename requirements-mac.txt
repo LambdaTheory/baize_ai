@@ -1,0 +1,35 @@
+# 白泽AI - macOS平台依赖
+# 用于在macOS上构建和运行应用
+
+# GUI框架 (macOS优化)
+PyQt5>=5.15.0
+PyQt-Fluent-Widgets>=1.4.0
+
+# 图像处理
+Pillow>=9.0.0
+exifread>=3.0.0
+
+# HTTP请求 (用于API调用)
+requests>=2.25.0
+
+# WebSocket (ComfyUI集成)
+websocket-client>=1.0.0
+
+# AI集成
+openai>=1.0.0
+
+# Excel导出
+openpyxl>=3.0.0
+
+# 加密和许可证
+cryptography>=3.4.8
+
+# 埋点分析
+mixpanel>=4.10.0
+psutil>=5.8.0
+
+# 打包工具 (macOS版本)
+pyinstaller>=5.0
+
+# macOS特定依赖 (如果需要)
+# py2app>=0.28.0  # 可选的macOS原生打包工具 

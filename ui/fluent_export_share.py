@@ -19,7 +19,7 @@ class FluentExportShare(QObject):
         self.parent = parent
     
     def copy_info(self):
-        """复制图片信息到剪贴板 - SD WebUI标准格式"""
+        """根据图片类型，复制信息或导出工作流"""
         if not self.parent.current_file_path:
             InfoBar.warning(
                 title="提示",
@@ -31,10 +31,23 @@ class FluentExportShare(QObject):
                 parent=self.parent
             )
             return
-        
+
         try:
-            # 获取图片信息
             image_info = self.parent.image_reader.extract_info(self.parent.current_file_path)
+            
+            if image_info:
+                is_comfyui = image_info.get('generation_source') == 'ComfyUI'
+                has_workflow = bool(image_info.get('workflow_data'))
+
+                # 如果是带工作流的ComfyUI图片，则执行导出
+                if is_comfyui and has_workflow:
+                    if hasattr(self.parent, 'image_info_widget'):
+                        self.parent.image_info_widget.export_workflow()
+                    else:
+                        print("错误：在主窗口中未找到 image_info_widget")
+                    return
+
+            # --- 对于所有其他情况，执行SD WebUI标准格式的复制 ---
             
             # 获取当前界面显示的提示词
             positive_prompt = self.parent.positive_prompt_text.toPlainText().strip()
@@ -52,8 +65,6 @@ class FluentExportShare(QObject):
             # 正向提示词（必须在第一行）
             if positive_prompt:
                 sd_format_parts.append(positive_prompt)
-            else:
-                sd_format_parts.append("")  # 即使没有也要有空行
             
             # 负向提示词
             if negative_prompt:
@@ -111,7 +122,7 @@ class FluentExportShare(QObject):
                     sd_format_parts.append(", ".join(param_parts))
             
             # 合并所有部分
-            sd_format_text = "\n".join(sd_format_parts)
+            sd_format_text = "\n".join(sd_format_parts).strip()
             
             # 复制到剪贴板
             clipboard = QApplication.clipboard()
@@ -137,15 +148,15 @@ class FluentExportShare(QObject):
             
         except Exception as e:
             InfoBar.error(
-                title="复制失败",
-                content=f"复制信息时出错: {str(e)}",
+                title="操作失败",
+                content=f"处理时出错: {str(e)}",
                 orient=Qt.Horizontal,
                 isClosable=True,
                 position=InfoBarPosition.TOP,
                 duration=3000,
                 parent=self.parent
             )
-            print(f"复制信息异常: {e}")
+            print(f"复制/导出信息异常: {e}")
             import traceback
             traceback.print_exc()
     

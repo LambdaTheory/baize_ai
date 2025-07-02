@@ -189,24 +189,31 @@ class FluentImageInfoWidget(SmoothScrollArea):
         title.setStyleSheet(f"""
             color: {FluentColors.get_color('text_primary')};
             font-weight: 600;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         """)
-        
-        # 工作流类型标签
-        self.workflow_type_label = BodyLabel("")
-        self.workflow_type_label.setStyleSheet(f"""
-            color: white;
-            background-color: {FluentColors.get_color('accent')};
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
+
+        # 复制/导出按钮 - 动态变化
+        self.copy_export_btn = PushButton("📋 复制信息")
+        self.copy_export_btn.setFixedHeight(32)
+        self.copy_export_btn.setMinimumWidth(120)
+        self.copy_export_btn.setToolTip("以SD WebUI格式复制生成信息")
+        self.copy_export_btn.setStyleSheet(f"""
+            PushButton {{
+                border-radius: 8px;
+                border: 1px solid {FluentColors.get_color('border_primary')};
+                background-color: {FluentColors.get_color('bg_secondary')};
+            }}
+            PushButton:hover {{
+                background-color: {FluentColors.get_color('bg_tertiary')};
+            }}
+            PushButton:pressed {{
+                background-color: {FluentColors.get_color('bg_quaternary')};
+            }}
         """)
-        self.workflow_type_label.hide()  # 默认隐藏
         
         title_layout.addWidget(title)
         title_layout.addStretch()
-        title_layout.addWidget(self.workflow_type_label)
+        title_layout.addWidget(self.copy_export_btn)
         
         content_layout = QVBoxLayout()
         content_layout.setSpacing(FluentSpacing.MD)
@@ -327,28 +334,7 @@ class FluentImageInfoWidget(SmoothScrollArea):
             }}
         """)
         
-        # 导出工作流按钮
-        self.export_workflow_btn = PushButton("📋 导出工作流")
-        self.export_workflow_btn.setFixedHeight(36)
-        self.export_workflow_btn.setMinimumWidth(140)
-        self.export_workflow_btn.setStyleSheet(f"""
-            PushButton {{
-                background-color: #10B981;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-weight: 600;
-            }}
-            PushButton:hover {{
-                background-color: rgba(16, 185, 129, 0.8);
-            }}
-            PushButton:pressed {{
-                background-color: rgba(16, 185, 129, 0.6);
-            }}
-        """)
-        
         ai_buttons_layout.addWidget(self.share_html_btn)
-        ai_buttons_layout.addWidget(self.export_workflow_btn)
         ai_buttons_layout.addStretch()
         
         # 添加到布局
@@ -796,6 +782,7 @@ class FluentImageInfoWidget(SmoothScrollArea):
             
             # 更新导出工作流按钮状态
             self.update_export_workflow_button()
+            self.update_copy_export_button_state()
             
             # 显示图片
             if os.path.exists(file_path):
@@ -1132,13 +1119,14 @@ class FluentImageInfoWidget(SmoothScrollArea):
         
         # 连接AI功能按钮（AI生成信息区域）
         self.share_html_btn.clicked.connect(self.on_share_html_clicked)
-        self.export_workflow_btn.clicked.connect(self.export_workflow)
+        self.copy_export_btn.clicked.connect(self.export_workflow)
         
         # 连接AI自动打标签按钮（用户信息区域）
         self.auto_tag_btn.clicked.connect(self.on_auto_tag_clicked)
         
         # 初始时隐藏导出工作流按钮
         self.export_workflow_btn.setVisible(False)
+        self.copy_export_btn.setVisible(False)
         
     def on_share_html_clicked(self):
         """处理分享HTML按钮点击"""
@@ -1148,4 +1136,27 @@ class FluentImageInfoWidget(SmoothScrollArea):
     def on_auto_tag_clicked(self):
         """处理AI自动打标签按钮点击"""
         # 这里需要实现AI自动打标签功能，或者发出信号给主窗口处理
-        print("AI自动打标签按钮被点击") 
+        print("AI自动打标签按钮被点击")
+
+    def update_copy_export_button_state(self):
+        """根据当前图片信息更新复制/导出按钮的状态"""
+        try:
+            if not hasattr(self, 'current_image_info') or not self.current_image_info:
+                self.copy_export_btn.setVisible(False)
+                return
+
+            is_comfyui = self.current_image_info.get('generation_source') == 'ComfyUI'
+            has_workflow = bool(self.current_image_info.get('workflow_data'))
+
+            self.copy_export_btn.setVisible(True)
+
+            if is_comfyui and has_workflow:
+                self.copy_export_btn.setText("📋 导出工作流")
+                self.copy_export_btn.setToolTip("将ComfyUI工作流导出为JSON文件")
+            else:
+                self.copy_export_btn.setText("📋 复制信息")
+                self.copy_export_btn.setToolTip("以SD WebUI格式复制生成信息")
+
+        except Exception as e:
+            print(f"更新复制/导出按钮状态时出错: {e}")
+            self.copy_export_btn.setVisible(False) 
