@@ -41,10 +41,8 @@ class FluentExportShare(QObject):
 
                 # 如果是带工作流的ComfyUI图片，则执行导出
                 if is_comfyui and has_workflow:
-                    if hasattr(self.parent, 'image_info_widget'):
-                        self.parent.image_info_widget.export_workflow()
-                    else:
-                        print("错误：在主窗口中未找到 image_info_widget")
+                    # 调用工作流导出功能
+                    self.export_comfyui_workflow()
                     return
 
             # --- 对于所有其他情况，执行SD WebUI标准格式的复制 ---
@@ -257,6 +255,86 @@ class FluentExportShare(QObject):
                 parent=self.parent
             )
             print(f"HTML分享异常: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def export_comfyui_workflow(self):
+        """导出ComfyUI工作流"""
+        try:
+            if not self.parent.current_file_path:
+                InfoBar.warning(
+                    title="提示",
+                    content="请先选择一个图片文件",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=2000,
+                    parent=self.parent
+                )
+                return
+            
+            # 读取图片信息
+            image_info = self.parent.image_reader.extract_info(self.parent.current_file_path)
+            
+            if not image_info or not image_info.get('workflow_data'):
+                InfoBar.warning(
+                    title="无工作流数据",
+                    content="该图片不包含ComfyUI工作流数据",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=3000,
+                    parent=self.parent
+                )
+                return
+            
+            # 获取工作流数据
+            workflow_data = image_info.get('workflow_data')
+            
+            # 选择保存路径
+            default_name = f"{os.path.splitext(os.path.basename(self.parent.current_file_path))[0]}_workflow.json"
+            save_path, _ = QFileDialog.getSaveFileName(
+                self.parent,
+                "导出ComfyUI工作流",
+                default_name,
+                "JSON文件 (*.json);;所有文件 (*)"
+            )
+            
+            if not save_path:
+                return
+            
+            # 保存工作流文件
+            with open(save_path, 'w', encoding='utf-8') as f:
+                json.dump(workflow_data, f, ensure_ascii=False, indent=2)
+            
+            # 埋点：追踪工作流导出功能使用
+            if hasattr(self.parent, 'track_feature_usage'):
+                self.parent.track_feature_usage("ComfyUI工作流导出", {
+                    "workflow_size": len(json.dumps(workflow_data)),
+                    "node_count": len(workflow_data) if isinstance(workflow_data, dict) else 0
+                })
+            
+            InfoBar.success(
+                title="导出成功",
+                content=f"ComfyUI工作流已导出到: {save_path}",
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=3000,
+                parent=self.parent
+            )
+            
+        except Exception as e:
+            InfoBar.error(
+                title="导出失败",
+                content=f"导出ComfyUI工作流时出错: {str(e)}",
+                orient=Qt.Horizontal,
+                isClosable=True,
+                position=InfoBarPosition.TOP,
+                duration=4000,
+                parent=self.parent
+            )
+            print(f"导出ComfyUI工作流异常: {e}")
             import traceback
             traceback.print_exc()
     

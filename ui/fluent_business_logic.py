@@ -33,6 +33,22 @@ class FluentBusinessLogic(QObject):
         try:
             self.parent.current_file_path = file_path
             
+            # 清空用户输入的标签（处理新图片时重置）
+            self.parent.user_tags_edit.setPlainText("")
+            
+            # 检查是否为WebP格式，给出提示
+            file_ext = os.path.splitext(file_path)[1].lower()
+            if file_ext == '.webp':
+                InfoBar.warning(
+                    title="WebP格式提示",
+                    content="WebP格式图片通常包含较少的AI生成信息。为获得完整的生成参数，建议使用PNG格式。",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=4000,
+                    parent=self.parent
+                )
+            
             # 埋点：追踪图片处理功能使用
             if hasattr(self.parent, 'track_feature_usage'):
                 self.parent.track_feature_usage("图片处理", {
@@ -40,21 +56,43 @@ class FluentBusinessLogic(QObject):
                     "file_size": os.path.getsize(file_path) if os.path.exists(file_path) else 0
                 })
             
-            # 读取图片信息
+            # 读取图片信息 - 优先从数据库读取已保存的记录
             image_info = self.parent.image_reader.extract_info(file_path)
+            
+            # 检查数据库中是否有该图片的保存记录
+            saved_record = self.parent.data_manager.get_record_by_path(file_path)
+            
+            if saved_record:
+                # 如果有保存的记录，使用数据库中的信息（包括用户修改的提示词）
+                if image_info is None:
+                    image_info = {}
+                
+                # 更新提示词为用户保存的版本
+                if saved_record.get('prompt'):
+                    image_info['prompt'] = saved_record['prompt']
+                if saved_record.get('negative_prompt'):
+                    image_info['negative_prompt'] = saved_record['negative_prompt']
+                
+                # 更新其他用户自定义信息
+                if saved_record.get('custom_name'):
+                    image_info['custom_name'] = saved_record['custom_name']
+                if saved_record.get('tags'):
+                    image_info['user_tags'] = saved_record['tags']
             
             # 更新主窗口的复制/导出按钮状态
             self.parent.update_copy_export_button(image_info)
             
             # 显示图片信息
-            self.parent.image_info_widget.display_image_info(file_path, image_info)
+            self.parent.image_display.display_image_info(file_path, image_info)
             
-            # 自动保存记录
+            # 检查是否有AI信息，如果没有则询问是否使用提示词反推
+            # 但如果数据库中有记录（说明用户已经处理过），则不再询问
+            if not image_info or not self._has_meaningful_ai_info(image_info):
+                if not saved_record:  # 只有在数据库中也没有记录时才询问
+                    self._show_prompt_reverser_dialog(file_path)
+            
+            # 自动保存记录（首次加载图片时保存一次）
             self.auto_save_record(file_path, image_info)
-            
-            # 启用自动保存功能
-            self.parent.auto_save_enabled = True
-            print(f"[处理图片] 已为图片 {file_path} 启用自动保存功能")
             
             # 刷新历史记录和画廊
             self.parent.history_widget.load_history()
@@ -62,6 +100,11 @@ class FluentBusinessLogic(QObject):
             
             # 发出信号
             self.image_info_updated.emit(file_path, image_info or {})
+            
+            # 显示相关按钮
+            self.parent.save_btn.setVisible(True)
+            self.parent.export_btn.setVisible(True)
+            self.parent.auto_tag_btn.setVisible(True)
             
         except Exception as e:
             print(f"处理图片时出错: {e}")
@@ -74,19 +117,26 @@ class FluentBusinessLogic(QObject):
                 duration=3000,
                 parent=self.parent
             )
-            
+            # 出错时清空UI
+            self.clear_current_info()
+    
+    def clear_current_info(self):
+        """清空当前信息"""
+        
         # 清空当前文件路径和信息
         self.parent.current_file_path = None
-        self.parent.current_image_info = {}
+        if hasattr(self.parent, 'current_image_info'):
+            self.parent.current_image_info = {}
         
         # 清空UI显示
-        self.parent.image_info_widget.clear_info()
+        self.clear_ui_display()
         
         # 更新按钮状态
         self.parent.update_copy_export_button(None)
         self.parent.save_btn.setVisible(False)
         self.parent.export_btn.setVisible(False)
         self.parent.auto_tag_btn.setVisible(False)
+        
     
     def auto_save_record(self, file_path, image_info):
         """自动保存记录"""
@@ -471,58 +521,115 @@ class FluentBusinessLogic(QObject):
             )
             print(f"AI分析失败: {error_msg}")
     
-    def auto_save_current_record(self):
-        """自动保存当前记录"""
-        if not self.parent.auto_save_enabled or not self.parent.current_file_path:
-            return
-            
+    # 注释掉定时器自动保存方法，不再需要
+    # def auto_save_current_record(self):
+    #     """自动保存当前记录"""
+    #     pass
+    
+    def clear_ui_display(self):
+        """清空UI显示"""
         try:
-            print("[自动保存] 开始自动保存当前记录...")
+            print("[清空UI] 开始清空UI显示...")
             
-            # 获取用户输入的信息
-            custom_name = self.parent.file_name_edit.text().strip()
-            tags = self.parent.user_tags_edit.toPlainText().strip()
-            notes = ''  # 备注功能已移除，设为空字符串
+            # 清空图片显示
+            self.parent.image_label.clear()
+            self.parent.image_label.setText("🖼️ 将图片拖拽到此处\n💻 支持从SD WebUI、ComfyUI等浏览器拖拽")
+            print("[清空UI] 已清空图片显示")
             
-            # 重新读取图片信息
-            image_info = self.parent.image_reader.extract_info(self.parent.current_file_path)
+            # 清空提示词
+            self.parent.positive_prompt_text.clear()
+            self.parent.positive_prompt_text.setPlainText("")
+            self.parent.negative_prompt_text.clear()
+            self.parent.negative_prompt_text.setPlainText("")
+            print("[清空UI] 已清空提示词")
             
-            record_data = {
-                'file_path': self.parent.current_file_path,
-                'custom_name': custom_name,
-                'tags': tags,
-                'notes': notes,
-            }
+            # 清空参数布局
+            while self.parent.params_layout.count():
+                child = self.parent.params_layout.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+            print("[清空UI] 已清空参数布局")
             
-            if image_info:
-                record_data.update(image_info)
+            # 清空用户输入
+            self.parent.file_name_edit.clear()
+            self.parent.file_name_edit.setText("")
+            self.parent.user_tags_edit.clear()
+            self.parent.user_tags_edit.setPlainText("")
+            print("[清空UI] 已清空用户输入")
             
-            record_id = self.parent.data_manager.save_record(record_data)
+            # 清空文件信息标签
+            if hasattr(self.parent, 'file_path_label'):
+                self.parent.file_path_label.setText("-")
+            if hasattr(self.parent, 'file_size_label'):
+                self.parent.file_size_label.setText("-")
+            if hasattr(self.parent, 'image_size_label'):
+                self.parent.image_size_label.setText("-")
+            print("[清空UI] 已清空文件信息标签")
             
-            if record_id:
-                print(f"[自动保存] 自动保存成功，记录ID: {record_id}")
-                # 注释掉自动保存提示，减少干扰
-                # InfoBar.info(
-                #     title="自动保存",
-                #     content="记录已自动保存",
-                #     orient=Qt.Horizontal,
-                #     isClosable=True,
-                #     position=InfoBarPosition.TOP,
-                #     duration=1500,
-                #     parent=self.parent
-                # )
-                # 刷新历史记录和画廊
-                self.parent.history_widget.load_history()
-                self.parent.gallery_interface.load_records()
-                self.record_saved.emit(record_id)
-            else:
-                print("[自动保存] 自动保存失败")
-                
+            # 清空原始提示词数据
+            self.parent.original_prompts['positive'] = ''
+            self.parent.original_prompts['negative'] = ''
+            print("[清空UI] 已清空原始提示词数据")
+            
+            # 强制刷新界面
+            self.parent.update()
+            self.parent.repaint()
+            print("[清空UI] 已强制刷新界面")
+            
+            print("[清空UI] UI显示清空完成")
+            
         except Exception as e:
-            print(f"[自动保存] 自动保存记录时出错: {e}")
+            print(f"清空UI显示时出错: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def _has_meaningful_ai_info(self, image_info):
+        """检查是否包含有意义的AI生成信息"""
+        if not image_info or not isinstance(image_info, dict):
+            return False
         
-        # 停止定时器，等待下次用户输入变化
-        self.parent.auto_save_timer.stop()
+        # 检查关键的AI生成信息字段
+        key_fields = ['prompt', 'negative_prompt', 'model', 'sampler', 'steps', 'cfg_scale']
+        meaningful_fields = 0
+        
+        for field in key_fields:
+            if field in image_info and image_info[field]:
+                # 检查字段值是否有意义（不是空字符串或默认值）
+                value = str(image_info[field]).strip()
+                if value and value.lower() not in ['', 'none', 'null', 'unknown', '未知']:
+                    meaningful_fields += 1
+        
+        # 如果有2个或以上有意义的字段，认为包含AI信息
+        return meaningful_fields >= 2
+    
+    def _show_prompt_reverser_dialog(self, file_path):
+        """显示提示词反推确认对话框"""
+        from qfluentwidgets import MessageBox
+        
+        dialog = MessageBox(
+            title="未检测到AI生成信息",
+            content="当前图片未检测到AI生成信息。\n\n是否使用AI提示词反推功能来分析这张图片？",
+            parent=self.parent
+        )
+        
+        # qfluentwidgets的MessageBox返回值是布尔值，exec()返回True表示点击了确认按钮
+        if dialog.exec():
+            # 切换到提示词反推界面
+            self.parent.switchTo(self.parent.prompt_reverser_interface)
+            
+            # 在提示词反推界面中加载图片
+            if hasattr(self.parent.prompt_reverser_interface, 'load_image'):
+                self.parent.prompt_reverser_interface.load_image(file_path)
+                
+                InfoBar.success(
+                    title="已切换到提示词反推",
+                    content="图片已加载到提示词反推界面，可以开始分析",
+                    orient=Qt.Horizontal,
+                    isClosable=True,
+                    position=InfoBarPosition.TOP,
+                    duration=3000,
+                    parent=self.parent
+                )
     
     def cleanup_ai_threads(self):
         """清理AI工作线程"""

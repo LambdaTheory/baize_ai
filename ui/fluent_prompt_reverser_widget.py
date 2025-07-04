@@ -5,6 +5,7 @@ Fluent Design 提示词反推组件
 """
 
 import os
+import sys
 import json
 from pathlib import Path
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, 
@@ -430,7 +431,7 @@ class FluentPromptReverserWidget(QWidget):
             
         api_key = self.api_key
         if not api_key:
-            self.show_error("API Key未配置")
+            self.show_error("API配置错误，请联系开发者")
             return
             
         model = self.model_combo.currentText()
@@ -645,11 +646,17 @@ Style Category: {style_data.get('en', 'Not specified')}"""
             self.settings.setValue("custom_model", self.custom_model_edit.text())
 
     def load_settings(self):
-        """加载设置"""
-        self.api_key = self.settings.value("api_key", "")
-        self.base_url = self.settings.value("base_url", "https://api.ssopen.top/v1")
-        model = self.settings.value("model", "gpt-4o-mini")
-        custom_model = self.settings.value("custom_model", "")
+        """加载设置（使用与AI打标相同的配置）"""
+        # 使用与ai_image_tagger.py相同的配置
+        self.api_key = "sk-CnEoNNdwU8KeJfIoEg6rcNeLeO5XbF3HafEMckZkuZXvKSGS"
+        self.base_url = "https://api.ssopen.top/v1"
+        model = "gpt-4o-mini"
+        custom_model = ""
+        
+        print(f"[配置] 使用内置API配置")
+        print(f"[配置] API Key: 已设置")
+        print(f"[配置] Base URL: {self.base_url}")
+        print(f"[配置] Model: {model}")
         
         # 设置模型选择
         index = self.model_combo.findText(model)
@@ -707,7 +714,7 @@ Style Category: {style_data.get('en', 'Not specified')}"""
         api_key = self.api_key
         if not api_key:
             print(f"[UI] API Key为空")
-            self.show_error("请先配置API Key")
+            self.show_error("API配置错误，请联系开发者")
             return
             
         model = self.model_combo.currentText()

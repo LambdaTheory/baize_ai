@@ -193,7 +193,8 @@ class FluentExtractionLayout:
         self.parent.negative_prompt_text.setMinimumHeight(80)
         self.parent.negative_prompt_text.setMaximumHeight(120)
         self.parent.negative_prompt_text.setPlaceholderText("反向提示词将显示在这里...")
-        self.parent.negative_prompt_text.setReadOnly(True)
+        # 移除只读限制，允许用户编辑负向提示词
+        # self.parent.negative_prompt_text.setReadOnly(True)
         
         # 翻译按钮布局
         negative_btn_layout = QHBoxLayout()
@@ -244,13 +245,13 @@ class FluentExtractionLayout:
         parent_layout.addWidget(second_column, 5)  # 第二列占5份
     
     def create_third_column(self, parent_layout):
-        """创建第三列：标签(40%) + 历史记录(60%)"""
+        """创建第三列：标签(35%) + 历史记录(65%)"""
         third_column = QWidget()
         column_layout = QVBoxLayout()
         column_layout.setSpacing(FluentSpacing.MD)
         third_column.setLayout(column_layout)
         
-        # 标签卡片 (40%)
+        # 标签卡片 (35%)
         self.parent.tags_notes_card = CardWidget()
         self.parent.tags_notes_card.setBorderRadius(16)
         tags_layout = QVBoxLayout()
@@ -375,7 +376,7 @@ class FluentExtractionLayout:
         self.parent.tags_notes_card.setLayout(tags_layout)
         column_layout.addWidget(self.parent.tags_notes_card, 40)  # 40% 高度
         
-        # 历史记录卡片 (60%)
+        # 历史记录卡片 (65%)
         self.parent.history_card = CardWidget()
         self.parent.history_card.setBorderRadius(16)
         history_layout = QVBoxLayout()
@@ -392,9 +393,9 @@ class FluentExtractionLayout:
         history_layout.addWidget(self.parent.history_widget, 1)  # 添加拉伸因子，让历史记录组件占用全部空间
         self.parent.history_card.setLayout(history_layout)
         
-        # 按30%和70%的比例添加到列布局
-        column_layout.addWidget(self.parent.tags_notes_card, 3)    # 30%
-        column_layout.addWidget(self.parent.history_card, 7)       # 70%
+        # 按35%和65%的比例添加到列布局
+        column_layout.addWidget(self.parent.tags_notes_card, 35)   # 35%
+        column_layout.addWidget(self.parent.history_card, 65)      # 65%
         
         parent_layout.addWidget(third_column, 2)  # 第三列占2份
     

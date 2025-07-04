@@ -552,7 +552,6 @@ class FluentHistoryWidget(CardWidget):
             # 注意：这里需要使用过滤后的记录
             if 0 <= row < len(self.filtered_records):
                 record = self.filtered_records[row]
-                print(f"历史记录点击: 发出信号，文件名: {record.get('file_path', '未知')}")
                 self.record_selected.emit(record)
         except Exception as e:
             print(f"点击记录时出错: {e}")
@@ -629,16 +628,23 @@ class FluentHistoryWidget(CardWidget):
         
         if reply == QMessageBox.Yes:
             try:
-                # 获取要删除的记录ID
+                # 获取要删除的记录ID和文件路径
                 record_ids = []
+                deleted_file_paths = []
                 for index in selected_rows:
                     row = index.row()
                     # 使用过滤后的记录获取正确的记录
                     if 0 <= row < len(self.filtered_records):
                         record = self.filtered_records[row]
                         record_id = record.get('id')
+                        file_path = record.get('file_path')
                         if record_id:
                             record_ids.append(record_id)
+                        if file_path:
+                            deleted_file_paths.append(file_path)
+                
+                print(f"[删除记录] 准备删除 {len(record_ids)} 条记录")
+                print(f"[删除记录] 删除的文件路径: {deleted_file_paths}")
                 
                 # 删除记录
                 success_count = 0
@@ -646,13 +652,43 @@ class FluentHistoryWidget(CardWidget):
                     if self.data_manager.delete_record(record_id):
                         success_count += 1
                 
+                print(f"[删除记录] 成功删除 {success_count} 条记录")
+                
+                # 检查当前主界面显示的图片是否在删除列表中
+                main_window = self.get_main_window()
+                if main_window and hasattr(main_window, 'current_file_path') and main_window.current_file_path:
+                    if main_window.current_file_path in deleted_file_paths:
+                        print(f"[删除记录] 当前显示的图片被删除，清空主界面: {main_window.current_file_path}")
+                        # 清空主界面显示
+                        if hasattr(main_window, 'business_logic'):
+                            main_window.business_logic.clear_current_info()
+                        else:
+                            # 备用清空方法
+                            main_window.current_file_path = None
+                            main_window.image_label.clear()
+                            main_window.image_label.setText("🖼️ 将图片拖拽到此处\n💻 支持从SD WebUI、ComfyUI等浏览器拖拽")
+                            main_window.positive_prompt_text.setPlainText("")
+                            main_window.negative_prompt_text.setPlainText("")
+                            main_window.user_tags_edit.setPlainText("")
+                        print("[删除记录] 主界面已清空")
+                
                 # 重新加载表格
                 self.load_history()
                 
                 QMessageBox.information(self, "删除成功", f"成功删除 {success_count} 条记录")
                 
             except Exception as e:
+                print(f"[删除记录] 删除失败: {e}")
                 QMessageBox.critical(self, "删除失败", f"删除记录时出错: {str(e)}")
+    
+    def get_main_window(self):
+        """获取主窗口引用"""
+        parent = self.parent()
+        while parent:
+            if hasattr(parent, 'current_file_path'):  # 主窗口的特征
+                return parent
+            parent = parent.parent()
+        return None
                 
     def delete_all_records(self):
         """删除所有记录"""
@@ -670,12 +706,33 @@ class FluentHistoryWidget(CardWidget):
         
         if reply == QMessageBox.Yes:
             try:
+                print("[删除记录] 准备清空所有记录")
+                
                 if self.data_manager.clear_all_records():
+                    print("[删除记录] 所有记录已从数据库删除")
+                    
+                    # 清空主界面显示（因为所有记录都被删除了）
+                    main_window = self.get_main_window()
+                    if main_window and hasattr(main_window, 'current_file_path'):
+                        print("[删除记录] 清空主界面显示")
+                        if hasattr(main_window, 'business_logic'):
+                            main_window.business_logic.clear_current_info()
+                        else:
+                            # 备用清空方法
+                            main_window.current_file_path = None
+                            main_window.image_label.clear()
+                            main_window.image_label.setText("🖼️ 将图片拖拽到此处\n💻 支持从SD WebUI、ComfyUI等浏览器拖拽")
+                            main_window.positive_prompt_text.setPlainText("")
+                            main_window.negative_prompt_text.setPlainText("")
+                            main_window.user_tags_edit.setPlainText("")
+                        print("[删除记录] 主界面已清空")
+                    
                     self.load_history()
                     QMessageBox.information(self, "清空成功", "所有记录已删除")
                 else:
                     QMessageBox.critical(self, "清空失败", "删除记录时出现错误")
             except Exception as e:
+                print(f"[删除记录] 清空失败: {e}")
                 QMessageBox.critical(self, "清空失败", f"删除记录时出错: {str(e)}")
                 
 

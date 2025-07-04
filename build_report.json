@@ -1,0 +1,72 @@
+{
+  "build_timestamp": "2025-07-04T10:45:40.012083",
+  "project_path": "/Users/arthurdon/workspace/baize_ai",
+  "execution_log": [
+    {
+      "timestamp": "2025-07-04T10:44:48.325038",
+      "action": "开始完整构建工作流",
+      "details": {},
+      "workflow": "complete_build"
+    },
+    {
+      "timestamp": "2025-07-04T10:44:48.325054",
+      "action": "检查构建环境",
+      "details": {},
+      "workflow": "complete_build"
+    },
+    {
+      "timestamp": "2025-07-04T10:44:48.334662",
+      "action": "检查代码质量",
+      "details": {},
+      "workflow": "complete_build"
+    },
+    {
+      "timestamp": "2025-07-04T10:44:48.368186",
+      "action": "构建应用程序",
+      "details": {},
+      "workflow": "complete_build"
+    },
+    {
+      "timestamp": "2025-07-04T10:45:02.691076",
+      "action": "创建DMG安装包",
+      "details": {},
+      "workflow": "complete_build"
+    },
+    {
+      "timestamp": "2025-07-04T10:45:37.900234",
+      "action": "验证构建结果",
+      "details": {},
+      "workflow": "complete_build"
+    },
+    {
+      "timestamp": "2025-07-04T10:45:40.011932",
+      "action": "生成构建报告",
+      "details": {},
+      "workflow": "complete_build"
+    }
+  ],
+  "build_artifacts": [
+    {
+      "name": ".DS_Store",
+      "size_bytes": 6148,
+      "size_mb": 0.005863189697265625
+    },
+    {
+      "name": "白泽.dmg",
+      "size_bytes": 173482384,
+      "size_mb": 165.44569396972656
+    },
+    {
+      "name": "白泽",
+      "type": "directory",
+      "size_bytes": 180669119,
+      "size_mb": 172.29949855804443
+    },
+    {
+      "name": "白泽.app",
+      "type": "directory",
+      "size_bytes": 237491256,
+      "size_mb": 226.48931121826172
+    }
+  ]
+}

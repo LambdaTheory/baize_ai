@@ -9,6 +9,7 @@ Revision history
 * **2025‑06‑27 v1** – initial redesign.
 """
 
+from typing import Optional
 from PyQt5.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -26,7 +27,7 @@ from .fluent_styles import FluentColors, FluentSpacing
 class LoadingOverlay(QWidget):
     """A polished, Fluent‑design loading overlay."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
         self.setObjectName("LoadingOverlay")
         self.setAttribute(Qt.WA_StyledBackground)

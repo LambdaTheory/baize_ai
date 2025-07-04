@@ -79,12 +79,18 @@ class FluentMainWindow(FluentWindow):
             'negative': ''
         }
         
-        # 初始化自动保存定时器
-        from PyQt5.QtCore import QTimer
-        self.auto_save_timer = QTimer()
-        self.auto_save_timer.timeout.connect(self.business_logic.auto_save_current_record)
-        self.auto_save_timer.setSingleShot(False)  # 重复触发
-        self.auto_save_enabled = False  # 默认关闭自动保存
+        # 删除图片标志，防止删除时自动恢复
+        self._deleting_image = False
+        
+        # 被删除的文件路径列表，防止重新加载已删除的文件
+        self._deleted_files = set()
+        
+        # 注释掉自动保存定时器，改为只在AI打标后自动保存
+        # from PyQt5.QtCore import QTimer
+        # self.auto_save_timer = QTimer()
+        # self.auto_save_timer.timeout.connect(self.business_logic.auto_save_current_record)
+        # self.auto_save_timer.setSingleShot(False)  # 重复触发
+        # self.auto_save_enabled = False  # 默认关闭自动保存
         
         # 初始化埋点管理器
         try:
@@ -322,9 +328,9 @@ class FluentMainWindow(FluentWindow):
         # 历史记录信号
         self.history_widget.record_selected.connect(self.load_from_history_record)
         
-        # 监听用户输入变化，启动自动保存定时器（不包括提示词）
-        self.file_name_edit.textChanged.connect(self.on_user_input_changed)
-        self.user_tags_edit.textChanged.connect(self.on_user_input_changed)
+        # 注释掉用户输入变化的自动保存监听，改为只在AI打标后自动保存
+        # self.file_name_edit.textChanged.connect(self.on_user_input_changed)
+        # self.user_tags_edit.textChanged.connect(self.on_user_input_changed)
         
         # 提示词变化处理（仅用于标记修改状态，不自动保存）
         self.positive_prompt_text.textChanged.connect(self.on_prompt_text_changed)
@@ -335,7 +341,7 @@ class FluentMainWindow(FluentWindow):
         self.event_handlers.prompt_edit_requested.connect(self.handle_edit_prompt_request)
         
         # 连接业务逻辑信号
-        self.business_logic.record_saved.connect(lambda record_id: print(f"记录已保存: {record_id}"))
+        self.business_logic.record_saved.connect(lambda record_id: None)  # 移除日志输出
         
         # 连接页面切换埋点
         if self.analytics:
@@ -389,7 +395,6 @@ class FluentMainWindow(FluentWindow):
     def load_from_history_record(self, record):
         """从历史记录加载"""
         try:
-            print(f"主窗口接收到历史记录信号: {record.get('file_path', '未知')}")
             file_path = record.get('file_path', '')
             
             if not os.path.exists(file_path):
@@ -407,21 +412,8 @@ class FluentMainWindow(FluentWindow):
             # 切换到信息提取页面
             self.stackedWidget.setCurrentWidget(self.extraction_interface)
             
-            self.current_file_path = file_path
-            
-            # 重新读取图片信息
-            image_info = self.image_reader.extract_info(file_path)
-            
-            # 显示图片信息
-            self.image_display.display_image_info(file_path, image_info)
-            
-            # 加载用户自定义信息
-            self.file_name_edit.setText(record.get('custom_name', ''))
-            self.user_tags_edit.setPlainText(record.get('tags', ''))
-            
-            # 启用自动保存功能
-            self.auto_save_enabled = True
-            print(f"[历史记录] 已为记录 {file_path} 启用自动保存功能")
+            # 使用业务逻辑处理图片，这样会包含数据库查询逻辑
+            self.business_logic.process_image(file_path)
             
         except Exception as e:
             InfoBar.error(
@@ -593,7 +585,7 @@ class FluentMainWindow(FluentWindow):
         # Ctrl+S 保存快捷键
         save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
         save_shortcut.activated.connect(self.business_logic.save_record)
-        print("设置Ctrl+S快捷键")
+        print("设置Backspace键快捷键")
     
     def smart_split_prompts(self, text):
         """智能分割提示词，保护括号内的内容"""
@@ -645,16 +637,10 @@ class FluentMainWindow(FluentWindow):
         
         return prompts
         
-    def on_user_input_changed(self):
-        """用户输入变化时的处理"""
-        if not self.current_file_path:
-            return  # 没有当前文件时不启动自动保存
-            
-        # 启用自动保存并重启定时器
-        self.auto_save_enabled = True
-        self.auto_save_timer.stop()  # 先停止当前定时器
-        self.auto_save_timer.start(5000)  # 5秒后触发
-        print("[自动保存] 检测到用户输入变化，将在5秒后自动保存")
+    # 注释掉用户输入变化处理方法，不再需要自动保存
+    # def on_user_input_changed(self):
+    #     """用户输入变化时的处理"""
+    #     pass
         
 
     

@@ -7,8 +7,15 @@ Fluent Design 设置界面组件
 
 import os
 import sys
-import winreg as reg
 from pathlib import Path
+
+# 平台特定的导入
+try:
+    import winreg as reg
+    WINDOWS_AVAILABLE = True
+except ImportError:
+    WINDOWS_AVAILABLE = False
+    reg = None  # 在非Windows平台上设为None
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                             QMessageBox, QApplication)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
@@ -58,6 +65,10 @@ class ContextMenuWorker(QThread):
     
     def install_context_menu(self):
         """安装右键菜单"""
+        # 检查是否在Windows平台
+        if not WINDOWS_AVAILABLE:
+            return False, "右键菜单功能仅在Windows系统上可用"
+        
         try:
             app_path = self.get_app_path()
             python_path = sys.executable
@@ -149,6 +160,10 @@ class ContextMenuWorker(QThread):
     
     def uninstall_context_menu(self):
         """卸载右键菜单"""
+        # 检查是否在Windows平台
+        if not WINDOWS_AVAILABLE:
+            return False, "右键菜单功能仅在Windows系统上可用"
+        
         try:
             app_name = "AI图片信息提取工具"
             
@@ -347,6 +362,11 @@ class ContextMenuCard(CardWidget):
     
     def check_context_menu_status(self):
         """检查右键菜单状态"""
+        # 在非Windows平台上，右键菜单功能不可用
+        if not WINDOWS_AVAILABLE:
+            self.update_status(False, is_non_windows=True)
+            return False
+            
         try:
             app_name = "AI图片信息提取工具"
             shell_key_path = f".png\\shell\\{app_name}"
@@ -365,8 +385,19 @@ class ContextMenuCard(CardWidget):
             self.update_status(False)
             return False
     
-    def update_status(self, installed):
+    def update_status(self, installed, is_non_windows=False):
         """更新状态显示"""
+        # 在非Windows平台上显示特殊信息
+        if is_non_windows:
+            self.status_label.setText("ℹ️ 不适用")
+            self.status_label.setStyleSheet(f"color: {FluentColors.get_color('text_tertiary')};")
+            self.info_label.setText("右键菜单功能仅在Windows系统上可用。\n"
+                                  "在macOS上，您可以直接拖拽图片文件到应用程序图标来打开文件。")
+            self.install_btn.setText("仅Windows可用")
+            self.install_btn.setEnabled(False)
+            self.uninstall_btn.setEnabled(False)
+            return
+        
         # 检查管理员权限
         is_admin = False
         try:

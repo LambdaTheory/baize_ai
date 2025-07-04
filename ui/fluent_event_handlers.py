@@ -185,14 +185,14 @@ class FluentEventHandlers(QObject):
                 if url.isLocalFile():
                     file_path = url.toLocalFile()
                     # 检查是否是文件夹或支持的图片格式
-                    if os.path.isdir(file_path) or file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    if os.path.isdir(file_path) or file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
                         has_valid_items = True
                         break
                 else:
                     # 支持从浏览器拖拽的网络图片URL或临时文件
                     url_string = url.toString()
                     # 检查URL是否包含图片扩展名或是常见的图片服务
-                    if (url_string.lower().endswith(('.png', '.jpg', '.jpeg')) or 
+                    if (url_string.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) or 
                         'data:image/' in url_string.lower() or
                         any(service in url_string.lower() for service in ['blob:', 'localhost:', '127.0.0.1:', 'webui', 'comfyui'])):
                         has_valid_items = True
@@ -258,7 +258,7 @@ class FluentEventHandlers(QObject):
                 file_path = url.toLocalFile()
                 if os.path.isdir(file_path):
                     folders.append(file_path)
-                elif file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                elif file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
                     files.append(file_path)
             else:
                 # 异步处理从浏览器拖拽的网络图片URL

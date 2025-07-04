@@ -15,27 +15,46 @@ from typing import Dict, List, Any, Optional
 class DataManager:
     """数据管理器"""
     
-    def __init__(self, db_path="database/records.db", data_dir: str = "data"):
+    def __init__(self, db_path=None, data_dir: str = None):
+        # 获取用户主目录下的应用数据目录
+        app_data_dir = os.path.expanduser("~/Library/Application Support/白泽AI")
+        
         # 数据库相关
-        self.db_path = db_path
+        if db_path is None:
+            self.db_path = os.path.join(app_data_dir, "database", "records.db")
+        else:
+            # 如果是相对路径，转换为用户目录下的路径
+            if not os.path.isabs(db_path):
+                self.db_path = os.path.join(app_data_dir, db_path)
+            else:
+                self.db_path = db_path
+                
         self.ensure_database_exists()
         self.init_database()
         
         # 提示词数据相关
-        self.data_dir = data_dir
-        self.prompt_data_file = os.path.join(data_dir, "prompt_history.json")
+        if data_dir is None:
+            self.data_dir = os.path.join(app_data_dir, "data")
+        else:
+            # 如果是相对路径，转换为用户目录下的路径
+            if not os.path.isabs(data_dir):
+                self.data_dir = os.path.join(app_data_dir, data_dir)
+            else:
+                self.data_dir = data_dir
+                
+        self.prompt_data_file = os.path.join(self.data_dir, "prompt_history.json")
         self.ensure_data_dir()
     
     def ensure_database_exists(self):
         """确保数据库目录存在"""
         db_dir = os.path.dirname(self.db_path)
         if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
+            os.makedirs(db_dir, exist_ok=True)
     
     def ensure_data_dir(self):
         """确保数据目录存在"""
         if not os.path.exists(self.data_dir):
-            os.makedirs(self.data_dir)
+            os.makedirs(self.data_dir, exist_ok=True)
     
     def init_database(self):
         """初始化数据库表"""
@@ -173,6 +192,13 @@ class DataManager:
                 ))
                 
                 return cursor.lastrowid
+    
+    def get_record_by_path(self, file_path: str) -> Optional[Dict]:
+        """根据文件路径获取记录"""
+        record_id = self.get_record_id_by_path(file_path)
+        if record_id:
+            return self.get_record_by_id(record_id)
+        return None
     
     def get_record_id_by_path(self, file_path: str) -> Optional[int]:
         """根据文件路径获取记录ID"""

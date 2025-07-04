@@ -16,7 +16,7 @@ class ImageInfoReader:
     """图片信息读取器"""
     
     def __init__(self):
-        self.supported_formats = ['.png', '.jpg', '.jpeg']
+        self.supported_formats = ['.png', '.jpg', '.jpeg', '.webp']
     
     def extract_info(self, file_path):
         """
@@ -44,6 +44,8 @@ class ImageInfoReader:
                 return self._extract_from_png(file_path)
             elif file_ext in ['jpg', 'jpeg']:
                 return self._extract_from_jpg(file_path)
+            elif file_ext == 'webp':
+                return self._extract_from_webp(file_path)
             else:
                 print(f"不支持的文件格式: {file_ext}")
                 return None
@@ -868,4 +870,63 @@ class ImageInfoReader:
             
         except Exception as e:
             print(f"提取Lora信息时出错: {e}")
+            return None
+    
+    def _extract_from_webp(self, file_path):
+        """从WebP文件中提取信息"""
+        try:
+            print("WebP图片格式: WebP")
+            
+            with Image.open(file_path) as img:
+                print(f"WebP图片尺寸: {img.size}")
+                
+                # 尝试读取EXIF数据
+                exif_info = {}
+                if hasattr(img, '_getexif') and img._getexif():
+                    exif_data = img._getexif()
+                    print(f"WebP EXIF数据条目数: {len(exif_data)}")
+                    
+                    # 查找可能的AI生成信息
+                    for tag, value in exif_data.items():
+                        if isinstance(value, str) and any(keyword in value.lower() for keyword in ['prompt', 'stable diffusion', 'comfyui', 'parameters']):
+                            exif_info[f'exif_{tag}'] = value
+                
+                # 尝试读取XMP数据
+                xmp_info = {}
+                if hasattr(img, 'info') and img.info:
+                    for key, value in img.info.items():
+                        if isinstance(value, str) and any(keyword in value.lower() for keyword in ['prompt', 'stable diffusion', 'comfyui', 'parameters']):
+                            xmp_info[key] = value
+                
+                # 合并所有找到的信息
+                all_info = {**exif_info, **xmp_info}
+                
+                if all_info:
+                    print(f"WebP中找到 {len(all_info)} 个可能的AI信息字段")
+                    # 尝试解析找到的信息
+                    parsed_info = {}
+                    for key, value in all_info.items():
+                        try:
+                            # 尝试解析为JSON或参数格式
+                            if value.startswith('{') and value.endswith('}'):
+                                parsed_data = json.loads(value)
+                                parsed_info.update(parsed_data)
+                            else:
+                                # 尝试解析参数格式
+                                parsed_params = self._parse_parameters_text(value)
+                                if parsed_params:
+                                    parsed_info.update(parsed_params)
+                        except:
+                            # 如果解析失败，保存原始值
+                            parsed_info[key] = value
+                    
+                    if parsed_info:
+                        parsed_info['generation_source'] = 'WebP'
+                        return parsed_info
+                
+                print("WebP文件中未找到AI生成信息")
+                return None
+                
+        except Exception as e:
+            print(f"读取WebP文件时出错: {e}")
             return None

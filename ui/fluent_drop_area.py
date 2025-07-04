@@ -204,14 +204,14 @@ class FluentDropArea(CardWidget):
                     file_path = url.toLocalFile()
                     import os
                     # 检查是否是文件夹或支持的图片格式
-                    if os.path.isdir(file_path) or file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    if os.path.isdir(file_path) or file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
                         has_valid_items = True
                         break
                 else:
                     # 支持从浏览器拖拽的网络图片URL或临时文件
                     url_string = url.toString()
                     # 检查URL是否包含图片扩展名或是常见的图片服务
-                    if (url_string.lower().endswith(('.png', '.jpg', '.jpeg')) or 
+                    if (url_string.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) or 
                         'data:image/' in url_string.lower() or
                         any(service in url_string.lower() for service in ['blob:', 'localhost:', '127.0.0.1:', 'webui', 'comfyui'])):
                         has_valid_items = True
@@ -273,14 +273,14 @@ class FluentDropArea(CardWidget):
                 file_path = url.toLocalFile()
                 if os.path.isdir(file_path):
                     folders.append(file_path)
-                elif file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                elif file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
                     files.append(file_path)
             else:
                 # 处理从浏览器拖拽的网络图片URL
                 url_string = url.toString()
                 try:
                     # 检查是否是支持的图片URL
-                    if (url_string.lower().endswith(('.png', '.jpg', '.jpeg')) or 
+                    if (url_string.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) or 
                         'data:image/' in url_string.lower() or
                         any(service in url_string.lower() for service in ['blob:', 'localhost:', '127.0.0.1:', 'webui', 'comfyui'])):
                         
@@ -351,7 +351,7 @@ class FluentDropArea(CardWidget):
         file_dialog = QFileDialog()
         files, _ = file_dialog.getOpenFileNames(
             self, "选择图片文件", "", 
-            "图片文件 (*.png *.jpg *.jpeg);;PNG文件 (*.png);;JPG文件 (*.jpg *.jpeg)"
+            "图片文件 (*.png *.jpg *.jpeg *.webp);;PNG文件 (*.png);;JPG文件 (*.jpg *.jpeg);;WebP文件 (*.webp)"
         )
         if files:
             self.filesDropped.emit(files)

@@ -30,21 +30,39 @@ class FluentImageDisplay(QObject):
             if os.path.exists(file_path):
                 pixmap = QPixmap(file_path)
                 if not pixmap.isNull():
+                    # 获取标签的当前尺寸，如果尺寸太小则使用默认尺寸
+                    label_size = self.parent.image_label.size()
+                    if label_size.width() < 100 or label_size.height() < 100:
+                        # 使用默认尺寸进行缩放
+                        target_size = self.parent.image_label.sizeHint()
+                        if target_size.width() < 400:
+                            from PyQt5.QtCore import QSize
+                            target_size = QSize(400, 300)
+                    else:
+                        target_size = label_size
+                    
                     # 缩放图片以适应显示区域
                     scaled_pixmap = pixmap.scaled(
-                        self.parent.image_label.size(), 
+                        target_size, 
                         Qt.KeepAspectRatio, 
                         Qt.SmoothTransformation
                     )
                     self.parent.image_label.setPixmap(scaled_pixmap)
+                    print(f"图片已显示: {file_path}, 原始尺寸: {pixmap.size()}, 缩放后: {scaled_pixmap.size()}")
                 else:
                     self.parent.image_label.setText("无法加载图片")
+                    print(f"无法加载图片: {file_path}")
             else:
                 self.parent.image_label.setText("图片文件不存在")
+                print(f"图片文件不存在: {file_path}")
             
             # 显示基础信息
             filename = os.path.basename(file_path)
-            self.parent.file_name_edit.setText(filename)
+            # 如果有自定义名称，优先显示自定义名称
+            if image_info and image_info.get('custom_name'):
+                self.parent.file_name_edit.setText(image_info['custom_name'])
+            else:
+                self.parent.file_name_edit.setText(filename)
             self.parent.file_path_label.setText(file_path)
             
             # 文件大小
@@ -64,26 +82,39 @@ class FluentImageDisplay(QObject):
             
             # 显示AI信息
             if image_info and isinstance(image_info, dict):
+                print(f"开始显示AI信息，包含 {len(image_info)} 个字段")
+                
                 # 正向提示词
                 prompt = image_info.get('prompt', '')
                 self.parent.positive_prompt_text.setPlainText(prompt)
+                print(f"正向提示词已设置: {len(prompt)} 字符")
                 
                 # 反向提示词
                 negative_prompt = image_info.get('negative_prompt', '')
                 self.parent.negative_prompt_text.setPlainText(negative_prompt)
+                print(f"反向提示词已设置: {len(negative_prompt)} 字符")
                 
                 # 保存原始提示词数据（用于重置功能）
                 self.parent.original_prompts['positive'] = prompt
                 self.parent.original_prompts['negative'] = negative_prompt
                 
+                # 显示用户标签（如果有）
+                if image_info.get('user_tags'):
+                    self.parent.user_tags_edit.setPlainText(image_info['user_tags'])
+                else:
+                    self.parent.user_tags_edit.setPlainText("")
+                
                 # 生成方式判断
                 generation_method = self.detect_generation_method(image_info)
                 self.parent.generation_method_text.setText(generation_method)
+                print(f"生成方式: {generation_method}")
                 
                 # 生成参数
                 self.clear_params_layout()
                 self.create_params_layout(image_info)
+                print("参数布局已更新")
             else:
+                print("没有AI信息或信息格式不正确，清空显示")
                 # 清空AI信息
                 self.parent.positive_prompt_text.setPlainText("")
                 self.parent.negative_prompt_text.setPlainText("")
@@ -93,6 +124,9 @@ class FluentImageDisplay(QObject):
                 # 清空原始提示词数据
                 self.parent.original_prompts['positive'] = ''
                 self.parent.original_prompts['negative'] = ''
+                
+                # 清空用户标签
+                self.parent.user_tags_edit.setPlainText("")
                 
         except Exception as e:
             print(f"显示图片信息时出错: {e}")
